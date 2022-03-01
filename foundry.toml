@@ -2,6 +2,15 @@
 src = 'src'
 out = 'out'
 libs = ['lib']
-remappings = ['ds-test/=lib/ds-test/src/']
+remappings = [
+    'ds-test/=lib/ds-test/src/',
+    'zodiac/=lib/zodiac/contracts/',
+    'openzeppelin/=lib/zeppelin-solidity/contracts/',
+    'gnosis-safe/=lib/safe-contracts/',
+
+    '@gnosis.pm/safe-contracts/=lib/safe-contracts/',
+    '@openzeppelin/contracts/=lib/zeppelin-solidity/contracts/',
+    '@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/'
+]
 
 # See more config options https://github.com/gakonst/foundry/tree/master/config

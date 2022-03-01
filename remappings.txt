@@ -1,0 +1,8 @@
+ds-test/=lib/ds-test/src/
+zodiac/=lib/zodiac/contracts/
+openzeppelin/=lib/zeppelin-solidity/contracts/
+gnosis-safe/=lib/safe-contracts/
+
+@gnosis.pm/safe-contracts/=lib/safe-contracts/
+@openzeppelin/contracts/=lib/zeppelin-solidity/contracts/
+@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
