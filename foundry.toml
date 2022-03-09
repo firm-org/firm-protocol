@@ -1,4 +1,6 @@
 [default]
+optimizer = true
+optimizer_runs = 100000
 src = 'src'
 out = 'out'
 libs = ['lib']
@@ -7,6 +9,7 @@ remappings = [
     'zodiac/=lib/zodiac/contracts/',
     'openzeppelin/=lib/zeppelin-solidity/contracts/',
     'gnosis-safe/=lib/safe-contracts/',
+    'datetime/=lib/BokkyPooBahsDateTimeLibrary/contracts',
 
     '@gnosis.pm/safe-contracts/=lib/safe-contracts/',
     '@openzeppelin/contracts/=lib/zeppelin-solidity/contracts/',

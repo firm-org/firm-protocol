@@ -35,4 +35,16 @@ contract Budget is Module {
 
         emit BudgetSetup(_params.owner, _params.avatar, _params.target);
     }
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // ALLOWANCES
+    ////////////////////////////////////////////////////////////////////////////////
+
+    struct Allowance {
+        address token; // TODO: handle ETH
+        uint256 amount;
+        address spender;
+        uint256 spent;
+        uint64 nextResetTime;
+    }
 }
