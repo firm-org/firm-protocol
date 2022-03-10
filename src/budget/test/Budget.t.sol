@@ -49,3 +49,57 @@ contract BudgetWithProxyInitTest is BudgetInitTest {
         );
     }
 }
+
+contract BudgetAllowanceTest is DSTestPlus {
+    Budget budget;
+
+    address internal constant OWNER = address(1);
+    address internal constant AVATAR = address(2);
+    address internal constant TARGET = address(3);
+    address internal constant SPENDER = address(5);
+
+    function setUp() public virtual {
+        budget = new Budget(Budget.InitParams(OWNER, AVATAR, TARGET));
+    }
+
+    function testCreateAllowance() public {
+        hevm.prank(OWNER);
+        createDailyAllowance(0);        
+    }
+
+    function testNotOwnerCannotCreateAllowance() public {
+        hevm.expectRevert(
+            bytes("Ownable: caller is not the owner")
+        );
+        createDailyAllowance(0);
+    }
+
+    function testAllowanceIsKeptTrackOf() public {
+        uint64 initialTime = uint64(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
+
+        hevm.prank(OWNER);
+        hevm.warp(initialTime);
+        createDailyAllowance(0);
+
+        hevm.startPrank(SPENDER);
+        
+        budget.executePayment(0, OWNER, 7);
+
+        hevm.warp(initialTime + 1 days);
+        budget.executePayment(0, OWNER, 7);
+        budget.executePayment(0, OWNER, 2);
+
+        hevm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, 0));
+        budget.executePayment(0, OWNER, 7);
+    }
+
+    function createDailyAllowance(uint256 expectedId) public {
+        uint256 allowanceId = budget.createAllowance(
+            SPENDER,
+            address(0),
+            10,
+            TimeShiftLib.TimeShift(TimeShiftLib.TimeUnit.Daily, 0)
+        );
+        assertEq(allowanceId, expectedId);
+    }
+}
