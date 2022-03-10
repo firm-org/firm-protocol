@@ -1,0 +1,86 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.10;
+
+import "solmate/test/utils/DSTestPlus.sol";
+import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsDateTimeLibrary.sol";
+
+import "../TimeShiftLib.sol";
+
+contract TimeShiftLibTest is DSTestPlus {
+    using TimeShiftLib for *;
+
+    function testDaily() public {
+        assertShift(TimeShiftLib.TimeUnit.Daily, 2022, 1, 1, 2022, 1, 2);
+        assertShift(TimeShiftLib.TimeUnit.Daily, 2022, 1, 31, 2022, 2, 1);
+        assertShift(TimeShiftLib.TimeUnit.Daily, 2022, 2, 28, 2022, 3, 1);
+        assertShift(TimeShiftLib.TimeUnit.Daily, 2020, 2, 28, 2020, 2, 29);
+        assertShift(TimeShiftLib.TimeUnit.Daily, 2021, 12, 31, 2022, 1, 1);
+    }
+
+    function testWeekly() public {
+        assertShift(TimeShiftLib.TimeUnit.Weekly, 2022, 1, 1, 2022, 1, 3);
+        assertShift(TimeShiftLib.TimeUnit.Weekly, 2022, 1, 31, 2022, 2, 7);
+        assertShift(TimeShiftLib.TimeUnit.Weekly, 2021, 12, 28, 2022, 1, 3);
+    }
+
+    function testMonthly() public {
+        assertShift(TimeShiftLib.TimeUnit.Monthly, 2022, 1, 1, 2022, 2, 1);
+        assertShift(TimeShiftLib.TimeUnit.Monthly, 2022, 1, 31, 2022, 2, 1);
+        assertShift(TimeShiftLib.TimeUnit.Monthly, 2022, 12, 3, 2023, 1, 1);
+    }
+
+    function testQuarterly() public {
+        assertShift(TimeShiftLib.TimeUnit.Quarterly, 2022, 1, 1, 2022, 4, 1);
+        assertShift(TimeShiftLib.TimeUnit.Quarterly, 2022, 1, 31, 2022, 4, 1);
+        assertShift(TimeShiftLib.TimeUnit.Quarterly, 2022, 4, 3, 2022, 7, 1);
+        assertShift(TimeShiftLib.TimeUnit.Quarterly, 2022, 5, 3, 2022, 7, 1);
+        assertShift(TimeShiftLib.TimeUnit.Quarterly, 2022, 6, 3, 2022, 7, 1);
+        assertShift(TimeShiftLib.TimeUnit.Quarterly, 2022, 10, 3, 2023, 1, 1);
+    }
+
+    function testSemiyearly() public {
+        assertShift(TimeShiftLib.TimeUnit.Semiyearly, 2022, 1, 1, 2022, 7, 1);
+        assertShift(TimeShiftLib.TimeUnit.Semiyearly, 2022, 1, 31, 2022, 7, 1);
+        assertShift(TimeShiftLib.TimeUnit.Semiyearly, 2022, 6, 3, 2022, 7, 1);
+        assertShift(TimeShiftLib.TimeUnit.Semiyearly, 2022, 7, 3, 2023, 1, 1);
+        assertShift(TimeShiftLib.TimeUnit.Semiyearly, 2022, 8, 3, 2023, 1, 1);
+        assertShift(TimeShiftLib.TimeUnit.Semiyearly, 2022, 12, 3, 2023, 1, 1);
+    }
+
+    function testYearly() public {
+        assertShift(TimeShiftLib.TimeUnit.Yearly, 2022, 1, 1, 2023, 1, 1);
+        assertShift(TimeShiftLib.TimeUnit.Yearly, 2022, 1, 31, 2023, 1, 1);
+    }
+
+    function testOffsets() public {
+        TimeShiftLib.TimeShift memory shift = TimeShiftLib.TimeShift(TimeShiftLib.TimeUnit.Monthly, 1 hours);
+
+        assertEq(
+            uint64(DateTimeLib.timestampFromDateTime(2022, 1, 1, 23, 23, 0))
+                .applyShift(shift),
+            DateTimeLib.timestampFromDateTime(2022, 1, 31, 23, 0, 0)
+        );
+        assertEq(
+            uint64(DateTimeLib.timestampFromDateTime(2022, 1, 31, 23, 23, 0))
+                .applyShift(shift),
+            DateTimeLib.timestampFromDateTime(2022, 2, 28, 23, 0, 0)
+        );
+    }
+    
+    function assertShift(
+        TimeShiftLib.TimeUnit unit,
+        uint256 y1,
+        uint256 m1,
+        uint256 d1,
+        uint256 y2,
+        uint256 m2,
+        uint256 d2
+    ) public {
+        assertEq(
+            uint64(DateTimeLib.timestampFromDate(y1, m1, d1)).applyShift(
+                TimeShiftLib.TimeShift(unit, 0)
+            ),
+            DateTimeLib.timestampFromDate(y2, m2, d2)
+        );
+    }
+}

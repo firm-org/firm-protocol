@@ -43,7 +43,7 @@ contract Budget is Module {
     struct Allowance {
         address token; // TODO: handle ETH
         uint256 amount;
-        address spender;
+        address spender; // TODO: consider defining spenders as a role instead
         uint256 spent;
         uint64 nextResetTime;
     }
