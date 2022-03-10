@@ -66,6 +66,20 @@ contract TimeShiftLibTest is DSTestPlus {
             DateTimeLib.timestampFromDateTime(2022, 2, 28, 23, 0, 0)
         );
     }
+
+    uint64 immutable from_ = uint64(DateTimeLib.timestampFromDateTime(2022, 12, 28, 0, 0, 0));
+    uint64 immutable to_ = uint64(DateTimeLib.timestampFromDateTime(2023, 1, 2, 0, 0, 0));
+    function testGasWorstCase() public {
+        TimeShiftLib.TimeShift memory shift = TimeShiftLib.TimeShift(TimeShiftLib.TimeUnit.Weekly, 0);
+
+        uint256 initialGas = gasleft();
+        assertEq(
+            uint64(from_).applyShift(shift),
+            to_
+        );
+
+        assertLt(initialGas - gasleft(), 12000);
+    }
     
     function assertShift(
         TimeShiftLib.TimeUnit unit,
