@@ -1,7 +1,7 @@
 ds-test/=lib/ds-test/src/
 zodiac/=lib/zodiac/contracts/
 openzeppelin/=lib/zeppelin-solidity/contracts/
-gnosis-safe/=lib/safe-contracts/
+gnosis-safe/=lib/safe-contracts/contracts
 datetime/=lib/BokkyPooBahsDateTimeLibrary/contracts
 
 @gnosis.pm/safe-contracts/=lib/safe-contracts/
