@@ -9,6 +9,7 @@ import "./TimeShiftLib.sol";
 address constant ETH = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 contract Budget is Module {
     using TimeShiftLib for uint64;
+
     ////////////////////////////////////////////////////////////////////////////////
     // SETUP
     ////////////////////////////////////////////////////////////////////////////////
@@ -46,10 +47,10 @@ contract Budget is Module {
     ////////////////////////////////////////////////////////////////////////////////
 
     struct Allowance {
-        address token; // TODO: handle ETH
+        address token;
         uint256 amount;
         address spender; // TODO: consider defining spenders as a role instead
-        TimeShiftLib.TimeShift recurrency;    
+        TimeShiftLib.TimeShift recurrency;
 
         uint256 spent;
         uint64 nextResetTime;
@@ -103,7 +104,9 @@ contract Budget is Module {
     function executePayment(uint256 _allowanceId, address _to, uint256 _amount) external {
         Allowance storage allowance = getAllowance[_allowanceId];
         
-        if (allowance.spender != msg.sender || allowance.isDisabled) revert ExecutionDisallowed(_allowanceId);
+        // Implicitly checks that the allowance exists as if spender hasn't been set, it will revert
+        if (allowance.spender != msg.sender || allowance.isDisabled)
+            revert ExecutionDisallowed(_allowanceId);
 
         uint64 time = uint64(block.timestamp);
         address token = allowance.token;
