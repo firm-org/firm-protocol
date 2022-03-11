@@ -2,9 +2,11 @@
 pragma solidity 0.8.10;
 
 import "zodiac/core/Module.sol";
+import "openzeppelin/interfaces/IERC20.sol";
 
 import "./TimeShiftLib.sol";
 
+address constant ETH = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 contract Budget is Module {
     using TimeShiftLib for uint64;
     ////////////////////////////////////////////////////////////////////////////////
@@ -65,8 +67,23 @@ contract Budget is Module {
         TimeShiftLib.TimeShift recurrency,
         uint64 nextResetTime
     );
+    event PaymentExecuted(
+        uint256 indexed allowanceId,
+        address indexed token,
+        address indexed to,
+        uint256 amount
+    );
 
-    function createAllowance(address _spender, address _token, uint256 _amount, TimeShiftLib.TimeShift calldata _recurrency) onlyOwner public returns (uint256 allowanceId) {
+    error ExecutionDisallowed(uint256 allowanceId);
+    error Overbudget(uint256 allowanceId, address token, address to, uint256 amount, uint256 remainingBudget);
+    error ExecutionFailed(uint256 allowanceId, address token, address to, uint256 amount);
+
+    function createAllowance(
+        address _spender,
+        address _token,
+        uint256 _amount,
+        TimeShiftLib.TimeShift calldata _recurrency
+    ) onlyOwner public returns (uint256 allowanceId) {
         unchecked {
             allowanceId = allowancesCount++;
         }
@@ -83,10 +100,6 @@ contract Budget is Module {
         emit AllowanceCreated(allowanceId, _spender, _token, _amount, _recurrency, nextResetTime);
     }
 
-    error ExecutionDisallowed(uint256 allowanceId);
-    error Overbudget(uint256 allowanceId);
-    event PaymentExecuted(uint256 indexed allowanceId, address indexed token, address indexed to, uint256 amount);
-
     function executePayment(uint256 _allowanceId, address _to, uint256 _amount) external {
         Allowance storage allowance = getAllowance[_allowanceId];
         
@@ -97,13 +110,36 @@ contract Budget is Module {
             allowance.spent = 0;
             allowance.nextResetTime = time.applyShift(allowance.recurrency);
         }
+        address token = allowance.token;
 
         uint256 newSpent = allowance.spent + _amount;
-        if (newSpent > allowance.amount) revert Overbudget(_allowanceId);
-
+        if (newSpent > allowance.amount) {
+            revert Overbudget(
+                _allowanceId,
+                token,
+                _to,
+                _amount,
+                allowance.amount - allowance.spent
+            );
+        }
         allowance.spent = newSpent;
 
-        _to; // TODO: actually execute the payment
+        bool success;
+        if (token == ETH) {
+            success = exec(_to, _amount, hex"", Enum.Operation.Call);
+        } else {
+            (bool callSuccess, bytes memory retData) = execAndReturnData(
+                token,
+                0,
+                abi.encodeWithSelector(IERC20.transfer.selector, _to, _amount),
+                Enum.Operation.Call
+            );
+
+            success = callSuccess
+                && retData.length == 0
+                || (retData.length == 32 && abi.decode(retData, (bool)));
+        }
+        if (!success) revert ExecutionFailed(_allowanceId, token, _to, _amount);
 
         emit PaymentExecuted(_allowanceId, allowance.token, _to, _amount);
     }

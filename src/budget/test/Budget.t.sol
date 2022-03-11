@@ -5,6 +5,7 @@ import "solmate/test/utils/DSTestPlus.sol";
 import "zodiac/factory/ModuleProxyFactory.sol";
 
 import "../Budget.sol";
+import "./lib/AvatarStub.sol";
 
 contract BudgetInitTest is DSTestPlus {
     Budget budget;
@@ -51,15 +52,15 @@ contract BudgetWithProxyInitTest is BudgetInitTest {
 }
 
 contract BudgetAllowanceTest is DSTestPlus {
+    AvatarStub avatar;
     Budget budget;
 
     address internal constant OWNER = address(1);
-    address internal constant AVATAR = address(2);
-    address internal constant TARGET = address(3);
     address internal constant SPENDER = address(5);
 
     function setUp() public virtual {
-        budget = new Budget(Budget.InitParams(OWNER, AVATAR, TARGET));
+        avatar = new AvatarStub();
+        budget = new Budget(Budget.InitParams(OWNER, address(avatar), address(avatar)));
     }
 
     function testCreateAllowance() public {
@@ -89,7 +90,7 @@ contract BudgetAllowanceTest is DSTestPlus {
         budget.executePayment(0, OWNER, 7);
         budget.executePayment(0, OWNER, 2);
 
-        hevm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, 0));
+        hevm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, 0, address(0), OWNER, 7, 1));
         budget.executePayment(0, OWNER, 7);
     }
 

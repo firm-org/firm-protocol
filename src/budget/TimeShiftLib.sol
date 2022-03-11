@@ -21,6 +21,9 @@ library TimeShiftLib {
         int64 offset;
     }
 
+    // TODO: Could add a special 'Seconds' time unit which would just apply the offset directly
+    //       Eg. TimeShift(Seconds, 100) would shift in 100 second intervals (would have to take into account the last time it was reset)
+
     error UnknownTimeShift();
     error BadShift();
 
