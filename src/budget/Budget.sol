@@ -7,8 +7,9 @@ import "openzeppelin/interfaces/IERC20.sol";
 import "./TimeShiftLib.sol";
 
 address constant ETH = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
+
 contract Budget is Module {
-    using TimeShiftLib for uint64;
+    using TimeShiftLib for *;
 
     ////////////////////////////////////////////////////////////////////////////////
     // SETUP
@@ -49,12 +50,13 @@ contract Budget is Module {
     struct Allowance {
         address token;
         uint256 amount;
-        address spender; // TODO: consider defining spenders as a role instead
-        TimeShiftLib.TimeShift recurrency;
 
+        address spender; // TODO: consider defining spenders as a role instead
+        EncodedTimeShift recurrency;
+
+        bool isDisabled;
         uint256 spent;
         uint64 nextResetTime;
-        bool isDisabled;
     }
 
     mapping (uint256 => Allowance) public getAllowance;
@@ -93,7 +95,7 @@ contract Budget is Module {
         allowance.spender = _spender;
         allowance.token = _token;
         allowance.amount = _amount;
-        allowance.recurrency = _recurrency;
+        allowance.recurrency = _recurrency.encode();
 
         uint64 nextResetTime = uint64(block.timestamp).applyShift(_recurrency);
         allowance.nextResetTime = nextResetTime;
@@ -124,7 +126,7 @@ contract Budget is Module {
         }
 
         if (allowanceResets) {
-            allowance.nextResetTime = time.applyShift(allowance.recurrency);
+            allowance.nextResetTime = time.applyShift(allowance.recurrency.decode());
             // TODO: Consider emitting an event here
         }
         allowance.spent = spentAfterPayment;

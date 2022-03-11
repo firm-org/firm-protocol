@@ -4,6 +4,7 @@ import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsD
 
 pragma solidity 0.8.10;
 
+type EncodedTimeShift is bytes9;
 library TimeShiftLib {
     using TimeShiftLib for *;
 
@@ -80,5 +81,22 @@ library TimeShiftLib {
         )
     {
         return DateTimeLib._daysToDate(timestamp / 1 days);
+    }
+
+    function encode(TimeShift memory shift)
+        internal
+        pure
+        returns (EncodedTimeShift)
+    {
+        return EncodedTimeShift.wrap(bytes9(
+            uint72(uint8(shift.unit)) << 64 |
+            uint72(uint64(bytes8(abi.encodePacked(shift.offset))))
+        ));
+    }
+
+    function decode(EncodedTimeShift encoded) internal pure returns (TimeShift memory shift) {
+        uint72 encodedValue = uint72(EncodedTimeShift.unwrap(encoded));
+        shift.unit = TimeUnit(uint8(encodedValue >> 64));
+        shift.offset = int64(uint64(uint72(encodedValue)));
     }
 }

@@ -6,7 +6,7 @@ import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsD
 
 import "../TimeShiftLib.sol";
 
-contract TimeShiftLibTest is DSTestPlus {
+contract TimeShiftLibShiftTest is DSTestPlus {
     using TimeShiftLib for *;
 
     function testDaily() public {
@@ -96,5 +96,43 @@ contract TimeShiftLibTest is DSTestPlus {
             ),
             DateTimeLib.timestampFromDate(y2, m2, d2)
         );
+    }
+}
+
+contract TimeShiftLibEncodingTest is DSTestPlus {
+    using TimeShiftLib for *;
+
+    function testRoundtrips() public {
+        assertRoundtrip(TimeShiftLib.TimeUnit.Daily, 0);
+        assertRoundtrip(TimeShiftLib.TimeUnit.Daily, -1);
+        assertRoundtrip(TimeShiftLib.TimeUnit.Monthly, -1 hours);
+        assertRoundtrip(TimeShiftLib.TimeUnit.Yearly, -1000 * 365 days);
+    }
+
+    function testEncodingGas() public {
+        TimeShiftLib.TimeShift memory shift = TimeShiftLib.TimeShift(TimeShiftLib.TimeUnit.Monthly, -1 hours);
+        assertEq(
+            uint256(uint72(EncodedTimeShift.unwrap(shift.encode()))),
+            0x02fffffffffffff1f0
+        );
+    }
+
+    function testDecodingGas() public {
+        EncodedTimeShift encodedShift = EncodedTimeShift.wrap(0x02fffffffffffff1f0);
+
+        TimeShiftLib.TimeShift memory decoded = encodedShift.decode();
+
+        assertEq(uint8(decoded.unit), uint8(TimeShiftLib.TimeUnit.Monthly));
+        assertEq(decoded.offset, -1 hours);
+    }
+
+    function assertRoundtrip(TimeShiftLib.TimeUnit inputUnit, int64 inputOffset) public {
+        TimeShiftLib.TimeShift memory shift = TimeShiftLib.TimeShift(inputUnit, inputOffset);
+        EncodedTimeShift encoded = shift.encode();
+        //emit log_bytes(abi.encodePacked(encoded));
+        TimeShiftLib.TimeShift memory decodedEncoded = encoded.decode();
+
+        assertEq(uint8(decodedEncoded.unit), uint8(inputUnit));
+        assertEq(decodedEncoded.offset, inputOffset);
     }
 }
