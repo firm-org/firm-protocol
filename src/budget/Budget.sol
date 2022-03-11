@@ -106,14 +106,11 @@ contract Budget is Module {
         if (allowance.spender != msg.sender || allowance.isDisabled) revert ExecutionDisallowed(_allowanceId);
 
         uint64 time = uint64(block.timestamp);
-        if (time >= allowance.nextResetTime) {
-            allowance.spent = 0;
-            allowance.nextResetTime = time.applyShift(allowance.recurrency);
-        }
         address token = allowance.token;
 
-        uint256 newSpent = allowance.spent + _amount;
-        if (newSpent > allowance.amount) {
+        bool allowanceResets = time >= allowance.nextResetTime;
+        uint256 spentAfterPayment = (allowanceResets ? 0 : allowance.spent) + _amount;
+        if (spentAfterPayment > allowance.amount) {
             revert Overbudget(
                 _allowanceId,
                 token,
@@ -122,7 +119,12 @@ contract Budget is Module {
                 allowance.amount - allowance.spent
             );
         }
-        allowance.spent = newSpent;
+
+        if (allowanceResets) {
+            allowance.nextResetTime = time.applyShift(allowance.recurrency);
+            // TODO: Consider emitting an event here
+        }
+        allowance.spent = spentAfterPayment;
 
         bool success;
         if (token == ETH) {
