@@ -136,8 +136,7 @@ contract Budget is Module {
             );
 
             success = !callSuccess
-                && retData.length == 0
-                || (retData.length == 32 && abi.decode(retData, (bool)));
+                && ((retData.length == 32 && abi.decode(retData, (bool)) || retData.length == 0));
         }
         if (!success) revert ExecutionFailed(_allowanceId, token, _to, _amount);
 
