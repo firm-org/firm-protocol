@@ -135,7 +135,7 @@ contract Budget is Module {
                 Enum.Operation.Call
             );
 
-            success = !callSuccess
+            success = callSuccess
                 && ((retData.length == 32 && abi.decode(retData, (bool)) || retData.length == 0));
         }
         if (!success) revert ExecutionFailed(_allowanceId, token, _to, _amount);
