@@ -44,7 +44,8 @@ contract IntegrationTest is DSTestPlus {
         );
 
         hevm.startPrank(spender);
-        budget.executePayment(allowanceId, receiver, 5);
+        budget.executePayment(allowanceId, receiver, 4);
+        budget.executePayment(allowanceId, receiver, 1);
 
         hevm.warp(block.timestamp + 1 days);
         budget.executePayment(allowanceId, receiver, 9);
