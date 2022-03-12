@@ -48,18 +48,17 @@ contract Budget is Module {
     ////////////////////////////////////////////////////////////////////////////////
 
     struct Allowance {
-        address token;
         uint256 amount;
-
+        uint256 spent;
+        address token;
+        uint64 nextResetTime;
         address spender; // TODO: consider defining spenders as a role instead
         EncodedTimeShift recurrency;
-
         bool isDisabled;
-        uint256 spent;
-        uint64 nextResetTime;
     }
 
     mapping (uint256 => Allowance) public getAllowance;
+
     uint256 public allowancesCount = 0;
 
     event AllowanceCreated(

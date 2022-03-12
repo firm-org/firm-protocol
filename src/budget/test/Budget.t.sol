@@ -96,6 +96,23 @@ contract BudgetAllowanceTest is DSTestPlus {
         budget.executePayment(0, OWNER, 7);
     }
 
+    function testMultipleAllowances() public {
+        uint64 initialTime = uint64(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
+
+        hevm.startPrank(OWNER);
+        hevm.warp(initialTime);
+        createDailyAllowance(0);
+        createDailyAllowance(1);
+
+        hevm.startPrank(SPENDER);
+        budget.executePayment(0, OWNER, 7);
+        budget.executePayment(1, OWNER, 7);
+
+        hevm.warp(initialTime + 1 days);
+        budget.executePayment(0, OWNER, 7);
+        budget.executePayment(1, OWNER, 7);
+    }
+
     function createDailyAllowance(uint256 expectedId) public {
         uint256 allowanceId = budget.createAllowance(
             SPENDER,
@@ -104,5 +121,30 @@ contract BudgetAllowanceTest is DSTestPlus {
             TimeShiftLib.TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode()
         );
         assertEq(allowanceId, expectedId);
+    }
+}
+
+contract TestGas is DSTestPlus {
+    struct One {
+        address a;
+        TimeShiftLib.TimeShift shift;
+    }
+
+    struct Two {
+        EncodedTimeShift shift;
+        address a;
+    }
+
+    One one;
+    Two two;
+
+    function testGas1() public {
+        one.a = address(1);
+        one.shift = TimeShiftLib.TimeShift(TimeShiftLib.TimeUnit.Weekly, 1);
+    }
+
+    function testGas2() public {
+        two.a = address(1);
+        two.shift = EncodedTimeShift.wrap(0x02fffffffffffff1f0);
     }
 }
