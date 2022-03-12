@@ -13,6 +13,8 @@ import "./lib/ERC20Token.sol";
 import {Budget, TimeShiftLib} from "../budget/Budget.sol";
 
 contract IntegrationTest is DSTestPlus {
+    using TimeShiftLib for *;
+
     GnosisSafeProxyFactory immutable safeFactory = new GnosisSafeProxyFactory();
     ModuleProxyFactory immutable moduleFactory = new ModuleProxyFactory();
 
@@ -40,7 +42,7 @@ contract IntegrationTest is DSTestPlus {
             spender,
             address(token),
             10,
-            TimeShiftLib.TimeShift(TimeShiftLib.TimeUnit.Daily, 0)
+            TimeShiftLib.TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode()
         );
 
         hevm.startPrank(spender);

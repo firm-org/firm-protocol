@@ -28,14 +28,15 @@ library TimeShiftLib {
     error UnknownTimeShift();
     error BadShift();
 
-    function applyShift(uint64 time, TimeShift memory shift)
+    function applyShift(uint64 time, EncodedTimeShift shift)
         internal
         pure
         returns (uint64)
     {
-        uint64 realTime = uint64(int64(time) + shift.offset);
+        (TimeUnit unit, int64 offset) = shift.decode();
+
+        uint64 realTime = uint64(int64(time) + offset);
         (uint256 y, uint256 m, uint256 d) = realTime.toDate();
-        TimeUnit unit = shift.unit;
 
         if (unit == TimeUnit.Daily) {
             (y, m, d) = addDays(y, m, d, 1);
@@ -54,7 +55,7 @@ library TimeShiftLib {
         }
 
         uint256 shiftedTs = DateTimeLib.timestampFromDateTime(y, m, d, 0, 0, 0);
-        return uint64(int64(uint64(shiftedTs)) - shift.offset);
+        return uint64(int64(uint64(shiftedTs)) - offset);
     }
 
     /**
@@ -74,11 +75,7 @@ library TimeShiftLib {
     function toDate(uint64 timestamp)
         internal
         pure
-        returns (
-            uint256 y,
-            uint256 m,
-            uint256 d
-        )
+        returns (uint256 y, uint256 m, uint256 d)
     {
         return DateTimeLib._daysToDate(timestamp / 1 days);
     }
@@ -88,15 +85,12 @@ library TimeShiftLib {
         pure
         returns (EncodedTimeShift)
     {
-        return EncodedTimeShift.wrap(bytes9(
-            uint72(uint8(shift.unit)) << 64 |
-            uint72(uint64(bytes8(abi.encodePacked(shift.offset))))
-        ));
+        return EncodedTimeShift.wrap(bytes9(abi.encodePacked(uint8(shift.unit), shift.offset)));
     }
 
-    function decode(EncodedTimeShift encoded) internal pure returns (TimeShift memory shift) {
+    function decode(EncodedTimeShift encoded) internal pure returns (TimeUnit unit, int64 offset) {
         uint72 encodedValue = uint72(EncodedTimeShift.unwrap(encoded));
-        shift.unit = TimeUnit(uint8(encodedValue >> 64));
-        shift.offset = int64(uint64(uint72(encodedValue)));
+        unit = TimeUnit(uint8(encodedValue >> 64));
+        offset = int64(uint64(uint72(encodedValue)));
     }
 }

@@ -52,6 +52,8 @@ contract BudgetWithProxyInitTest is BudgetInitTest {
 }
 
 contract BudgetAllowanceTest is DSTestPlus {
+    using TimeShiftLib for *;
+
     AvatarStub avatar;
     Budget budget;
 
@@ -99,7 +101,7 @@ contract BudgetAllowanceTest is DSTestPlus {
             SPENDER,
             address(0),
             10,
-            TimeShiftLib.TimeShift(TimeShiftLib.TimeUnit.Daily, 0)
+            TimeShiftLib.TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode()
         );
         assertEq(allowanceId, expectedId);
     }

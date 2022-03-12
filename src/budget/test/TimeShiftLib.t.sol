@@ -57,12 +57,12 @@ contract TimeShiftLibShiftTest is DSTestPlus {
 
         assertEq(
             uint64(DateTimeLib.timestampFromDateTime(2022, 1, 1, 23, 23, 0))
-                .applyShift(shift),
+                .applyShift(shift.encode()),
             DateTimeLib.timestampFromDateTime(2022, 1, 31, 23, 0, 0)
         );
         assertEq(
             uint64(DateTimeLib.timestampFromDateTime(2022, 1, 31, 23, 23, 0))
-                .applyShift(shift),
+                .applyShift(shift.encode()),
             DateTimeLib.timestampFromDateTime(2022, 2, 28, 23, 0, 0)
         );
     }
@@ -74,7 +74,7 @@ contract TimeShiftLibShiftTest is DSTestPlus {
 
         uint256 initialGas = gasleft();
         assertEq(
-            uint64(from_).applyShift(shift),
+            uint64(from_).applyShift(shift.encode()),
             to_
         );
 
@@ -92,7 +92,7 @@ contract TimeShiftLibShiftTest is DSTestPlus {
     ) public {
         assertEq(
             uint64(DateTimeLib.timestampFromDate(y1, m1, d1)).applyShift(
-                TimeShiftLib.TimeShift(unit, 0)
+                TimeShiftLib.TimeShift(unit, 0).encode()
             ),
             DateTimeLib.timestampFromDate(y2, m2, d2)
         );
@@ -120,19 +120,18 @@ contract TimeShiftLibEncodingTest is DSTestPlus {
     function testDecodingGas() public {
         EncodedTimeShift encodedShift = EncodedTimeShift.wrap(0x02fffffffffffff1f0);
 
-        TimeShiftLib.TimeShift memory decoded = encodedShift.decode();
+        (TimeShiftLib.TimeUnit unit, int64 offset) = encodedShift.decode();
 
-        assertEq(uint8(decoded.unit), uint8(TimeShiftLib.TimeUnit.Monthly));
-        assertEq(decoded.offset, -1 hours);
+        assertEq(uint8(unit), uint8(TimeShiftLib.TimeUnit.Monthly));
+        assertEq(offset, -1 hours);
     }
 
     function assertRoundtrip(TimeShiftLib.TimeUnit inputUnit, int64 inputOffset) public {
         TimeShiftLib.TimeShift memory shift = TimeShiftLib.TimeShift(inputUnit, inputOffset);
         EncodedTimeShift encoded = shift.encode();
-        //emit log_bytes(abi.encodePacked(encoded));
-        TimeShiftLib.TimeShift memory decodedEncoded = encoded.decode();
+        (TimeShiftLib.TimeUnit unit, int64 offset) = encoded.decode();
 
-        assertEq(uint8(decodedEncoded.unit), uint8(inputUnit));
-        assertEq(decodedEncoded.offset, inputOffset);
+        assertEq(uint8(unit), uint8(inputUnit));
+        assertEq(offset, inputOffset);
     }
 }

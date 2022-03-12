@@ -67,7 +67,7 @@ contract Budget is Module {
         address indexed spender,
         address indexed token,
         uint256 amount,
-        TimeShiftLib.TimeShift recurrency,
+        EncodedTimeShift recurrency,
         uint64 nextResetTime
     );
     event PaymentExecuted(
@@ -85,7 +85,7 @@ contract Budget is Module {
         address _spender,
         address _token,
         uint256 _amount,
-        TimeShiftLib.TimeShift calldata _recurrency
+        EncodedTimeShift _recurrency
     ) onlyOwner public returns (uint256 allowanceId) {
         unchecked {
             allowanceId = allowancesCount++;
@@ -95,7 +95,7 @@ contract Budget is Module {
         allowance.spender = _spender;
         allowance.token = _token;
         allowance.amount = _amount;
-        allowance.recurrency = _recurrency.encode();
+        allowance.recurrency = _recurrency;
 
         uint64 nextResetTime = uint64(block.timestamp).applyShift(_recurrency);
         allowance.nextResetTime = nextResetTime;
@@ -126,7 +126,7 @@ contract Budget is Module {
         }
 
         if (allowanceResets) {
-            allowance.nextResetTime = time.applyShift(allowance.recurrency.decode());
+            allowance.nextResetTime = time.applyShift(allowance.recurrency);
             // TODO: Consider emitting an event here
         }
         allowance.spent = spentAfterPayment;
