@@ -123,28 +123,3 @@ contract BudgetAllowanceTest is DSTestPlus {
         assertEq(allowanceId, expectedId);
     }
 }
-
-contract TestGas is DSTestPlus {
-    struct One {
-        address a;
-        TimeShiftLib.TimeShift shift;
-    }
-
-    struct Two {
-        EncodedTimeShift shift;
-        address a;
-    }
-
-    One one;
-    Two two;
-
-    function testGas1() public {
-        one.a = address(1);
-        one.shift = TimeShiftLib.TimeShift(TimeShiftLib.TimeUnit.Weekly, 1);
-    }
-
-    function testGas2() public {
-        two.a = address(1);
-        two.shift = EncodedTimeShift.wrap(0x02fffffffffffff1f0);
-    }
-}
