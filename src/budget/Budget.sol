@@ -34,8 +34,7 @@ contract Budget is Module {
     function setUp(bytes memory _encodedParams) public override initializer {
         InitParams memory _params = abi.decode(_encodedParams, (InitParams));
 
-        __Ownable_init();
-        transferOwnership(_params.owner);
+        _transferOwnership(_params.owner);
 
         avatar = _params.avatar;
         target = _params.target;
@@ -87,6 +86,8 @@ contract Budget is Module {
         uint256 _amount,
         EncodedTimeShift _recurrency
     ) onlyOwner public returns (uint256 allowanceId) {
+        uint64 nextResetTime = uint64(block.timestamp).applyShift(_recurrency);
+
         unchecked {
             allowanceId = allowancesCount++;
         }
@@ -96,8 +97,6 @@ contract Budget is Module {
         allowance.token = _token;
         allowance.amount = _amount;
         allowance.recurrency = _recurrency;
-
-        uint64 nextResetTime = uint64(block.timestamp).applyShift(_recurrency);
         allowance.nextResetTime = nextResetTime;
 
         emit AllowanceCreated(allowanceId, _spender, _token, _amount, _recurrency, nextResetTime);
