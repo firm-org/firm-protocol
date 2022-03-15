@@ -25,12 +25,20 @@ contract Roles is IRoles {
     event RoleAdminSet(uint8 indexed roleId, bytes32 roleAdmin, address indexed actor);
     event RolesSet(address indexed user, bytes32 userRoles, address indexed actor);
     
+    error AlreadyInitialized();
     error UnauthorizedNoRole(uint8 requiredRole);
     error UnauthorizedNotAdmin(uint8 role);
     error RoleLimitReached();
-
-    // TODO: Proxy compatibility
+    
     constructor(address _initialRoot) {
+        setUp(_initialRoot);
+    }
+
+    function setUp(address _initialRoot) public {
+        // Since setUp creates the first two roles, this function can only be called once
+        if (roleCount != 0)
+            revert AlreadyInitialized();
+
         _createRole(ONLY_ROOT_ROLE, "Root");
         _createRole(ONLY_ROOT_ROLE, "Role manager");
 

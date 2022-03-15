@@ -25,7 +25,7 @@ contract Budget is RolesAuth, Module {
     );
 
     struct InitParams {
-        address owner; // TODO: consider using roles instead of owner per module
+        address owner; // TODO: consider using roles instead of owner per module or just having the avatar be the owner
         address avatar;
         address target;
         address roles;

@@ -2,20 +2,21 @@
 pragma solidity 0.8.10;
 
 import "solmate/test/utils/DSTestPlus.sol";
+import "zodiac/factory/ModuleProxyFactory.sol";
 
 import "../Roles.sol";
 
-contract RolesTest is DSTestPlus {
+contract RolesTestBase is DSTestPlus {
     Roles roles;
 
     address ADMIN = address(1);
-    address SOMEONE = address(2);
-    address SOMEONE_ELSE = address(3);
 
-    function setUp() public {
+    function setUp() public virtual {
         roles = new Roles(ADMIN);
     }
+}
 
+contract RolesInitTest is RolesTestBase {
     function testInitialRoot() public {
         assertTrue(roles.hasRole(ADMIN, ROOT_ROLE_ID));
         assertTrue(roles.isRoleAdmin(ADMIN, ROOT_ROLE_ID));
@@ -27,6 +28,31 @@ contract RolesTest is DSTestPlus {
         assertFalse(roles.hasRole(address(this), ROLE_MANAGER_ROLE));
         assertFalse(roles.isRoleAdmin(address(this), ROLE_MANAGER_ROLE));
     }
+
+    function testCannotReinit() public {
+        hevm.expectRevert(abi.encodeWithSelector(Roles.AlreadyInitialized.selector));
+        roles.setUp(address(2));
+    }
+}
+
+contract RolesWithProxyInitTest is RolesInitTest {
+    ModuleProxyFactory immutable factory = new ModuleProxyFactory();
+    Roles immutable rolesImpl = new Roles(address(0));
+
+    function setUp() public override {
+        roles = Roles(
+            factory.deployModule(
+                address(rolesImpl),
+                abi.encodeWithSelector(rolesImpl.setUp.selector, ADMIN),
+                0
+            )
+        );
+    }
+}
+
+contract RolesTest is RolesTestBase {
+    address SOMEONE = address(2);
+    address SOMEONE_ELSE = address(3);
 
     function testAdminCanCreateRoles() public {
         hevm.prank(ADMIN);
