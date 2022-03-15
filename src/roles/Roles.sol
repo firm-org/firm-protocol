@@ -35,7 +35,9 @@ contract Roles {
     }
 
     function createRole(bytes32 _adminRoles, string memory _name) public returns (uint8 roleId) {
-        if (!hasRole(msg.sender, ROLE_MANAGER_ROLE)) revert UnauthorizedNoRole(ROLE_MANAGER_ROLE);
+        if (!hasRole(msg.sender, ROLE_MANAGER_ROLE))
+            revert UnauthorizedNoRole(ROLE_MANAGER_ROLE);
+
         return _createRole(_adminRoles, _name);
     }
 
@@ -71,7 +73,8 @@ contract Roles {
     function setRole(address _user, uint8 _roleId, bool _grant) public {
         bytes32 userRoles = getUserRoles[_user];
 
-        if (!_isRoleAdmin(getUserRoles[msg.sender], _roleId)) revert UnauthorizedNotAdmin(_roleId);
+        if (!_isRoleAdmin(getUserRoles[msg.sender], _roleId))
+            revert UnauthorizedNotAdmin(_roleId);
 
         if (_grant) {
             userRoles |= bytes32(1 << _roleId);
@@ -91,7 +94,8 @@ contract Roles {
         uint256 grantsLength = _grantingRoles.length;
         for (uint256 i = 0; i < grantsLength; i++) {
             uint8 roleId = _grantingRoles[i];
-            if (!_isRoleAdmin(senderRoles, roleId)) revert UnauthorizedNotAdmin(roleId);
+            if (!_isRoleAdmin(senderRoles, roleId))
+                revert UnauthorizedNotAdmin(roleId);
 
             userRoles |= bytes32(1 << roleId);
         }
@@ -99,7 +103,8 @@ contract Roles {
         uint256 revokesLength = _revokingRoles.length;
         for (uint256 i = 0; i < revokesLength; i++) {
             uint8 roleId = _revokingRoles[i];
-            if (!_isRoleAdmin(senderRoles, roleId)) revert UnauthorizedNotAdmin(roleId);
+            if (!_isRoleAdmin(senderRoles, roleId))
+                revert UnauthorizedNotAdmin(roleId);
 
             userRoles &= ~(bytes32(1 << roleId));
         }
@@ -107,16 +112,6 @@ contract Roles {
         getUserRoles[_user] = userRoles;
 
         emit RolesSet(_user, userRoles, msg.sender);
-    }
-
-    function hasRootRole(address _user) public view returns (bool) {
-        // Since root role is always at ID 0, we don't need to shift
-        return _hasRootRole(getUserRoles[_user]);
-    }
-
-    function _hasRootRole(bytes32 _userRoles) internal pure returns (bool) {
-        // Since root role is always at ID 0, we don't need to shift
-        return uint256(_userRoles) & 1 != 0;
     }
 
     function hasRole(address _user, uint8 _roleId) public view returns (bool) {
@@ -133,5 +128,15 @@ contract Roles {
     function _isRoleAdmin(bytes32 _userRoles, uint8 _roleId) internal view returns (bool) {
         // Note: For root it will return true even if the role hasn't been created yet
         return (_userRoles & getRoleAdmin[_roleId]) != 0 || _hasRootRole(_userRoles);
+    }
+
+    function hasRootRole(address _user) public view returns (bool) {
+        // Since root role is always at ID 0, we don't need to shift
+        return _hasRootRole(getUserRoles[_user]);
+    }
+
+    function _hasRootRole(bytes32 _userRoles) internal pure returns (bool) {
+        // Since root role is always at ID 0, we don't need to shift
+        return uint256(_userRoles) & 1 != 0;
     }
 }
