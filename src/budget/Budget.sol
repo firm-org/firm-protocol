@@ -4,28 +4,32 @@ pragma solidity 0.8.10;
 import "zodiac/core/Module.sol";
 import "openzeppelin/interfaces/IERC20.sol";
 
+import "../common/RolesAuth.sol";
+
 import "./TimeShiftLib.sol";
 
 address constant ETH = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
-contract Budget is Module {
+contract Budget is RolesAuth, Module {
     using TimeShiftLib for *;
 
     ////////////////////////////////////////////////////////////////////////////////
     // SETUP
     ////////////////////////////////////////////////////////////////////////////////
 
+    event BudgetSetup(
+        address owner,
+        address avatar,
+        address target,
+        address roles
+    );
+
     struct InitParams {
-        address owner;
+        address owner; // TODO: consider using roles instead of owner per module or just having the avatar be the owner
         address avatar;
         address target;
+        address roles;
     }
-
-    event BudgetSetup(
-        address indexed owner,
-        address indexed avatar,
-        address indexed target
-    );
 
     constructor(InitParams memory _initParams) {
         setUp(abi.encode(_initParams));
@@ -38,8 +42,9 @@ contract Budget is Module {
 
         avatar = _params.avatar;
         target = _params.target;
+        roles = IRoles(_params.roles);
 
-        emit BudgetSetup(_params.owner, _params.avatar, _params.target);
+        emit BudgetSetup(_params.owner, _params.avatar, _params.target, _params.roles);
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -51,7 +56,7 @@ contract Budget is Module {
         uint256 spent;
         address token;
         uint64 nextResetTime;
-        address spender; // TODO: consider defining spenders as a role instead
+        address spender;
         EncodedTimeShift recurrency;
         bool isDisabled;
     }
@@ -70,13 +75,14 @@ contract Budget is Module {
     );
     event PaymentExecuted(
         uint256 indexed allowanceId,
-        address indexed token,
+        address indexed actor,
+        address token,
         address indexed to,
         uint256 amount,
         uint64 nextResetTime
     );
 
-    error ExecutionDisallowed(uint256 allowanceId);
+    error ExecutionDisallowed(uint256 allowanceId, address actor);
     error Overbudget(uint256 allowanceId, address token, address to, uint256 amount, uint256 remainingBudget);
     error ExecutionFailed(uint256 allowanceId, address token, address to, uint256 amount);
 
@@ -106,8 +112,8 @@ contract Budget is Module {
         Allowance storage allowance = getAllowance[_allowanceId];
         
         // Implicitly checks that the allowance exists as if spender hasn't been set, it will revert
-        if (allowance.spender != msg.sender || allowance.isDisabled)
-            revert ExecutionDisallowed(_allowanceId);
+        if (!_isAuthorized(msg.sender, allowance.spender) || allowance.isDisabled)
+            revert ExecutionDisallowed(_allowanceId, msg.sender);
 
         address token = allowance.token;
         uint64 nextResetTime = allowance.nextResetTime;
@@ -146,6 +152,6 @@ contract Budget is Module {
         }
         if (!success) revert ExecutionFailed(_allowanceId, token, _to, _amount);
 
-        emit PaymentExecuted(_allowanceId, allowance.token, _to, _amount, nextResetTime);
+        emit PaymentExecuted(_allowanceId, msg.sender, allowance.token, _to, _amount, nextResetTime);
     }
 }
