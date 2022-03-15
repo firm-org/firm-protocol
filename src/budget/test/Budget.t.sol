@@ -10,53 +10,7 @@ import {roleFlag} from "../../common/test/lib/RolesAuthMock.sol";
 import "../Budget.sol";
 import "./lib/AvatarStub.sol";
 
-contract BudgetInitTest is DSTestPlus {
-    Budget budget;
-
-    address internal constant OWNER = address(1);
-    address internal constant AVATAR = address(2);
-    address internal constant TARGET = address(3);
-    address internal constant ROLES = address(4);
-
-    function setUp() public virtual {
-        budget = new Budget(Budget.InitParams(OWNER, AVATAR, TARGET, ROLES));
-    }
-
-    function testInitialState() public {
-        assertEq(budget.owner(), OWNER);
-        assertEq(budget.avatar(), AVATAR);
-        assertEq(budget.target(), TARGET);
-        assertEq(address(budget.roles()), ROLES);
-    }
-
-    function testCannotReinit() public {
-        hevm.expectRevert(
-            bytes("Initializable: contract is already initialized")
-        );
-        budget.setUp(abi.encode(Budget.InitParams(OWNER, AVATAR, TARGET, ROLES)));
-    }
-}
-
-contract BudgetWithProxyInitTest is BudgetInitTest {
-    ModuleProxyFactory immutable factory = new ModuleProxyFactory();
-    Budget immutable budgetImpl =
-        new Budget(Budget.InitParams(address(10), address(10), address(10), address(10)));
-
-    function setUp() public override {
-        budget = Budget(
-            factory.deployModule(
-                address(budgetImpl),
-                abi.encodeWithSelector(
-                    budgetImpl.setUp.selector,
-                    abi.encode(Budget.InitParams(OWNER, AVATAR, TARGET, ROLES))
-                ),
-                0
-            )
-        );
-    }
-}
-
-contract BudgetAllowanceTest is DSTestPlus {
+contract BudgetTest is DSTestPlus {
     using TimeShiftLib for *;
 
     AvatarStub avatar;
@@ -70,6 +24,20 @@ contract BudgetAllowanceTest is DSTestPlus {
         avatar = new AvatarStub();
         roles = new RolesStub();
         budget = new Budget(Budget.InitParams(OWNER, address(avatar), address(avatar), address(roles)));
+    }
+
+    function testInitialState() public {
+        assertEq(budget.owner(), OWNER);
+        assertEq(budget.avatar(), address(avatar));
+        assertEq(budget.target(), address(avatar));
+        assertEq(address(budget.roles()), address(roles));
+    }
+
+    function testCannotReinit() public {
+        hevm.expectRevert(
+            bytes("Initializable: contract is already initialized")
+        );
+        budget.setUp(abi.encode(Budget.InitParams(OWNER, address(avatar), address(avatar), address(roles))));
     }
 
     function testCreateAllowance() public {
@@ -202,5 +170,26 @@ contract BudgetAllowanceTest is DSTestPlus {
 
         assertEq(spent, initialSpent + amount);
         assertEq(nextResetTime, expectedNextResetTime);
+    }
+}
+
+contract BudgetWithProxyTest is BudgetTest {
+    ModuleProxyFactory immutable factory = new ModuleProxyFactory();
+    address immutable budgetImpl =
+        address(new Budget(Budget.InitParams(address(10), address(10), address(10), address(10))));
+
+    function setUp() public override {
+        avatar = new AvatarStub();
+        roles = new RolesStub();
+        budget = Budget(
+            factory.deployModule(
+                budgetImpl,
+                abi.encodeWithSelector(
+                    Budget.setUp.selector,
+                    abi.encode(Budget.InitParams(OWNER, address(avatar), address(avatar), address(roles)))
+                ),
+                0
+            )
+        );
     }
 }

@@ -6,17 +6,17 @@ import "zodiac/factory/ModuleProxyFactory.sol";
 
 import "../Roles.sol";
 
-contract RolesTestBase is DSTestPlus {
+contract RolesTest is DSTestPlus {
     Roles roles;
 
     address ADMIN = address(1);
+    address SOMEONE = address(2);
+    address SOMEONE_ELSE = address(3);
 
     function setUp() public virtual {
         roles = new Roles(ADMIN);
     }
-}
 
-contract RolesInitTest is RolesTestBase {
     function testInitialRoot() public {
         assertTrue(roles.hasRole(ADMIN, ROOT_ROLE_ID));
         assertTrue(roles.isRoleAdmin(ADMIN, ROOT_ROLE_ID));
@@ -33,26 +33,6 @@ contract RolesInitTest is RolesTestBase {
         hevm.expectRevert(abi.encodeWithSelector(Roles.AlreadyInitialized.selector));
         roles.setUp(address(2));
     }
-}
-
-contract RolesWithProxyInitTest is RolesInitTest {
-    ModuleProxyFactory immutable factory = new ModuleProxyFactory();
-    Roles immutable rolesImpl = new Roles(address(0));
-
-    function setUp() public override {
-        roles = Roles(
-            factory.deployModule(
-                address(rolesImpl),
-                abi.encodeWithSelector(rolesImpl.setUp.selector, ADMIN),
-                0
-            )
-        );
-    }
-}
-
-contract RolesTest is RolesTestBase {
-    address SOMEONE = address(2);
-    address SOMEONE_ELSE = address(3);
 
     function testAdminCanCreateRoles() public {
         hevm.prank(ADMIN);
@@ -189,5 +169,20 @@ contract RolesTest is RolesTestBase {
         // However, when attempting to change the admin role, it will fail
         hevm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, ROOT_ROLE_ID));
         roles.setRoleAdmin(ROOT_ROLE_ID, newRoleAdmin);
+    }
+}
+
+contract RolesWithProxyTest is RolesTest {
+    ModuleProxyFactory immutable factory = new ModuleProxyFactory();
+    address immutable rolesImpl = address(new Roles(address(0)));
+
+    function setUp() public override {
+        roles = Roles(
+            factory.deployModule(
+                rolesImpl,
+                abi.encodeWithSelector(Roles.setUp.selector, ADMIN),
+                0
+            )
+        );
     }
 }
