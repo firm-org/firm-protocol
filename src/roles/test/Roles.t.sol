@@ -57,7 +57,7 @@ contract RolesTest is DSTestPlus {
         testCannotCreateRolesWithoutRolesManagerRole();
     }
 
-    function skip_testCanOnlyHave256Roles() public {
+    function testCanOnlyHave256Roles() public {
         hevm.startPrank(ADMIN);
         for (uint256 i = 0; i < 254; i++) {
             roles.createRole(ONLY_ROOT_ROLE, "");

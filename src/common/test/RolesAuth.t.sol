@@ -39,8 +39,4 @@ contract RolesAuthTest is DSTestPlus {
         assertFalse(rolesAuth.isAuthorized(SOMEONE, 0x0000000000000000000000000000000000010201));
         assertFalse(rolesAuth.isAuthorized(SOMEONE, 0xaBababaBabABabaBAbabAbAbABabaBABABAB0201));
     }
-
-    function roleFlag(uint8 role) internal pure returns (address) {
-        return address(uint160(uint256(role) << 8) + 1);
-    }
 }

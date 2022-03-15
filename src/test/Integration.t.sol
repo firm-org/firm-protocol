@@ -11,6 +11,7 @@ import "zodiac/factory/ModuleProxyFactory.sol";
 import "./lib/ERC20Token.sol";
 
 import {Budget, TimeShiftLib} from "../budget/Budget.sol";
+import {Roles} from "../roles/Roles.sol";
 
 contract IntegrationTest is DSTestPlus {
     using TimeShiftLib for *;
@@ -20,7 +21,7 @@ contract IntegrationTest is DSTestPlus {
 
     address immutable safeImpl = address(new GnosisSafe());
     address immutable budgetImpl =
-        address(new Budget(Budget.InitParams(address(10), address(10), address(10))));
+        address(new Budget(Budget.InitParams(address(10), address(10), address(10), address(10))));
 
     ERC20Token token;
     function setUp() public {
@@ -28,12 +29,12 @@ contract IntegrationTest is DSTestPlus {
     }
 
     function testCreateSafeWithBudget() public {
-        (GnosisSafe safe, Budget budget) = setupSafeWithBudget();
+        (GnosisSafe safe, Budget budget,) = setupSafeWithBudget();
         assertTrue(safe.isModuleEnabled(address(budget)));
     }
 
     function testExecutingPaymentsFromBudget() public {
-        (GnosisSafe safe, Budget budget) = setupSafeWithBudget();
+        (GnosisSafe safe, Budget budget,) = setupSafeWithBudget();
         token.mint(address(safe), 100);
 
         address spender = address(10);
@@ -58,7 +59,7 @@ contract IntegrationTest is DSTestPlus {
         assertEq(token.balanceOf(receiver), 14);
     }
 
-    function setupSafeWithBudget() internal returns (GnosisSafe safe, Budget budget) {
+    function setupSafeWithBudget() internal returns (GnosisSafe safe, Budget budget, Roles roles) {
         address OWNER = address(this);
 
         address[] memory owners = new address[](1);
@@ -75,12 +76,13 @@ contract IntegrationTest is DSTestPlus {
             address(0)
         );
         safe = GnosisSafe(payable(safeFactory.createProxyWithNonce(safeImpl, safeInitData, 1)));
+        roles = new Roles(OWNER);
         budget = Budget(
             moduleFactory.deployModule(
                 budgetImpl,
                 abi.encodeWithSelector(
                     Budget.setUp.selector,
-                    abi.encode(Budget.InitParams(OWNER, address(safe), address(safe)))
+                    abi.encode(Budget.InitParams(OWNER, address(safe), address(safe), address(roles)))
                 ),
                 1
             )

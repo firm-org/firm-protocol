@@ -7,7 +7,7 @@ import "openzeppelin/interfaces/IERC20.sol";
 import "../roles/Roles.sol";
 
 contract RolesAuth {
-    IRoles roles;
+    IRoles public roles;
 
     uint256 constant private ROLE_FLAG_MASK = ~uint160(0xFF00);
 

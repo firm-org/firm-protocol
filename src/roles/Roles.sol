@@ -29,6 +29,7 @@ contract Roles is IRoles {
     error UnauthorizedNotAdmin(uint8 role);
     error RoleLimitReached();
 
+    // TODO: Proxy compatibility
     constructor(address _initialRoot) {
         _createRole(ONLY_ROOT_ROLE, "Root");
         _createRole(ONLY_ROOT_ROLE, "Role manager");
