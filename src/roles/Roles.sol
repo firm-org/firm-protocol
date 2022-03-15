@@ -12,7 +12,11 @@ uint8 constant ROOT_ROLE_ID = 0;
 uint8 constant ROLE_MANAGER_ROLE = 1;
 bytes32 constant ONLY_ROOT_ROLE = bytes32(uint256(1));
 
-contract Roles {
+interface IRoles {
+    function hasRole(address _user, uint8 _roleId) external view returns (bool);
+}
+
+contract Roles is IRoles {
     mapping (address => bytes32) public getUserRoles;
     mapping (uint8 => bytes32) public getRoleAdmin;
     uint256 public roleCount;
