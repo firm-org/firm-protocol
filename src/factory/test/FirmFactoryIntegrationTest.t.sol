@@ -47,6 +47,7 @@ contract FirmFactoryIntegrationTest is DSTestPlus {
 
         address spender = address(10);
         address receiver = address(11);
+        hevm.prank(address(safe));
         uint256 allowanceId = budget.createAllowance(
             spender,
             address(token),
