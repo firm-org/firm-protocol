@@ -2,6 +2,7 @@
 pragma solidity 0.8.10;
 
 import "solmate/test/utils/DSTestPlus.sol";
+import "solmate/utils/Bytes32AddressLib.sol";
 import "zodiac/factory/ModuleProxyFactory.sol";
 
 import "../../common/test/lib/RolesStub.sol";
@@ -12,6 +13,7 @@ import "./lib/AvatarStub.sol";
 
 contract BudgetTest is DSTestPlus {
     using TimeShiftLib for *;
+    using Bytes32AddressLib for bytes32;
 
     AvatarStub avatar;
     RolesStub roles;
@@ -30,6 +32,21 @@ contract BudgetTest is DSTestPlus {
         assertEq(address(budget.avatar()), address(avatar));
         assertEq(address(budget.target()), address(avatar));
         assertEq(address(budget.roles()), address(roles));
+    }
+
+    // To be moved into FirmModule unit tests
+    function testModuleStateRawStorage() public {
+        // change target to make it different from avatar
+        address someTarget = address(7);
+        hevm.prank(address(avatar));
+        budget.setTarget(IAvatar(someTarget));
+
+        uint256 moduleStateBaseSlot = 0xa5b7510e75e06df92f176662510e3347b687605108b9f72b4260aa7cf56ebb12;
+        assertEq(hevm.load(address(budget), 0).fromLast20Bytes(), address(roles));
+        assertEq(hevm.load(address(budget), bytes32(moduleStateBaseSlot)).fromLast20Bytes(), address(avatar));
+        assertEq(hevm.load(address(budget), bytes32(moduleStateBaseSlot + 1)).fromLast20Bytes(), someTarget);
+        assertEq(hevm.load(address(budget), bytes32(moduleStateBaseSlot + 2)).fromLast20Bytes(), address(0)); // guard not set yet
+        assertEq(bytes32(moduleStateBaseSlot + 3), keccak256("firm.module.state"));
     }
 
     function testCannotReinit() public {
