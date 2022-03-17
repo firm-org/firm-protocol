@@ -4,6 +4,7 @@ pragma solidity 0.8.10;
 import "gnosis-safe/GnosisSafe.sol";
 import "gnosis-safe/proxies/GnosisSafeProxyFactory.sol";
 import "zodiac/factory/ModuleProxyFactory.sol";
+import "zodiac/interfaces/IAvatar.sol";
 
 import {Roles} from "../roles/Roles.sol";
 import {Budget} from "../budget/Budget.sol";
@@ -74,7 +75,7 @@ contract FirmFactory {
                 budgetImpl,
                 abi.encodeWithSelector(
                     Budget.setUp.selector,
-                    abi.encode(Budget.InitParams(address(safe), address(safe), address(safe), address(roles)))
+                    Budget.InitParams(IAvatar(address(safe)), IAvatar(address(safe)), roles)
                 ),
                 1
             )

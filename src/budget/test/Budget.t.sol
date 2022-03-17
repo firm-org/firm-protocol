@@ -17,32 +17,29 @@ contract BudgetTest is DSTestPlus {
     RolesStub roles;
     Budget budget;
 
-    address internal constant OWNER = address(1);
     address internal constant SPENDER = address(5);
+    address internal constant RECEIVER = address(6);
 
     function setUp() public virtual {
         avatar = new AvatarStub();
         roles = new RolesStub();
-        budget = new Budget(Budget.InitParams(OWNER, address(avatar), address(avatar), address(roles)));
+        budget = new Budget(Budget.InitParams(avatar, avatar, roles));
     }
 
     function testInitialState() public {
-        assertEq(budget.owner(), OWNER);
-        assertEq(budget.avatar(), address(avatar));
-        assertEq(budget.target(), address(avatar));
+        assertEq(address(budget.avatar()), address(avatar));
+        assertEq(address(budget.target()), address(avatar));
         assertEq(address(budget.roles()), address(roles));
     }
 
     function testCannotReinit() public {
-        hevm.expectRevert(
-            bytes("Initializable: contract is already initialized")
-        );
-        budget.setUp(abi.encode(Budget.InitParams(OWNER, address(avatar), address(avatar), address(roles))));
+        hevm.expectRevert(abi.encodeWithSelector(FirmModule.AlreadyInitialized.selector));
+        budget.setUp(Budget.InitParams(avatar, avatar, roles));
     }
 
     function testCreateAllowance() public {
         uint256 allowanceId = 0;
-        hevm.prank(OWNER);
+        hevm.prank(address(avatar));
         hevm.warp(0);
         createDailyAllowance(SPENDER, allowanceId);
         (
@@ -68,9 +65,7 @@ contract BudgetTest is DSTestPlus {
     }
 
     function testNotOwnerCannotCreateAllowance() public {
-        hevm.expectRevert(
-            bytes("Ownable: caller is not the owner")
-        );
+        hevm.expectRevert(abi.encodeWithSelector(FirmModule.UnauthorizedNotAvatar.selector));
         createDailyAllowance(SPENDER, 0);
     }
 
@@ -78,62 +73,63 @@ contract BudgetTest is DSTestPlus {
         uint64 initialTime = uint64(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
         uint256 allowanceId = 0;
 
-        hevm.prank(OWNER);
+        hevm.prank(address(avatar));
         hevm.warp(initialTime);
         createDailyAllowance(SPENDER, allowanceId);
 
-        assertExecutePayment(SPENDER, allowanceId, OWNER, 7, initialTime + 1 days);
+        assertExecutePayment(SPENDER, allowanceId, RECEIVER, 7, initialTime + 1 days);
 
         hevm.warp(initialTime + 1 days);
-        assertExecutePayment(SPENDER, allowanceId, OWNER, 7, initialTime + 2 days);
-        assertExecutePayment(SPENDER, allowanceId, OWNER, 2, initialTime + 2 days);
+        assertExecutePayment(SPENDER, allowanceId, RECEIVER, 7, initialTime + 2 days);
+        assertExecutePayment(SPENDER, allowanceId, RECEIVER, 2, initialTime + 2 days);
 
         hevm.prank(SPENDER);
-        hevm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, 0, address(0), OWNER, 7, 1));
-        budget.executePayment(allowanceId, OWNER, 7);
+        hevm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, 0, address(0), RECEIVER, 7, 1));
+        budget.executePayment(allowanceId, RECEIVER, 7);
     }
 
     function testMultipleAllowances() public {
         uint64 initialTime = uint64(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
 
-        hevm.startPrank(OWNER);
+        hevm.startPrank(address(avatar));
         hevm.warp(initialTime);
         createDailyAllowance(SPENDER, 0);
         createDailyAllowance(SPENDER, 1);
 
-        assertExecutePayment(SPENDER, 0, OWNER, 7, initialTime + 1 days);
-        assertExecutePayment(SPENDER, 1, OWNER, 7, initialTime + 1 days);
+        assertExecutePayment(SPENDER, 0, RECEIVER, 7, initialTime + 1 days);
+        assertExecutePayment(SPENDER, 1, RECEIVER, 7, initialTime + 1 days);
 
         hevm.warp(initialTime + 1 days);
-        assertExecutePayment(SPENDER, 0, OWNER, 7, initialTime + 2 days);
-        assertExecutePayment(SPENDER, 1, OWNER, 7, initialTime + 2 days);
+        assertExecutePayment(SPENDER, 0, RECEIVER, 7, initialTime + 2 days);
+        assertExecutePayment(SPENDER, 1, RECEIVER, 7, initialTime + 2 days);
     }
 
     function testCantExecuteIfNotAuthorized() public {
-        hevm.startPrank(OWNER);
+        hevm.prank(address(avatar));
         createDailyAllowance(SPENDER, 0);
         
-        hevm.expectRevert(abi.encodeWithSelector(Budget.ExecutionDisallowed.selector, 0, OWNER));
-        budget.executePayment(0, OWNER, 7);
+        hevm.prank(RECEIVER);
+        hevm.expectRevert(abi.encodeWithSelector(Budget.ExecutionDisallowed.selector, 0, RECEIVER));
+        budget.executePayment(0, RECEIVER, 7);
     }
 
     function testCantExecuteInexistentAllowance() public {
         hevm.prank(SPENDER);
         hevm.expectRevert(abi.encodeWithSelector(Budget.ExecutionDisallowed.selector, 0, SPENDER));
-        budget.executePayment(0, OWNER, 7);
+        budget.executePayment(0, RECEIVER, 7);
     }
 
     function testAllowanceSpenderWithRoleFlags() public {
         uint8 roleId = 1;
-        hevm.prank(OWNER);
+        hevm.prank(address(avatar));
         createDailyAllowance(roleFlag(roleId), 0);
 
         hevm.startPrank(SPENDER);
         hevm.expectRevert(abi.encodeWithSelector(Budget.ExecutionDisallowed.selector, 0, SPENDER));
-        budget.executePayment(0, OWNER, 7); // execution fails since SPENDER doesn't have the required role yet
+        budget.executePayment(0, RECEIVER, 7); // execution fails since SPENDER doesn't have the required role yet
 
         roles.setRole(SPENDER, roleId, true);
-        budget.executePayment(0, OWNER, 7); // as soon as it gets the role, the payment executes
+        budget.executePayment(0, RECEIVER, 7); // as soon as it gets the role, the payment executes
     }
 
     function createDailyAllowance(address spender, uint256 expectedId) public {
@@ -176,7 +172,7 @@ contract BudgetTest is DSTestPlus {
 contract BudgetWithProxyTest is BudgetTest {
     ModuleProxyFactory immutable factory = new ModuleProxyFactory();
     address immutable budgetImpl =
-        address(new Budget(Budget.InitParams(address(10), address(10), address(10), address(10))));
+        address(new Budget(Budget.InitParams(IAvatar(address(10)), IAvatar(address(10)), IRoles(address(10)))));
 
     function setUp() public override {
         avatar = new AvatarStub();
@@ -186,7 +182,7 @@ contract BudgetWithProxyTest is BudgetTest {
                 budgetImpl,
                 abi.encodeWithSelector(
                     Budget.setUp.selector,
-                    abi.encode(Budget.InitParams(OWNER, address(avatar), address(avatar), address(roles)))
+                    Budget.InitParams(avatar, avatar, roles)
                 ),
                 0
             )

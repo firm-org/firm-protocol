@@ -7,12 +7,13 @@ import "gnosis-safe/GnosisSafe.sol";
 import "gnosis-safe/proxies/GnosisSafeProxyFactory.sol";
 import "gnosis-safe/common/Enum.sol";
 import "zodiac/factory/ModuleProxyFactory.sol";
+import "zodiac/interfaces/IAvatar.sol";
 
 import "./lib/ERC20Token.sol";
 
 import {FirmFactory} from "../FirmFactory.sol";
 import {Budget, TimeShiftLib} from "../../budget/Budget.sol";
-import {Roles} from "../../roles/Roles.sol";
+import {Roles, IRoles} from "../../roles/Roles.sol";
 
 contract FirmFactoryIntegrationTest is DSTestPlus {
     using TimeShiftLib for *;
@@ -27,7 +28,7 @@ contract FirmFactoryIntegrationTest is DSTestPlus {
             new ModuleProxyFactory(),
             address(new GnosisSafe()),
             address(new Roles(address(10))),
-            address(new Budget(Budget.InitParams(address(10), address(10), address(10), address(10))))
+            address(new Budget(Budget.InitParams(IAvatar(address(10)), IAvatar(address(10)), IRoles(address(10)))))
         );
     }
 

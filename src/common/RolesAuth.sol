@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.10;
 
-import "zodiac/core/Module.sol";
-import "openzeppelin/interfaces/IERC20.sol";
-
 import "../roles/Roles.sol";
 
 contract RolesAuth {
