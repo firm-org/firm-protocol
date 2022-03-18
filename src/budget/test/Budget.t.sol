@@ -196,10 +196,7 @@ contract BudgetWithProxyTest is BudgetTest {
         budget = Budget(
             factory.deployModule(
                 budgetImpl,
-                abi.encodeWithSelector(
-                    Budget.setUp.selector,
-                    Budget.InitParams(avatar, avatar, roles)
-                ),
+                abi.encodeCall(Budget.setUp, (Budget.InitParams(avatar, avatar, roles))),
                 0
             )
         );

@@ -180,7 +180,7 @@ contract RolesWithProxyTest is RolesTest {
         roles = Roles(
             factory.deployModule(
                 rolesImpl,
-                abi.encodeWithSelector(Roles.setUp.selector, ADMIN),
+                abi.encodeCall(Roles.setUp, (ADMIN)),
                 0
             )
         );

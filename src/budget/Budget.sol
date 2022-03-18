@@ -138,7 +138,7 @@ contract Budget is FirmModule, RolesAuth {
             (bool callSuccess, bytes memory retData) = execAndReturnData(
                 token,
                 0,
-                abi.encodeWithSelector(IERC20.transfer.selector, _to, _amount),
+                abi.encodeCall(IERC20.transfer, (_to, _amount)),
                 Enum.Operation.Call
             );
 
