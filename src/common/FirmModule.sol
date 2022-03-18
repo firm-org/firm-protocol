@@ -27,7 +27,7 @@ abstract contract FirmModule {
     error NotIERC165Compliant(address guard_);
 
     modifier onlyAvatar {
-        if (address(moduleState().avatar) != msg.sender) {
+        if (msg.sender != address(moduleState().avatar)) {
             revert UnauthorizedNotAvatar();
         }
         _;

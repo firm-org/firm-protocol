@@ -20,6 +20,7 @@ contract BudgetTest is DSTestPlus {
 
     address internal constant SPENDER = address(5);
     address internal constant RECEIVER = address(6);
+    address internal constant SOMEONE_ELSE = address(7);
 
     function setUp() public virtual {
         avatar = new AvatarStub();
@@ -54,11 +55,12 @@ contract BudgetTest is DSTestPlus {
     }
 
     function testCreateAllowance() public {
-        uint256 allowanceId = 0;
+        uint256 allowanceId = 1;
         hevm.prank(address(avatar));
         hevm.warp(0);
         createDailyAllowance(SPENDER, allowanceId);
-        (
+        (   
+            uint256 parentId,
             uint256 amount,
             uint256 spent,
             address token,
@@ -68,6 +70,7 @@ contract BudgetTest is DSTestPlus {
             bool isDisabled
         ) = budget.getAllowance(allowanceId);
 
+        assertEq(parentId, NO_PARENT_ID);
         assertEq(amount, 10);
         assertEq(spent, 0);
         assertEq(token, address(0));
@@ -90,6 +93,7 @@ contract BudgetTest is DSTestPlus {
 
         hevm.expectRevert(abi.encodeWithSelector(TimeShiftLib.InvalidTimeShift.selector));
         budget.createAllowance(
+            NO_PARENT_ID,
             SPENDER,
             address(0),
             10,
@@ -99,7 +103,7 @@ contract BudgetTest is DSTestPlus {
 
     function testAllowanceIsKeptTrackOf() public {
         uint64 initialTime = uint64(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
-        uint256 allowanceId = 0;
+        uint256 allowanceId = 1;
 
         hevm.prank(address(avatar));
         hevm.warp(initialTime);
@@ -112,7 +116,7 @@ contract BudgetTest is DSTestPlus {
         assertExecutePayment(SPENDER, allowanceId, RECEIVER, 2, initialTime + 2 days);
 
         hevm.prank(SPENDER);
-        hevm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, 0, address(0), RECEIVER, 7, 1));
+        hevm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, allowanceId, address(0), RECEIVER, 7, 1));
         budget.executePayment(allowanceId, RECEIVER, 7);
     }
 
@@ -121,24 +125,40 @@ contract BudgetTest is DSTestPlus {
 
         hevm.startPrank(address(avatar));
         hevm.warp(initialTime);
-        createDailyAllowance(SPENDER, 0);
-        createDailyAllowance(SPENDER, 1);
 
-        assertExecutePayment(SPENDER, 0, RECEIVER, 7, initialTime + 1 days);
-        assertExecutePayment(SPENDER, 1, RECEIVER, 7, initialTime + 1 days);
+        uint256 firstAllowanceId = 1;
+        uint256 secondAllowanceId = 2;
+        createDailyAllowance(SPENDER, firstAllowanceId);
+        createDailyAllowance(SPENDER, secondAllowanceId);
+
+        assertExecutePayment(SPENDER, firstAllowanceId, RECEIVER, 7, initialTime + 1 days);
+        assertExecutePayment(SPENDER, secondAllowanceId, RECEIVER, 7, initialTime + 1 days);
 
         hevm.warp(initialTime + 1 days);
-        assertExecutePayment(SPENDER, 0, RECEIVER, 7, initialTime + 2 days);
-        assertExecutePayment(SPENDER, 1, RECEIVER, 7, initialTime + 2 days);
+        assertExecutePayment(SPENDER, firstAllowanceId, RECEIVER, 7, initialTime + 2 days);
+        assertExecutePayment(SPENDER, secondAllowanceId, RECEIVER, 7, initialTime + 2 days);
+    }
+
+    function testCreateSuballowance() public {
+        uint64 initialTime = uint64(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
+        hevm.warp(initialTime);
+
+        hevm.prank(address(avatar));
+        uint256 topLevelAllowance = budget.createAllowance(NO_PARENT_ID, SPENDER, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Monthly, 0).encode());
+        hevm.prank(SPENDER);
+        uint256 subAllowance = budget.createAllowance(topLevelAllowance, SOMEONE_ELSE, address(0), 5, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode());
+        
+        assertExecutePayment(SOMEONE_ELSE, subAllowance, RECEIVER, 5, initialTime + 1 days);
     }
 
     function testCantExecuteIfNotAuthorized() public {
         hevm.prank(address(avatar));
-        createDailyAllowance(SPENDER, 0);
+        uint256 allowanceId = 1;
+        createDailyAllowance(SPENDER, allowanceId);
         
         hevm.prank(RECEIVER);
-        hevm.expectRevert(abi.encodeWithSelector(Budget.ExecutionDisallowed.selector, 0, RECEIVER));
-        budget.executePayment(0, RECEIVER, 7);
+        hevm.expectRevert(abi.encodeWithSelector(Budget.ExecutionDisallowed.selector, allowanceId, RECEIVER));
+        budget.executePayment(allowanceId, RECEIVER, 7);
     }
 
     function testCantExecuteInexistentAllowance() public {
@@ -148,20 +168,22 @@ contract BudgetTest is DSTestPlus {
     }
 
     function testAllowanceSpenderWithRoleFlags() public {
+        uint256 allowanceId = 1;
         uint8 roleId = 1;
         hevm.prank(address(avatar));
-        createDailyAllowance(roleFlag(roleId), 0);
+        createDailyAllowance(roleFlag(roleId), allowanceId);
 
         hevm.startPrank(SPENDER);
-        hevm.expectRevert(abi.encodeWithSelector(Budget.ExecutionDisallowed.selector, 0, SPENDER));
-        budget.executePayment(0, RECEIVER, 7); // execution fails since SPENDER doesn't have the required role yet
+        hevm.expectRevert(abi.encodeWithSelector(Budget.ExecutionDisallowed.selector, allowanceId, SPENDER));
+        budget.executePayment(allowanceId, RECEIVER, 7); // execution fails since SPENDER doesn't have the required role yet
 
         roles.setRole(SPENDER, roleId, true);
-        budget.executePayment(0, RECEIVER, 7); // as soon as it gets the role, the payment executes
+        budget.executePayment(allowanceId, RECEIVER, 7); // as soon as it gets the role, the payment executes
     }
 
     function createDailyAllowance(address spender, uint256 expectedId) public {
         uint256 allowanceId = budget.createAllowance(
+            NO_PARENT_ID,
             spender,
             address(0),
             10,
@@ -179,7 +201,7 @@ contract BudgetTest is DSTestPlus {
         uint64 nextResetTime
     );
     function assertExecutePayment(address actor, uint256 allowanceId, address to, uint256 amount, uint64 expectedNextResetTime) public {
-        (,uint256 initialSpent, address token, uint64 initialNextReset,,,) = budget.getAllowance(allowanceId);
+        (,,uint256 initialSpent, address token, uint64 initialNextReset,,,) = budget.getAllowance(allowanceId);
 
         if (block.timestamp >= initialNextReset) {
             initialSpent = 0;
@@ -190,7 +212,7 @@ contract BudgetTest is DSTestPlus {
         emit PaymentExecuted(allowanceId, actor, token, to, amount, expectedNextResetTime);
         budget.executePayment(allowanceId, to, amount);
 
-        (,uint256 spent,,uint64 nextResetTime,,,) = budget.getAllowance(allowanceId);
+        (,,uint256 spent,,uint64 nextResetTime,,,) = budget.getAllowance(allowanceId);
 
         assertEq(spent, initialSpent + amount);
         assertEq(nextResetTime, expectedNextResetTime);
