@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.10;
+pragma solidity 0.8.13;
 
 import "solmate/test/utils/DSTestPlus.sol";
 import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsDateTimeLibrary.sol";
@@ -53,7 +53,7 @@ contract TimeShiftLibShiftTest is DSTestPlus {
     }
 
     function testOffsets() public {
-        TimeShiftLib.TimeShift memory shift = TimeShiftLib.TimeShift(TimeShiftLib.TimeUnit.Monthly, 1 hours);
+        TimeShift memory shift = TimeShift(TimeShiftLib.TimeUnit.Monthly, 1 hours);
 
         assertEq(
             uint64(DateTimeLib.timestampFromDateTime(2022, 1, 1, 23, 23, 0))
@@ -70,7 +70,7 @@ contract TimeShiftLibShiftTest is DSTestPlus {
     uint64 immutable from_ = uint64(DateTimeLib.timestampFromDateTime(2022, 12, 28, 0, 0, 0));
     uint64 immutable to_ = uint64(DateTimeLib.timestampFromDateTime(2023, 1, 2, 0, 0, 0));
     function testGasWorstCase() public {
-        TimeShiftLib.TimeShift memory shift = TimeShiftLib.TimeShift(TimeShiftLib.TimeUnit.Weekly, 0);
+        TimeShift memory shift = TimeShift(TimeShiftLib.TimeUnit.Weekly, 0);
 
         uint256 initialGas = gasleft();
         assertEq(
@@ -92,7 +92,7 @@ contract TimeShiftLibShiftTest is DSTestPlus {
     ) public {
         assertEq(
             uint64(DateTimeLib.timestampFromDate(y1, m1, d1)).applyShift(
-                TimeShiftLib.TimeShift(unit, 0).encode()
+                TimeShift(unit, 0).encode()
             ),
             DateTimeLib.timestampFromDate(y2, m2, d2)
         );
@@ -110,7 +110,7 @@ contract TimeShiftLibEncodingTest is DSTestPlus {
     }
 
     function testEncodingGas() public {
-        TimeShiftLib.TimeShift memory shift = TimeShiftLib.TimeShift(TimeShiftLib.TimeUnit.Monthly, -1 hours);
+        TimeShift memory shift = TimeShift(TimeShiftLib.TimeUnit.Monthly, -1 hours);
         assertEq(
             uint256(uint72(EncodedTimeShift.unwrap(shift.encode()))),
             0x02fffffffffffff1f0
@@ -127,7 +127,7 @@ contract TimeShiftLibEncodingTest is DSTestPlus {
     }
 
     function assertRoundtrip(TimeShiftLib.TimeUnit inputUnit, int64 inputOffset) public {
-        TimeShiftLib.TimeShift memory shift = TimeShiftLib.TimeShift(inputUnit, inputOffset);
+        TimeShift memory shift = TimeShift(inputUnit, inputOffset);
         EncodedTimeShift encoded = shift.encode();
         (TimeShiftLib.TimeUnit unit, int64 offset) = encoded.decode();
 

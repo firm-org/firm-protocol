@@ -1,7 +1,7 @@
 
 
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.10;
+pragma solidity 0.8.13;
 
 import "openzeppelin/interfaces/IERC20.sol";
 
@@ -13,7 +13,7 @@ import "./TimeShiftLib.sol";
 address constant ETH = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
 contract Budget is FirmModule, RolesAuth {
-    using TimeShiftLib for *;
+    using TimeShiftLib for uint64;
 
     ////////////////////////////////////////////////////////////////////////////////
     // SETUP

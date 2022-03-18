@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.10;
+pragma solidity 0.8.13;
 
 import "solmate/test/utils/DSTestPlus.sol";
 import "solmate/utils/Bytes32AddressLib.sol";
@@ -12,7 +12,6 @@ import "../Budget.sol";
 import "./lib/AvatarStub.sol";
 
 contract BudgetTest is DSTestPlus {
-    using TimeShiftLib for *;
     using Bytes32AddressLib for bytes32;
 
     AvatarStub avatar;
@@ -76,7 +75,7 @@ contract BudgetTest is DSTestPlus {
         assertEq(spender, SPENDER);
         assertEq(
             bytes32(EncodedTimeShift.unwrap(recurrency)),
-            bytes32(EncodedTimeShift.unwrap(TimeShiftLib.TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode()))
+            bytes32(EncodedTimeShift.unwrap(TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode()))
         );
         assertFalse(isDisabled);
     }
@@ -154,7 +153,7 @@ contract BudgetTest is DSTestPlus {
             spender,
             address(0),
             10,
-            TimeShiftLib.TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode()
+            TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode()
         );
         assertEq(allowanceId, expectedId);
     }
