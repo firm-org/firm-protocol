@@ -1,16 +1,18 @@
+
+
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.10;
 
-import "zodiac/core/Module.sol";
 import "openzeppelin/interfaces/IERC20.sol";
 
+import "../common/FirmModule.sol";
 import "../common/RolesAuth.sol";
 
 import "./TimeShiftLib.sol";
 
 address constant ETH = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
-contract Budget is RolesAuth, Module {
+contract Budget is FirmModule, RolesAuth {
     using TimeShiftLib for *;
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -18,33 +20,26 @@ contract Budget is RolesAuth, Module {
     ////////////////////////////////////////////////////////////////////////////////
 
     event BudgetSetup(
-        address owner,
-        address avatar,
-        address target,
-        address roles
+        IAvatar avatar,
+        IAvatar target,
+        IRoles roles
     );
 
     struct InitParams {
-        address owner; // TODO: consider using roles instead of owner per module or just having the avatar be the owner
-        address avatar;
-        address target;
-        address roles;
+        IAvatar avatar;
+        IAvatar target;
+        IRoles roles;
     }
 
     constructor(InitParams memory _initParams) {
-        setUp(abi.encode(_initParams));
+        setUp(_initParams);
     }
 
-    function setUp(bytes memory _encodedParams) public override initializer {
-        InitParams memory _params = abi.decode(_encodedParams, (InitParams));
+    function setUp(InitParams memory _params) public {
+        initialize(_params.avatar, _params.target); // reverts on reinitialization
+        roles = _params.roles;
 
-        _transferOwnership(_params.owner);
-
-        avatar = _params.avatar;
-        target = _params.target;
-        roles = IRoles(_params.roles);
-
-        emit BudgetSetup(_params.owner, _params.avatar, _params.target, _params.roles);
+        emit BudgetSetup(_params.avatar, _params.target, _params.roles);
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -91,7 +86,7 @@ contract Budget is RolesAuth, Module {
         address _token,
         uint256 _amount,
         EncodedTimeShift _recurrency
-    ) onlyOwner public returns (uint256 allowanceId) {
+    ) onlyAvatar public returns (uint256 allowanceId) {
         uint64 nextResetTime = uint64(block.timestamp).applyShift(_recurrency);
 
         unchecked {

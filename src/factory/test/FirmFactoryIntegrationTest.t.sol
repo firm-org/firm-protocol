@@ -7,12 +7,14 @@ import "gnosis-safe/GnosisSafe.sol";
 import "gnosis-safe/proxies/GnosisSafeProxyFactory.sol";
 import "gnosis-safe/common/Enum.sol";
 import "zodiac/factory/ModuleProxyFactory.sol";
+import "zodiac/interfaces/IAvatar.sol";
 
 import "./lib/ERC20Token.sol";
+import {roleFlag} from "../../common/test/lib/RolesAuthMock.sol";
 
 import {FirmFactory} from "../FirmFactory.sol";
 import {Budget, TimeShiftLib} from "../../budget/Budget.sol";
-import {Roles} from "../../roles/Roles.sol";
+import {Roles, IRoles, ONLY_ROOT_ROLE} from "../../roles/Roles.sol";
 
 contract FirmFactoryIntegrationTest is DSTestPlus {
     using TimeShiftLib for *;
@@ -27,7 +29,7 @@ contract FirmFactoryIntegrationTest is DSTestPlus {
             new ModuleProxyFactory(),
             address(new GnosisSafe()),
             address(new Roles(address(10))),
-            address(new Budget(Budget.InitParams(address(10), address(10), address(10), address(10))))
+            address(new Budget(Budget.InitParams(IAvatar(address(10)), IAvatar(address(10)), IRoles(address(10)))))
         );
     }
 
@@ -42,14 +44,18 @@ contract FirmFactoryIntegrationTest is DSTestPlus {
     }
 
     function testExecutingPaymentsFromBudget() public {
-        (GnosisSafe safe, Budget budget,) = factory.createFirm(address(this));
+        (GnosisSafe safe, Budget budget, Roles roles) = factory.createFirm(address(this));
         token.mint(address(safe), 100);
 
         address spender = address(10);
         address receiver = address(11);
-        hevm.prank(address(safe));
+
+        hevm.startPrank(address(safe));
+        uint8 roleId = roles.createRole(ONLY_ROOT_ROLE, "Executive");
+        roles.setRole(spender, roleId, true);
+
         uint256 allowanceId = budget.createAllowance(
-            spender,
+            roleFlag(roleId),
             address(token),
             10,
             TimeShiftLib.TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode()
