@@ -92,7 +92,13 @@ contract Budget is FirmModule, RolesAuth {
         uint256 _amount,
         EncodedTimeShift _recurrency
     ) public returns (uint256 allowanceId) {
+        uint64 nextResetTime;
+
         if (_parentAllowanceId == NO_PARENT_ID) {
+            // Will revert with InvalidTimeShift if _recurrency is invalid
+            // For top-level allowances, _recurrency needs to be explicit and cannot be zero
+            nextResetTime = uint64(block.timestamp).applyShift(_recurrency);
+
             // Top-level allowances can only be created by the avatar
             if (msg.sender != address(moduleState().avatar))
                 revert UnauthorizedNotAvatar();
@@ -103,10 +109,13 @@ contract Budget is FirmModule, RolesAuth {
                 revert UnauthorizedForAllowance(_parentAllowanceId, msg.sender);
             if (_token != getAllowance[_parentAllowanceId].token)
                 revert TokenMismatch(_token);
-        }
 
-        // Will revert with InvalidTimeShift if _recurrency is invalid
-        uint64 nextResetTime = uint64(block.timestamp).applyShift(_recurrency);
+            // Recurrency can be zero in sub-allowances and is inherited from the parent
+            if (!_recurrency.isInherited()) {
+                // Will revert with InvalidTimeShift if _recurrency is invalid
+                nextResetTime = uint64(block.timestamp).applyShift(_recurrency);
+            }
+        }
 
         unchecked {
             allowanceId = ++allowancesCount;
@@ -116,11 +125,13 @@ contract Budget is FirmModule, RolesAuth {
         if (_parentAllowanceId != 0) {
             allowance.parentId = _parentAllowanceId;
         }
+        if (nextResetTime != 0) {
+            allowance.recurrency = _recurrency;
+            allowance.nextResetTime = nextResetTime;
+        }
         allowance.spender = _spender;
         allowance.token = _token;
         allowance.amount = _amount;
-        allowance.recurrency = _recurrency;
-        allowance.nextResetTime = nextResetTime;
 
         emit AllowanceCreated(
             allowanceId,
@@ -142,7 +153,7 @@ contract Budget is FirmModule, RolesAuth {
 
         address token = allowance.token;
 
-        uint64 nextResetTime = _checkAndUpdateAllowanceChain(_allowanceId, token, _to, _amount);
+        (uint64 nextResetTime, ) = _checkAndUpdateAllowanceChain(_allowanceId, token, _to, _amount);
         
         bool success;
         if (token == ETH) {
@@ -164,11 +175,28 @@ contract Budget is FirmModule, RolesAuth {
         emit PaymentExecuted(_allowanceId, msg.sender, allowance.token, _to, _amount, nextResetTime);
     }
 
-    function _checkAndUpdateAllowanceChain(uint256 _allowanceId, address _token, address _to, uint256 _amount) internal returns (uint64 nextResetTime) {
+    function _checkAndUpdateAllowanceChain(uint256 _allowanceId, address _token, address _to, uint256 _amount) internal returns (uint64 nextResetTime, bool allowanceResets) {
         Allowance storage allowance = getAllowance[_allowanceId];
-        nextResetTime = allowance.nextResetTime;
+    
+        if (allowance.nextResetTime == 0) {
+            (nextResetTime, allowanceResets) = _checkAndUpdateAllowanceChain(allowance.parentId, _token, _to, _amount);
+        } else {
+            nextResetTime = allowance.nextResetTime;
 
-        bool allowanceResets = uint64(block.timestamp) >= nextResetTime;
+            if (uint64(block.timestamp) >= nextResetTime) {
+                allowanceResets = true;
+                nextResetTime = uint64(block.timestamp).applyShift(allowance.recurrency);
+            }
+
+            if (allowanceResets) {
+                allowance.nextResetTime = nextResetTime;
+            }
+
+            if (allowance.parentId != NO_PARENT_ID) {
+                _checkAndUpdateAllowanceChain(allowance.parentId, _token, _to, _amount);
+            }
+        }
+
         uint256 spentAfterPayment = (allowanceResets ? 0 : allowance.spent) + _amount;
         if (spentAfterPayment > allowance.amount) {
             revert Overbudget(
@@ -181,13 +209,5 @@ contract Budget is FirmModule, RolesAuth {
         }
 
         allowance.spent = spentAfterPayment;
-        if (allowanceResets) {
-            nextResetTime = uint64(block.timestamp).applyShift(allowance.recurrency);
-            allowance.nextResetTime = nextResetTime;
-        }
-
-        if (allowance.parentId != NO_PARENT_ID) {
-            _checkAndUpdateAllowanceChain(allowance.parentId, _token, _to, _amount);
-        }
     }
 }

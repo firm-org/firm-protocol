@@ -17,18 +17,18 @@ function decode(EncodedTimeShift encoded) pure returns (TimeShiftLib.TimeUnit un
     unit = TimeShiftLib.TimeUnit(uint8(encodedValue >> 64));
     offset = int64(uint64(uint72(encodedValue)));
 }
-function isZero(EncodedTimeShift encoded) pure returns (bool) {
+function isInherited(EncodedTimeShift encoded) pure returns (bool) {
     return EncodedTimeShift.unwrap(encoded) == bytes9(0);
 }
 
-using {decode, isZero} for EncodedTimeShift global;
+using {decode, isInherited} for EncodedTimeShift global;
 using {encode} for TimeShift global;
 
 library TimeShiftLib {
     using TimeShiftLib for *;
 
     enum TimeUnit {
-        Invalid,
+        Inherit,
         Daily,
         Weekly,
         Monthly,

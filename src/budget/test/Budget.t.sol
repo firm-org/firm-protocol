@@ -97,7 +97,7 @@ contract BudgetTest is DSTestPlus {
             SPENDER,
             address(0),
             10,
-            TimeShift(TimeShiftLib.TimeUnit.Invalid, 0).encode()
+            TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode()
         );
     }
 
@@ -147,8 +147,50 @@ contract BudgetTest is DSTestPlus {
         uint256 topLevelAllowance = budget.createAllowance(NO_PARENT_ID, SPENDER, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Monthly, 0).encode());
         hevm.prank(SPENDER);
         uint256 subAllowance = budget.createAllowance(topLevelAllowance, SOMEONE_ELSE, address(0), 5, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode());
-        
+
         assertExecutePayment(SOMEONE_ELSE, subAllowance, RECEIVER, 5, initialTime + 1 days);
+    }
+
+    function testCreateSuballowanceWithInheritedRecurrency() public {
+        uint64 initialTime = uint64(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
+        hevm.warp(initialTime);
+
+        hevm.prank(address(avatar));
+        uint256 topLevelAllowance = budget.createAllowance(NO_PARENT_ID, SPENDER, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode());
+        hevm.prank(SPENDER);
+        uint256 subAllowance = budget.createAllowance(topLevelAllowance, SOMEONE_ELSE, address(0), 5, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode());
+
+        assertExecutePayment(SOMEONE_ELSE, subAllowance, RECEIVER, 5, initialTime + 1 days);
+    }
+
+    function testAllowanceChain() public {
+        uint64 initialTime = uint64(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
+        hevm.warp(initialTime);
+
+        hevm.prank(address(avatar));
+        uint256 allowance1 = budget.createAllowance(NO_PARENT_ID, SPENDER, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Monthly, 0).encode());
+        hevm.startPrank(SPENDER);
+        uint256 allowance2 = budget.createAllowance(allowance1, SPENDER, address(0), 5, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode());
+        uint256 allowance3 = budget.createAllowance(allowance2, SPENDER, address(0), 2, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode());
+        uint256 allowance4 = budget.createAllowance(allowance3, SPENDER, address(0), 1, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode());
+
+        assertExecutePayment(SPENDER, allowance4, RECEIVER, 1, initialTime + 1 days);
+
+        hevm.warp(initialTime + 1 days);
+        assertExecutePayment(SPENDER, allowance3, RECEIVER, 2, initialTime + 2 days);
+
+        (,,uint256 spent1,,,,,) = budget.getAllowance(allowance1);
+        (,,uint256 spent2,,,,,) = budget.getAllowance(allowance2);
+        (,,uint256 spent3,,,,,) = budget.getAllowance(allowance3);
+        (,,uint256 spent4,,,,,) = budget.getAllowance(allowance4);
+
+        assertEq(spent1, 3);
+        assertEq(spent2, 3);
+        assertEq(spent3, 2);
+        assertEq(spent4, 1); // It's one because the state doesn't get reset until a payment involving this allowance
+
+        hevm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, allowance3, address(0), SPENDER, 1, 0));
+        budget.executePayment(allowance4, SPENDER, 1);
     }
 
     function testCantExecuteIfNotAuthorized() public {
@@ -201,7 +243,7 @@ contract BudgetTest is DSTestPlus {
         uint64 nextResetTime
     );
     function assertExecutePayment(address actor, uint256 allowanceId, address to, uint256 amount, uint64 expectedNextResetTime) public {
-        (,,uint256 initialSpent, address token, uint64 initialNextReset,,,) = budget.getAllowance(allowanceId);
+        (,,uint256 initialSpent, address token, uint64 initialNextReset,, EncodedTimeShift shift,) = budget.getAllowance(allowanceId);
 
         if (block.timestamp >= initialNextReset) {
             initialSpent = 0;
@@ -215,7 +257,8 @@ contract BudgetTest is DSTestPlus {
         (,,uint256 spent,,uint64 nextResetTime,,,) = budget.getAllowance(allowanceId);
 
         assertEq(spent, initialSpent + amount);
-        assertEq(nextResetTime, expectedNextResetTime);
+        if (!shift.isInherited())
+            assertEq(nextResetTime, expectedNextResetTime);
     }
 }
 
