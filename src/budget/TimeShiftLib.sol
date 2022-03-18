@@ -24,6 +24,7 @@ library TimeShiftLib {
     using TimeShiftLib for *;
 
     enum TimeUnit {
+        Invalid,
         Daily,
         Weekly,
         Monthly,
@@ -35,8 +36,7 @@ library TimeShiftLib {
     // TODO: Could add a special 'Seconds' time unit which would just apply the offset directly
     //       Eg. TimeShift(Seconds, 100) would shift in 100 second intervals (would have to take into account the last time it was reset)
 
-    error UnknownTimeShift();
-    error BadShift();
+    error InvalidTimeShift();
 
     function applyShift(uint64 time, EncodedTimeShift shift)
         internal
@@ -61,7 +61,7 @@ library TimeShiftLib {
         } else if (unit == TimeUnit.Yearly) {
             (y, m, d) = (y + 1, 1, 1);
         } else {
-            revert UnknownTimeShift();
+            revert InvalidTimeShift();
         }
 
         uint256 shiftedTs = DateTimeLib.timestampFromDateTime(y, m, d, 0, 0, 0);

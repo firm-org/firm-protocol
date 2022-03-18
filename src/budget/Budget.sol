@@ -87,6 +87,7 @@ contract Budget is FirmModule, RolesAuth {
         uint256 _amount,
         EncodedTimeShift _recurrency
     ) onlyAvatar public returns (uint256 allowanceId) {
+        // Will revert with InvalidTimeShift if _recurrency is invalid
         uint64 nextResetTime = uint64(block.timestamp).applyShift(_recurrency);
 
         unchecked {

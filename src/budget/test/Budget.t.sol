@@ -85,6 +85,18 @@ contract BudgetTest is DSTestPlus {
         createDailyAllowance(SPENDER, 0);
     }
 
+    function testBadTimeshiftsRevert() public {
+        hevm.startPrank(address(avatar));
+
+        hevm.expectRevert(abi.encodeWithSelector(TimeShiftLib.InvalidTimeShift.selector));
+        budget.createAllowance(
+            SPENDER,
+            address(0),
+            10,
+            TimeShift(TimeShiftLib.TimeUnit.Invalid, 0).encode()
+        );
+    }
+
     function testAllowanceIsKeptTrackOf() public {
         uint64 initialTime = uint64(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
         uint256 allowanceId = 0;
