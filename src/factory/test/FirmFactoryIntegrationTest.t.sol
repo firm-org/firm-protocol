@@ -13,7 +13,7 @@ import "./lib/ERC20Token.sol";
 import {roleFlag} from "../../common/test/lib/RolesAuthMock.sol";
 
 import {FirmFactory} from "../FirmFactory.sol";
-import {Budget, TimeShiftLib} from "../../budget/Budget.sol";
+import {Budget, TimeShiftLib, TimeShift} from "../../budget/Budget.sol";
 import {Roles, IRoles, ONLY_ROOT_ROLE} from "../../roles/Roles.sol";
 
 contract FirmFactoryIntegrationTest is DSTestPlus {
@@ -58,7 +58,7 @@ contract FirmFactoryIntegrationTest is DSTestPlus {
             roleFlag(roleId),
             address(token),
             10,
-            TimeShiftLib.TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode()
+            TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode()
         );
 
         hevm.startPrank(spender);

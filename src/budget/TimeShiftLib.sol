@@ -1,10 +1,25 @@
 // SPDX-License-Identifier: UNLICENSED
-
 import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsDateTimeLibrary.sol";
 
 pragma solidity 0.8.13;
 
 type EncodedTimeShift is bytes9;
+struct TimeShift {
+    TimeShiftLib.TimeUnit unit; // in the special case of seconds, offset doesn't apply
+    int64 offset;
+}
+function encode(TimeShift memory shift) pure returns (EncodedTimeShift) {
+    return EncodedTimeShift.wrap(bytes9(abi.encodePacked(uint8(shift.unit), shift.offset)));
+}
+
+function decode(EncodedTimeShift encoded) pure returns (TimeShiftLib.TimeUnit unit, int64 offset) {
+    uint72 encodedValue = uint72(EncodedTimeShift.unwrap(encoded));
+    unit = TimeShiftLib.TimeUnit(uint8(encodedValue >> 64));
+    offset = int64(uint64(uint72(encodedValue)));
+}
+using {decode} for EncodedTimeShift global;
+using {encode} for TimeShift global;
+
 library TimeShiftLib {
     using TimeShiftLib for *;
 
@@ -15,11 +30,6 @@ library TimeShiftLib {
         Quarterly,
         Semiyearly,
         Yearly
-    }
-
-    struct TimeShift {
-        TimeUnit unit; // in the special case of seconds, offset doesn't apply
-        int64 offset;
     }
 
     // TODO: Could add a special 'Seconds' time unit which would just apply the offset directly
@@ -78,19 +88,5 @@ library TimeShiftLib {
         returns (uint256 y, uint256 m, uint256 d)
     {
         return DateTimeLib._daysToDate(timestamp / 1 days);
-    }
-
-    function encode(TimeShift memory shift)
-        internal
-        pure
-        returns (EncodedTimeShift)
-    {
-        return EncodedTimeShift.wrap(bytes9(abi.encodePacked(uint8(shift.unit), shift.offset)));
-    }
-
-    function decode(EncodedTimeShift encoded) internal pure returns (TimeUnit unit, int64 offset) {
-        uint72 encodedValue = uint72(EncodedTimeShift.unwrap(encoded));
-        unit = TimeUnit(uint8(encodedValue >> 64));
-        offset = int64(uint64(uint72(encodedValue)));
     }
 }

@@ -13,7 +13,7 @@ import "./TimeShiftLib.sol";
 address constant ETH = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
 contract Budget is FirmModule, RolesAuth {
-    using TimeShiftLib for *;
+    using TimeShiftLib for uint64;
 
     ////////////////////////////////////////////////////////////////////////////////
     // SETUP
