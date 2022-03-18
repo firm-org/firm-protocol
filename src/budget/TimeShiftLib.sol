@@ -2,7 +2,7 @@
 
 import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsDateTimeLibrary.sol";
 
-pragma solidity 0.8.10;
+pragma solidity 0.8.13;
 
 type EncodedTimeShift is bytes9;
 library TimeShiftLib {
