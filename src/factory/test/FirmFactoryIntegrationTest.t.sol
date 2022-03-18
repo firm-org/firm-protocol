@@ -34,17 +34,17 @@ contract FirmFactoryIntegrationTest is DSTestPlus {
     }
 
     function testFactoryGas() public {
-        factory.createFirm(address(this));
+        createFirm(address(this));
     }
 
     function testInitialState() public {
-        (GnosisSafe safe, Budget budget, Roles roles) = factory.createFirm(address(this));
+        (GnosisSafe safe, Budget budget, Roles roles) = createFirm(address(this));
         assertTrue(safe.isModuleEnabled(address(budget)));
         assertTrue(roles.hasRootRole(address(safe)));
     }
 
     function testExecutingPaymentsFromBudget() public {
-        (GnosisSafe safe, Budget budget, Roles roles) = factory.createFirm(address(this));
+        (GnosisSafe safe, Budget budget, Roles roles) = createFirm(address(this));
         token.mint(address(safe), 100);
 
         address spender = address(10);
@@ -72,5 +72,11 @@ contract FirmFactoryIntegrationTest is DSTestPlus {
         budget.executePayment(allowanceId, receiver, 2);
 
         assertEq(token.balanceOf(receiver), 14);
+    }
+
+    function createFirm(address owner) internal returns (GnosisSafe safe, Budget budget, Roles roles) {
+        (safe, budget, roles) = factory.createFirm(owner);
+        hevm.label(address(budget), "BudgetProxy");
+        hevm.label(address(roles), "RolesProxy");
     }
 }

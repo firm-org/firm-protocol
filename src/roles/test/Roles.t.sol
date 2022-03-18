@@ -184,5 +184,6 @@ contract RolesWithProxyTest is RolesTest {
                 0
             )
         );
+        hevm.label(address(roles), "RolesProxy");
     }
 }

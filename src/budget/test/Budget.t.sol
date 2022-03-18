@@ -200,5 +200,6 @@ contract BudgetWithProxyTest is BudgetTest {
                 0
             )
         );
+        hevm.label(address(roles), "BudgetProxy");
     }
 }
