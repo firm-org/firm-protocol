@@ -6,4 +6,3 @@ datetime/=lib/BokkyPooBahsDateTimeLibrary/contracts
 
 @gnosis.pm/safe-contracts/=lib/safe-contracts/
 @openzeppelin/contracts/=lib/zeppelin-solidity/contracts/
-@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
