@@ -61,6 +61,7 @@ contract FirmFactoryIntegrationTest is DSTestPlus {
             10,
             TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode()
         );
+        hevm.stopPrank();
 
         hevm.startPrank(spender);
         budget.executePayment(allowanceId, receiver, 4);

@@ -123,13 +123,14 @@ contract BudgetTest is DSTestPlus {
     function testMultipleAllowances() public {
         uint64 initialTime = uint64(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
 
-        hevm.startPrank(address(avatar));
-        hevm.warp(initialTime);
-
         uint256 firstAllowanceId = 1;
         uint256 secondAllowanceId = 2;
+
+        hevm.warp(initialTime);
+        hevm.startPrank(address(avatar));
         createDailyAllowance(SPENDER, firstAllowanceId);
         createDailyAllowance(SPENDER, secondAllowanceId);
+        hevm.stopPrank();
 
         assertExecutePayment(SPENDER, firstAllowanceId, RECEIVER, 7, initialTime + 1 days);
         assertExecutePayment(SPENDER, secondAllowanceId, RECEIVER, 7, initialTime + 1 days);
@@ -173,6 +174,7 @@ contract BudgetTest is DSTestPlus {
         uint256 allowance2 = budget.createAllowance(allowance1, SPENDER, address(0), 5, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode());
         uint256 allowance3 = budget.createAllowance(allowance2, SPENDER, address(0), 2, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode());
         uint256 allowance4 = budget.createAllowance(allowance3, SPENDER, address(0), 1, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode());
+        hevm.stopPrank();
 
         assertExecutePayment(SPENDER, allowance4, RECEIVER, 1, initialTime + 1 days);
 
@@ -190,6 +192,7 @@ contract BudgetTest is DSTestPlus {
         assertEq(spent4, 1); // It's one because the state doesn't get reset until a payment involving this allowance
 
         hevm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, allowance3, address(0), SPENDER, 1, 0));
+        hevm.prank(SPENDER);
         budget.executePayment(allowance4, SPENDER, 1);
     }
 
