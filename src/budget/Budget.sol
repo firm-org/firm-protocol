@@ -189,6 +189,8 @@ contract Budget is FirmModule, RolesAuth {
             }
 
             if (allowanceResets) {
+                // TODO: Consider emitting an event here since the 'spent' field in other suballowances that depend
+                // on this one won't be updated on-chain until they are touched
                 allowance.nextResetTime = nextResetTime;
             }
 

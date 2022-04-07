@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
-import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsDateTimeLibrary.sol";
-
 pragma solidity 0.8.13;
+
+// Formal verification for library and formula: https://twitter.com/Zellic_io/status/1510341868021854209
+import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsDateTimeLibrary.sol";
 
 type EncodedTimeShift is bytes9;
 struct TimeShift {
