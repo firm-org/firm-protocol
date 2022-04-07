@@ -95,8 +95,9 @@ contract Budget is FirmModule, RolesAuth {
         uint64 nextResetTime;
 
         if (_parentAllowanceId == NO_PARENT_ID) {
-            // Will revert with InvalidTimeShift if _recurrency is invalid
-            // For top-level allowances, _recurrency needs to be explicit and cannot be zero
+            // For top-level allowances, _recurrency needs to be set and cannot be zero
+            // applyShift reverts with InvalidTimeShift if _recurrency is unspecified
+            // Therefore, nextResetTime is implicitly ensured to always be greater than the current time
             nextResetTime = uint64(block.timestamp).applyShift(_recurrency);
 
             // Top-level allowances can only be created by the avatar
@@ -153,7 +154,7 @@ contract Budget is FirmModule, RolesAuth {
 
         address token = allowance.token;
 
-        (uint64 nextResetTime, ) = _checkAndUpdateAllowanceChain(_allowanceId, token, _to, _amount);
+        (uint64 nextResetTime,) = _checkAndUpdateAllowanceChain(_allowanceId, token, _to, _amount);
         
         bool success;
         if (token == ETH) {
@@ -175,10 +176,19 @@ contract Budget is FirmModule, RolesAuth {
         emit PaymentExecuted(_allowanceId, msg.sender, allowance.token, _to, _amount, nextResetTime);
     }
 
-    function _checkAndUpdateAllowanceChain(uint256 _allowanceId, address _token, address _to, uint256 _amount) internal returns (uint64 nextResetTime, bool allowanceResets) {
+    function _checkAndUpdateAllowanceChain(
+        uint256 _allowanceId,
+        address _token,
+        address _to,
+        uint256 _amount
+    )
+        internal
+        returns (uint64 nextResetTime, bool allowanceResets)
+    {
         Allowance storage allowance = getAllowance[_allowanceId];
     
         if (allowance.nextResetTime == 0) {
+            // Sub-budget's recurrency is inherited from parent
             (nextResetTime, allowanceResets) = _checkAndUpdateAllowanceChain(allowance.parentId, _token, _to, _amount);
         } else {
             nextResetTime = allowance.nextResetTime;

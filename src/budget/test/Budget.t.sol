@@ -257,8 +257,7 @@ contract BudgetTest is DSTestPlus {
         (,,uint256 spent,,uint64 nextResetTime,,,) = budget.getAllowance(allowanceId);
 
         assertEq(spent, initialSpent + amount);
-        if (!shift.isInherited())
-            assertEq(nextResetTime, expectedNextResetTime);
+        assertEq(nextResetTime, shift.isInherited() ? 0 : expectedNextResetTime);
     }
 }
 
