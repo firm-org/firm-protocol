@@ -113,12 +113,12 @@ contract TimeShiftLibEncodingTest is DSTestPlus {
         TimeShift memory shift = TimeShift(TimeShiftLib.TimeUnit.Monthly, -1 hours);
         assertEq(
             uint256(uint72(EncodedTimeShift.unwrap(shift.encode()))),
-            0x02fffffffffffff1f0
+            0x03fffffffffffff1f0
         );
     }
 
     function testDecodingGas() public {
-        EncodedTimeShift encodedShift = EncodedTimeShift.wrap(0x02fffffffffffff1f0);
+        EncodedTimeShift encodedShift = EncodedTimeShift.wrap(0x03fffffffffffff1f0);
 
         (TimeShiftLib.TimeUnit unit, int64 offset) = encodedShift.decode();
 

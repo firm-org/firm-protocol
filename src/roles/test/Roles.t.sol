@@ -90,6 +90,7 @@ contract RolesTest is DSTestPlus {
         hevm.startPrank(ADMIN);
         uint8 roleId = roles.createRole(ONLY_ROOT_ROLE, "");
         roles.setRole(SOMEONE, roleId, true);
+        hevm.stopPrank();
 
         hevm.prank(SOMEONE);
         hevm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, roleId));
@@ -111,7 +112,8 @@ contract RolesTest is DSTestPlus {
         assertTrue(roles.hasRole(SOMEONE, roleTwo));
         assertFalse(roles.isRoleAdmin(SOMEONE, roleOne));
         assertTrue(roles.isRoleAdmin(SOMEONE, roleTwo));
-       
+
+        hevm.stopPrank();
         hevm.prank(SOMEONE);
         roles.setRole(SOMEONE_ELSE, roleTwo, true);
 
@@ -123,6 +125,7 @@ contract RolesTest is DSTestPlus {
         hevm.startPrank(ADMIN);
         uint8 newRoleId = roles.createRole(ONLY_ROOT_ROLE, "");
         roles.setRole(SOMEONE, newRoleId, true);
+        hevm.stopPrank();
 
         hevm.prank(SOMEONE);
         hevm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, newRoleId));
@@ -143,6 +146,7 @@ contract RolesTest is DSTestPlus {
         hevm.startPrank(ADMIN);
         uint8 newRoleId = roles.createRole(ONLY_ROOT_ROLE, "");
         roles.setRole(SOMEONE, newRoleId, true);
+        hevm.stopPrank();
 
         hevm.prank(SOMEONE);
         hevm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNoRole.selector, ROLE_MANAGER_ROLE));

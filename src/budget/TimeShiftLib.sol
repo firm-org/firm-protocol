@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
-import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsDateTimeLibrary.sol";
-
 pragma solidity 0.8.13;
+
+// Formal verification for library and formula: https://twitter.com/Zellic_io/status/1510341868021854209
+import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsDateTimeLibrary.sol";
 
 type EncodedTimeShift is bytes9;
 struct TimeShift {
@@ -17,13 +18,18 @@ function decode(EncodedTimeShift encoded) pure returns (TimeShiftLib.TimeUnit un
     unit = TimeShiftLib.TimeUnit(uint8(encodedValue >> 64));
     offset = int64(uint64(uint72(encodedValue)));
 }
-using {decode} for EncodedTimeShift global;
+function isInherited(EncodedTimeShift encoded) pure returns (bool) {
+    return EncodedTimeShift.unwrap(encoded) == bytes9(0);
+}
+
+using {decode, isInherited} for EncodedTimeShift global;
 using {encode} for TimeShift global;
 
 library TimeShiftLib {
     using TimeShiftLib for *;
 
     enum TimeUnit {
+        Inherit,
         Daily,
         Weekly,
         Monthly,
@@ -35,8 +41,7 @@ library TimeShiftLib {
     // TODO: Could add a special 'Seconds' time unit which would just apply the offset directly
     //       Eg. TimeShift(Seconds, 100) would shift in 100 second intervals (would have to take into account the last time it was reset)
 
-    error UnknownTimeShift();
-    error BadShift();
+    error InvalidTimeShift();
 
     function applyShift(uint64 time, EncodedTimeShift shift)
         internal
@@ -61,7 +66,7 @@ library TimeShiftLib {
         } else if (unit == TimeUnit.Yearly) {
             (y, m, d) = (y + 1, 1, 1);
         } else {
-            revert UnknownTimeShift();
+            revert InvalidTimeShift();
         }
 
         uint256 shiftedTs = DateTimeLib.timestampFromDateTime(y, m, d, 0, 0, 0);
