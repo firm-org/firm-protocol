@@ -56,8 +56,9 @@ contract Roles is IRoles {
 
     function _createRole(bytes32 _adminRoles, string memory _name) internal returns (uint8 roleId) {
         uint256 roleCount_ = roleCount;
-        if (roleCount_ == 256) revert RoleLimitReached();
-         unchecked {
+        if (roleCount_ == 256)
+            revert RoleLimitReached();
+        unchecked {
             roleCount = roleCount_ + 1;
         }
 
