@@ -18,4 +18,9 @@ contract LocalDeploy {
         rolesImpl,
         budgetImpl
     );
+
+    constructor() {
+        // deploy a test firm
+        firmFactory.createFirm(msg.sender);
+    }
 }

@@ -1,5 +1,14 @@
 {
     "solidity.packageDefaultDependenciesContractsDirectory": "src",
     "solidity.packageDefaultDependenciesDirectory": "lib",
-    "solidity.compileUsingRemoteVersion": "v0.8.13"
+    "solidity.compileUsingRemoteVersion": "v0.8.13",
+    "solidity.remappings": [
+        "ds-test/=lib/ds-test/src/",
+        "zodiac/=lib/zodiac/contracts/",
+        "openzeppelin/=lib/zeppelin-solidity/contracts/",
+        "gnosis-safe/=lib/safe-contracts/contracts",
+        "datetime/=lib/BokkyPooBahsDateTimeLibrary/contracts",
+        "@gnosis.pm/safe-contracts/=lib/safe-contracts/",
+        "@openzeppelin/contracts/=lib/zeppelin-solidity/contracts/"
+    ]
 }
