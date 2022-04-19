@@ -37,8 +37,14 @@ contract FirmFactoryIntegrationTest is DSTestPlus {
         createFirm(address(this));
     }
 
+    event NewFirm(address indexed creator, GnosisSafe indexed safe, Roles roles, Budget budget);
     function testInitialState() public {
+        // we don't match the deployed contract addresses for simplicity (could precalculate them but unnecessary)
+        hevm.expectEmit(true, false, false, false);
+        emit NewFirm(address(this), GnosisSafe(payable(0)), Roles(address(0)), Budget(address(0)));
+
         (GnosisSafe safe, Budget budget, Roles roles) = createFirm(address(this));
+
         assertTrue(safe.isModuleEnabled(address(budget)));
         assertTrue(roles.hasRootRole(address(safe)));
     }

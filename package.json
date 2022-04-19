@@ -1,0 +1,12 @@
+{
+    "name": "@firm-org/firm-core",
+    "version": "0.0.1",
+    "main": "index.js",
+    "repository": "https://github.com/firm-org/firm-core",
+    "files": [
+        "/out",
+        "/src"
+    ],
+    "devDependencies": {},
+    "dependencies": {}
+}

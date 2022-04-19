@@ -19,6 +19,8 @@ contract FirmFactory {
 
     error EnableModuleFailed();
 
+    event NewFirm(address indexed creator, GnosisSafe indexed safe, Roles roles, Budget budget);
+
     constructor(
         GnosisSafeProxyFactory _safeFactory,
         ModuleProxyFactory _moduleFactory,
@@ -54,6 +56,8 @@ contract FirmFactory {
         (address[] memory modules,) = safe.getModulesPaginated(address(0x1), 1);
         budget = Budget(modules[0]);
         roles = Roles(address(budget.roles()));
+
+        emit NewFirm(_creator, safe, roles, budget);
     }
     
     function installModules() public {
