@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.13;
 
-import "solmate/test/utils/DSTestPlus.sol";
 import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsDateTimeLibrary.sol";
 
+import {FirmTest} from "../../common/test/lib/FirmTest.sol";
 import "../TimeShiftLib.sol";
 
-contract TimeShiftLibShiftTest is DSTestPlus {
+contract TimeShiftLibShiftTest is FirmTest {
     using TimeShiftLib for *;
 
     function testDaily() public {
@@ -99,7 +99,7 @@ contract TimeShiftLibShiftTest is DSTestPlus {
     }
 }
 
-contract TimeShiftLibEncodingTest is DSTestPlus {
+contract TimeShiftLibEncodingTest is FirmTest {
     using TimeShiftLib for *;
 
     function testRoundtrips() public {

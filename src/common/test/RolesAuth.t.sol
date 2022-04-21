@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.13;
 
-import "solmate/test/utils/DSTestPlus.sol";
+import {FirmTest} from "./lib/FirmTest.sol";
 
-import "./lib/RolesAuthMock.sol";
-import "./lib/RolesStub.sol";
+import {RolesAuthMock, roleFlag} from "./lib/RolesAuthMock.sol";
+import {RolesStub} from "./lib/RolesStub.sol";
 
-contract RolesAuthTest is DSTestPlus {
+contract RolesAuthTest is FirmTest {
     RolesStub roles;
     RolesAuthMock rolesAuth;
 
-    address constant SOMEONE = address(0x1234567890123456789012345678901234567890);
+    address SOMEONE = account("someone");
 
     function setUp() public {
         roles = new RolesStub();
