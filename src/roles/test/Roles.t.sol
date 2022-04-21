@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.13;
 
-import "solmate/test/utils/DSTestPlus.sol";
 import "zodiac/factory/ModuleProxyFactory.sol";
 
+import {FirmTest} from  "../../common/test/lib/FirmTest.sol";
 import "../Roles.sol";
 
-contract RolesTest is DSTestPlus {
+contract RolesTest is FirmTest {
     Roles roles;
 
-    address ADMIN = address(1);
-    address SOMEONE = address(2);
-    address SOMEONE_ELSE = address(3);
+    address ADMIN = account("admin");
+    address SOMEONE = account("someone");
+    address SOMEONE_ELSE = account("someone else");
 
     function setUp() public virtual {
         roles = new Roles(ADMIN);
@@ -30,12 +30,12 @@ contract RolesTest is DSTestPlus {
     }
 
     function testCannotReinit() public {
-        hevm.expectRevert(abi.encodeWithSelector(Roles.AlreadyInitialized.selector));
+        vm.expectRevert(abi.encodeWithSelector(Roles.AlreadyInitialized.selector));
         roles.setUp(address(2));
     }
 
     function testAdminCanCreateRoles() public {
-        hevm.prank(ADMIN);
+        vm.prank(ADMIN);
         uint8 roleId = roles.createRole(ONLY_ROOT_ROLE, "");
         assertEq(roleId, ROLE_MANAGER_ROLE + 1);
 
@@ -44,38 +44,38 @@ contract RolesTest is DSTestPlus {
     }
 
     function testCannotCreateRolesWithoutRolesManagerRole() public {
-        hevm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNoRole.selector, ROLE_MANAGER_ROLE));
+        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNoRole.selector, ROLE_MANAGER_ROLE));
         roles.createRole(ONLY_ROOT_ROLE, "");
     }
 
     function testSomeoneWithPermissionCanCreateRolesUntilRevoked() public {
-        hevm.prank(ADMIN);
+        vm.prank(ADMIN);
         roles.setRole(SOMEONE, ROLE_MANAGER_ROLE, true);
 
-        hevm.prank(SOMEONE);
+        vm.prank(SOMEONE);
         uint8 roleId = roles.createRole(ONLY_ROOT_ROLE, "");
         assertEq(roleId, ROLE_MANAGER_ROLE + 1);
 
-        hevm.prank(ADMIN);
+        vm.prank(ADMIN);
         roles.setRole(SOMEONE, ROLE_MANAGER_ROLE, false);
 
-        hevm.prank(SOMEONE);
+        vm.prank(SOMEONE);
         testCannotCreateRolesWithoutRolesManagerRole();
     }
 
     function testCanOnlyHave256Roles() public {
-        hevm.startPrank(ADMIN);
+        vm.startPrank(ADMIN);
         for (uint256 i = 0; i < 254; i++) {
             roles.createRole(ONLY_ROOT_ROLE, "");
         }
         assertEq(roles.roleCount(), 256);
 
-        hevm.expectRevert(abi.encodeWithSelector(Roles.RoleLimitReached.selector));
+        vm.expectRevert(abi.encodeWithSelector(Roles.RoleLimitReached.selector));
         roles.createRole(ONLY_ROOT_ROLE, "");
     }
 
     function testAdminCanGrantAndRevokeRoles() public {
-        hevm.startPrank(ADMIN);
+        vm.startPrank(ADMIN);
         uint8 roleId = roles.createRole(ONLY_ROOT_ROLE, "");
 
         roles.setRole(SOMEONE, roleId, true);
@@ -87,18 +87,18 @@ contract RolesTest is DSTestPlus {
     }
 
     function testNonAdminCannotGrantRole() public {
-        hevm.startPrank(ADMIN);
+        vm.startPrank(ADMIN);
         uint8 roleId = roles.createRole(ONLY_ROOT_ROLE, "");
         roles.setRole(SOMEONE, roleId, true);
-        hevm.stopPrank();
+        vm.stopPrank();
 
-        hevm.prank(SOMEONE);
-        hevm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, roleId));
+        vm.prank(SOMEONE);
+        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, roleId));
         roles.setRole(SOMEONE_ELSE, roleId, true);
     }
 
     function testCanSetMultipleRoles() public {
-        hevm.startPrank(ADMIN);
+        vm.startPrank(ADMIN);
         uint8 roleOne = roles.createRole(ONLY_ROOT_ROLE, ""); // Admin for role one is ROOT_ROLE_ID
         uint8 roleTwo = roles.createRole(ONLY_ROOT_ROLE | bytes32(1 << uint256(roleOne)), ""); // Admin for role 2 is ROOT_ROLE_ID and roleOne
 
@@ -113,8 +113,8 @@ contract RolesTest is DSTestPlus {
         assertFalse(roles.isRoleAdmin(SOMEONE, roleOne));
         assertTrue(roles.isRoleAdmin(SOMEONE, roleTwo));
 
-        hevm.stopPrank();
-        hevm.prank(SOMEONE);
+        vm.stopPrank();
+        vm.prank(SOMEONE);
         roles.setRole(SOMEONE_ELSE, roleTwo, true);
 
         assertTrue(roles.hasRole(SOMEONE_ELSE, roleTwo));
@@ -122,56 +122,56 @@ contract RolesTest is DSTestPlus {
     }
 
     function testCanChangeRoleAdmin() public {
-        hevm.startPrank(ADMIN);
+        vm.startPrank(ADMIN);
         uint8 newRoleId = roles.createRole(ONLY_ROOT_ROLE, "");
         roles.setRole(SOMEONE, newRoleId, true);
-        hevm.stopPrank();
+        vm.stopPrank();
 
-        hevm.prank(SOMEONE);
-        hevm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, newRoleId));
+        vm.prank(SOMEONE);
+        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, newRoleId));
         roles.setRole(SOMEONE_ELSE, newRoleId, true);
 
-        hevm.prank(ADMIN);
+        vm.prank(ADMIN);
         bytes32 newRoleAdmin = ONLY_ROOT_ROLE | bytes32(1 << uint256(newRoleId));
         roles.setRoleAdmin(newRoleId, newRoleAdmin); // those with newRoleId are admins
         assertEq(roles.getRoleAdmin(newRoleId), newRoleAdmin);
 
-        hevm.prank(SOMEONE);
+        vm.prank(SOMEONE);
         roles.setRole(SOMEONE_ELSE, newRoleId, true); // action that was previously reverting, now succeeds
 
         assertTrue(roles.hasRole(SOMEONE_ELSE, newRoleId));
     }
 
     function testCannotChangeRoleAdminWithoutRolesManagerRole() public {
-        hevm.startPrank(ADMIN);
+        vm.startPrank(ADMIN);
         uint8 newRoleId = roles.createRole(ONLY_ROOT_ROLE, "");
         roles.setRole(SOMEONE, newRoleId, true);
-        hevm.stopPrank();
+        vm.stopPrank();
 
-        hevm.prank(SOMEONE);
-        hevm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNoRole.selector, ROLE_MANAGER_ROLE));
+        vm.prank(SOMEONE);
+        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNoRole.selector, ROLE_MANAGER_ROLE));
         roles.setRoleAdmin(newRoleId, ONLY_ROOT_ROLE);
     }
 
     function testAdminCanChangeAdminForAdminRole() public {
         bytes32 newRoleAdmin = ONLY_ROOT_ROLE | bytes32(1 << uint256(ROLE_MANAGER_ROLE));
-        hevm.prank(ADMIN);
+        vm.prank(ADMIN);
         roles.setRoleAdmin(ROOT_ROLE_ID, newRoleAdmin);
         assertEq(roles.getRoleAdmin(ROOT_ROLE_ID), newRoleAdmin);
     }
 
     function testNonAdminCantChangeAdminForAdminRole() public {
-        hevm.prank(ADMIN);
+        vm.prank(ADMIN);
         roles.setRole(SOMEONE, ROLE_MANAGER_ROLE, true);
 
         // As SOMEONE is granted ROLE_MANAGER_ROLE, it can change the admin for all roles, including ROLE_MANAGER_ROLE
-        hevm.startPrank(SOMEONE);
+        vm.startPrank(SOMEONE);
         bytes32 newRoleAdmin = ONLY_ROOT_ROLE | bytes32(1 << uint256(ROLE_MANAGER_ROLE));
         roles.setRoleAdmin(ROLE_MANAGER_ROLE, newRoleAdmin);
         assertEq(roles.getRoleAdmin(ROLE_MANAGER_ROLE), newRoleAdmin);
 
         // However, when attempting to change the admin role, it will fail
-        hevm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, ROOT_ROLE_ID));
+        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, ROOT_ROLE_ID));
         roles.setRoleAdmin(ROOT_ROLE_ID, newRoleAdmin);
     }
 }
@@ -188,6 +188,6 @@ contract RolesWithProxyTest is RolesTest {
                 0
             )
         );
-        hevm.label(address(roles), "RolesProxy");
+        vm.label(address(roles), "RolesProxy");
     }
 }
