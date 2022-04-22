@@ -16,4 +16,4 @@ initcode:
     return           ; []
 
 runtime:
-%include("runtime.etk")
+    %include("runtime.etk")
