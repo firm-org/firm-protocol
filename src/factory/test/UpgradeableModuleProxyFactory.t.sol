@@ -11,29 +11,54 @@ contract UpgradeableModuleProxyFactoryMock is UpgradeableModuleProxyFactory {
 }
 
 contract Target {
-    function foo() public pure returns (uint) {
+    error SomeError();
+
+    function upgrade(address _newTarget) external {
+        assembly {
+            sstore(
+                0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc,
+                _newTarget
+            )
+        }
+    }
+
+    function foo() virtual public pure returns (uint256) {
         return 42;
+    }
+
+    function bar() public pure returns (uint256) {
+        revert SomeError();
     }
 }
 
-contract UpgradeableModuleProxyFactoryCreationTest is FirmTest {
+contract UpgradedTarget is Target {
+    function foo() override public pure returns (uint256) {
+        return 43;
+    }
+}
+
+contract UpgradeableModuleProxyFactoryTest is FirmTest {
     Target target = new Target();
     UpgradeableModuleProxyFactoryMock factory = new UpgradeableModuleProxyFactoryMock();
 
-    function testGas() virtual public returns (address) {
-        return factory.createUpgradeableProxy(address(target));
-    }
-}
-
-contract UpgradeableModuleProxyFactoryCallTest is UpgradeableModuleProxyFactoryCreationTest {
     Target proxy;
 
     function setUp() public {
-        proxy = Target(super.testGas());
+        proxy = Target(factory.createUpgradeableProxy(address(target)));
     }
 
-    function testGas() public override returns (address) {
-        proxy.foo();
+    function testReturnData() public {
+        assertEq(proxy.foo(), 42);
+    }
+
+    function testRevert() public {
+        vm.expectRevert(abi.encodeWithSelector(Target.SomeError.selector));
+        proxy.bar();
+    }
+
+    function testUpgrade() public {
+        assertEq(proxy.foo(), 42);
+        proxy.upgrade(address(new UpgradedTarget()));
+        assertEq(proxy.foo(), 43);
     }
 }
-
