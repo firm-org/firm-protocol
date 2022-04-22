@@ -1,5 +1,5 @@
 initcode:
-    ;; Put initial implementation address at the standard eip1967 slot
+    ;; Store initial implementation address at the standard EIP-1967 slot
     push20 0xffffffffffffffffffffffffffffffffffffffff
                      ; [initialImpl]
     push32 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc
