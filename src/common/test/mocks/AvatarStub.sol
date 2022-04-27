@@ -4,8 +4,6 @@ pragma solidity 0.8.13;
 import "zodiac/interfaces/IAvatar.sol";
 
 contract AvatarStub is IAvatar {
-    event AvatarExecuted(address to, uint256 value, bytes data);
-
     function enableModule(address module) external {}
     function disableModule(address prevModule, address module) external {}
 
@@ -24,9 +22,9 @@ contract AvatarStub is IAvatar {
         bytes memory data,
         Enum.Operation operation
     ) public returns (bool success, bytes memory returnData) {
-        emit AvatarExecuted(to, value, data);
-
-        return (operation == Enum.Operation.Call, abi.encode(true));
+        return operation == Enum.Operation.Call
+            ? to.call{value: value}(data)
+            : to.delegatecall(data);
     }
 
     function isModuleEnabled(address) external pure returns (bool) { return true; }

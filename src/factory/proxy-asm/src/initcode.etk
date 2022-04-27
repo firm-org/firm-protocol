@@ -1,19 +1,19 @@
 initcode:
     ;; Store initial implementation address at the standard EIP-1967 slot
     push20 0xffffffffffffffffffffffffffffffffffffffff
-                     ; [initialImpl]
+                     ;  [initialImpl]
     push32 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc
-                     ; [slot, initialImpl]
-    sstore           ; [] ;; initialImpl in storage at slot keccak256("eip1967.proxy.implementation") - 1
+                     ;  [slot, initialImpl]
+    sstore           ;  [] ;; initialImpl in storage at slot keccak256("eip1967.proxy.implementation") - 1
     
     ;; Copy runtime code and return it
-    push1 59         ; [runtimeLength]
-    dup1             ; [runtimeLength, runtimeLength]
-    %push(runtime)   ; [runtimeLabel, runtimeLength, runtimeLength]
-    returndatasize   ; [0, runtimeLabel, runtimeLength, runtimeLength]
-    codecopy         ; [runtimeLength] ;; Code in memory starting at 0
-    returndatasize   ; [0, runtimeLength]
-    return           ; []
+    push1 59         ;  [runtimeLength]
+    dup1             ;  [runtimeLength, runtimeLength]
+    %push(runtime)   ;  [runtimeLabel, runtimeLength, runtimeLength]
+    returndatasize   ;  [0, runtimeLabel, runtimeLength, runtimeLength]
+    codecopy         ;  [runtimeLength] ;; Code in memory starting at 0
+    returndatasize   ;  [0, runtimeLength]
+    return           ;  []
 
 runtime:
     %include("runtime.etk")

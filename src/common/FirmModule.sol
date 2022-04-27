@@ -22,9 +22,16 @@ abstract contract FirmModule {
     event TargetSet(IAvatar indexed previousTarget, IAvatar indexed newTarget);
     event ChangedGuard(address guard);
 
+    event Upgraded(address indexed implementation);
+
     error AlreadyInitialized();
     error UnauthorizedNotAvatar();
     error NotIERC165Compliant(address guard_);
+
+    // MODULE_STATE_SLOT = bytes32(uint256(keccak256("firm.module.state")) - 3)
+    bytes32 internal constant MODULE_STATE_SLOT = 0xa5b7510e75e06df92f176662510e3347b687605108b9f72b4260aa7cf56ebb12;
+    // EIP1967_IMPL_SLOT = bytes32(uint256(keccak256('eip1967.proxy.implementation')) - 1)
+    bytes32 internal constant EIP1967_IMPL_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
     modifier onlyAvatar {
         if (msg.sender != address(moduleState().avatar)) {
@@ -60,6 +67,29 @@ abstract contract FirmModule {
         IAvatar previousTarget = state.target;
         state.target = _target;
         emit TargetSet(previousTarget, _target);
+    }
+
+    /// @dev Set a guard that checks transactions before execution.
+    /// @param _guard The address of the guard to be used or the 0 address to disable the guard.
+    function setGuard(IGuard _guard) external onlyAvatar {
+        if (address(_guard) != address(0)) {
+            if (!BaseGuard(address(_guard)).supportsInterface(type(IGuard).interfaceId))
+                revert NotIERC165Compliant(address(_guard));
+        }
+        moduleState().guard = _guard;
+        emit ChangedGuard(address(_guard));
+    }
+
+    /// @notice Upgrades the proxy to a new implementation address
+    /// @dev The new implementation should be a contract that implements a way to perform upgrades as well
+    ////     otherwise the proxy will freeze on that implementation forever, since the proxy doesn't contain logic to change it.
+    /// @param _newImplementation The address of the new implementation address the proxy will use
+    function upgrade(address _newImplementation) public onlyAvatar {
+        assembly {
+            sstore(EIP1967_IMPL_SLOT, _newImplementation)
+        }
+
+        emit Upgraded(_newImplementation);
     }
 
     /// @dev Passes a transaction to be executed by the avatar.
@@ -145,17 +175,6 @@ abstract contract FirmModule {
         }
     }
 
-    /// @dev Set a guard that checks transactions before execution.
-    /// @param _guard The address of the guard to be used or the 0 address to disable the guard.
-    function setGuard(IGuard _guard) external onlyAvatar {
-        if (address(_guard) != address(0)) {
-            if (!BaseGuard(address(_guard)).supportsInterface(type(IGuard).interfaceId))
-                revert NotIERC165Compliant(address(_guard));
-        }
-        moduleState().guard = _guard;
-        emit ChangedGuard(address(_guard));
-    }
-
     function avatar() public view returns (IAvatar) {
         return moduleState().avatar;
     }
@@ -168,8 +187,6 @@ abstract contract FirmModule {
         return moduleState().guard;
     }
 
-    // MODULE_STATE_SLOT = bytes32(uint256(keccak256("firm.module.state")) - 3)
-    bytes32 internal constant MODULE_STATE_SLOT = 0xa5b7510e75e06df92f176662510e3347b687605108b9f72b4260aa7cf56ebb12;
     function moduleState() internal pure returns (ModuleState storage state) {
         assembly {
             state.slot := MODULE_STATE_SLOT
