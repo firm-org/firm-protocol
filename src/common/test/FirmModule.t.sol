@@ -134,6 +134,14 @@ contract FirmModuleTest is FirmTest {
         module.setAvatar(avatar);
     }
 
+    function testAvatarCanAddGuard() public {
+        // TODO
+    }
+
+    function testNonAvatarCannotAddGuard() public {
+        // TODO
+    }
+
     function assertImplAtEIP1967Slot(address _impl) internal {
         bytes32 implSlot = bytes32(uint256(keccak256('eip1967.proxy.implementation')) - 1);
         assertEq(vm.load(address(module), implSlot).fromLast20Bytes(), _impl);
