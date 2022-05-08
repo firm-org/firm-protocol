@@ -8,7 +8,7 @@ import "zodiac/factory/ModuleProxyFactory.sol";
 import "zodiac/interfaces/IAvatar.sol";
 
 import {FirmTest} from "../../common/test/lib/FirmTest.sol";
-import {roleFlag} from "../../common/test/lib/RolesAuthMock.sol";
+import {roleFlag} from "../../common/test/mocks/RolesAuthMock.sol";
 import "./lib/ERC20Token.sol";
 
 import {FirmFactory} from "../FirmFactory.sol";

@@ -1,19 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.13;
 
-import "solmate/utils/Bytes32AddressLib.sol";
 import "zodiac/factory/ModuleProxyFactory.sol";
 
 import {FirmTest} from "../../common/test/lib/FirmTest.sol";
-import {RolesStub} from "../../common/test/lib/RolesStub.sol";
-import {roleFlag} from "../../common/test/lib/RolesAuthMock.sol";
+import {RolesStub} from "../../common/test/mocks/RolesStub.sol";
+import {roleFlag} from "../../common/test/mocks/RolesAuthMock.sol";
+import {AvatarStub} from "../../common/test/mocks/AvatarStub.sol";
 
 import "../Budget.sol";
-import "./lib/AvatarStub.sol";
 
 contract BudgetTest is FirmTest {
-    using Bytes32AddressLib for bytes32;
-
     AvatarStub avatar;
     RolesStub roles;
     Budget budget;
@@ -32,21 +29,6 @@ contract BudgetTest is FirmTest {
         assertEq(address(budget.avatar()), address(avatar));
         assertEq(address(budget.target()), address(avatar));
         assertEq(address(budget.roles()), address(roles));
-    }
-
-    // To be moved into FirmModule unit tests
-    function testModuleStateRawStorage() public {
-        // change target to make it different from avatar
-        address someTarget = address(7);
-        vm.prank(address(avatar));
-        budget.setTarget(IAvatar(someTarget));
-
-        uint256 moduleStateBaseSlot = 0xa5b7510e75e06df92f176662510e3347b687605108b9f72b4260aa7cf56ebb12;
-        assertEq(vm.load(address(budget), 0).fromLast20Bytes(), address(roles));
-        assertEq(vm.load(address(budget), bytes32(moduleStateBaseSlot)).fromLast20Bytes(), address(avatar));
-        assertEq(vm.load(address(budget), bytes32(moduleStateBaseSlot + 1)).fromLast20Bytes(), someTarget);
-        assertEq(vm.load(address(budget), bytes32(moduleStateBaseSlot + 2)).fromLast20Bytes(), address(0)); // guard not set yet
-        assertEq(bytes32(moduleStateBaseSlot + 3), keccak256("firm.module.state"));
     }
 
     function testCannotReinit() public {

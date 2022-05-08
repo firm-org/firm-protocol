@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.13;
 
-import "zodiac/factory/ModuleProxyFactory.sol";
-
 import {FirmTest} from  "../../common/test/lib/FirmTest.sol";
+import "../../factory/UpgradeableModuleProxyFactory.sol";
+
 import "../Roles.sol";
 
 contract RolesTest is FirmTest {
@@ -177,7 +177,7 @@ contract RolesTest is FirmTest {
 }
 
 contract RolesWithProxyTest is RolesTest {
-    ModuleProxyFactory immutable factory = new ModuleProxyFactory();
+    UpgradeableModuleProxyFactory immutable factory = new UpgradeableModuleProxyFactory();
     address immutable rolesImpl = address(new Roles(address(0)));
 
     function setUp() public override {
@@ -185,7 +185,8 @@ contract RolesWithProxyTest is RolesTest {
             factory.deployModule(
                 rolesImpl,
                 abi.encodeCall(Roles.setUp, (ADMIN)),
-                0
+                0,
+                true
             )
         );
         vm.label(address(roles), "RolesProxy");
