@@ -8,6 +8,7 @@ import "zodiac/interfaces/IAvatar.sol";
 
 import {FirmTest} from "../../common/test/lib/FirmTest.sol";
 import {roleFlag} from "../../common/test/mocks/RolesAuthMock.sol";
+import {ModuleMock} from "../../common/test/mocks/ModuleMock.sol";
 import "./lib/ERC20Token.sol";
 
 import {FirmFactory, UpgradeableModuleProxyFactory} from "../FirmFactory.sol";
@@ -78,6 +79,16 @@ contract FirmFactoryIntegrationTest is FirmTest {
         budget.executePayment(allowanceId, receiver, 2);
 
         assertEq(token.balanceOf(receiver), 14);
+    }
+
+    function testModuleUpgrades() public {
+        (GnosisSafe safe, Budget budget,) = createFirm(address(this));
+
+        address moduleMockImpl = address(new ModuleMock(1));
+        vm.prank(address(safe));        
+        budget.upgrade(moduleMockImpl);
+
+        assertEq(ModuleMock(address(budget)).foo(), 1);
     }
 
     function createFirm(address owner) internal returns (GnosisSafe safe, Budget budget, Roles roles) {
