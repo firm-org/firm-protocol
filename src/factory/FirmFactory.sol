@@ -3,15 +3,16 @@ pragma solidity 0.8.13;
 
 import "gnosis-safe/GnosisSafe.sol";
 import "gnosis-safe/proxies/GnosisSafeProxyFactory.sol";
-import "zodiac/factory/ModuleProxyFactory.sol";
 import "zodiac/interfaces/IAvatar.sol";
 
 import {Roles} from "../roles/Roles.sol";
 import {Budget} from "../budget/Budget.sol";
 
+import {UpgradeableModuleProxyFactory} from "./UpgradeableModuleProxyFactory.sol";
+
 contract FirmFactory {
     GnosisSafeProxyFactory immutable safeFactory;
-    ModuleProxyFactory immutable moduleFactory;
+    UpgradeableModuleProxyFactory immutable moduleFactory;
 
     address immutable safeImpl;
     address immutable rolesImpl;
@@ -23,7 +24,7 @@ contract FirmFactory {
 
     constructor(
         GnosisSafeProxyFactory _safeFactory,
-        ModuleProxyFactory _moduleFactory,
+        UpgradeableModuleProxyFactory _moduleFactory,
         address _safeImpl,
         address _rolesImpl,
         address _budgetImpl
@@ -70,14 +71,16 @@ contract FirmFactory {
             moduleFactory.deployModule(
                 rolesImpl,
                 abi.encodeCall(Roles.setUp, (address(safe))),
-                1
+                1,
+                true
             )
         );
         Budget budget = Budget(
             moduleFactory.deployModule(
                 budgetImpl,
                 abi.encodeCall(Budget.setUp, (Budget.InitParams(IAvatar(address(safe)), IAvatar(address(safe)), roles))),
-                1
+                1,
+                true
             )
         );
         
