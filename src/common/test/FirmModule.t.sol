@@ -29,11 +29,10 @@ contract FirmModuleTest is FirmTest {
 
     function setUp() public {
         avatar = new AvatarStub();
-        module = ModuleMock(factory.deployModule(
+        module = ModuleMock(factory.deployUpgradeableModule(
             address(moduleOneImpl),
             abi.encodeCall(moduleOneImpl.setUp, (avatar, avatar, INITIAL_BAR)),
-            0,
-            true
+            0
         ));
         vm.label(address(module), "Proxy");
         vm.label(address(moduleOneImpl), "ModuleOne");

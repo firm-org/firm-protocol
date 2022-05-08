@@ -68,19 +68,17 @@ contract FirmFactory {
 
         GnosisSafe safe = GnosisSafe(payable(address(this)));
         Roles roles = Roles(
-            moduleFactory.deployModule(
+            moduleFactory.deployUpgradeableModule(
                 rolesImpl,
                 abi.encodeCall(Roles.setUp, (address(safe))),
-                1,
-                true
+                1
             )
         );
         Budget budget = Budget(
-            moduleFactory.deployModule(
+            moduleFactory.deployUpgradeableModule(
                 budgetImpl,
                 abi.encodeCall(Budget.setUp, (Budget.InitParams(IAvatar(address(safe)), IAvatar(address(safe)), roles))),
-                1,
-                true
+                1
             )
         );
         

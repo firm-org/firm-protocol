@@ -182,11 +182,10 @@ contract RolesWithProxyTest is RolesTest {
 
     function setUp() public override {
         roles = Roles(
-            factory.deployModule(
+            factory.deployUpgradeableModule(
                 rolesImpl,
                 abi.encodeCall(Roles.setUp, (ADMIN)),
-                0,
-                true
+                0
             )
         );
         vm.label(address(roles), "RolesProxy");
