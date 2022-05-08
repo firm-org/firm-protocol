@@ -6,7 +6,7 @@ import {IRoles} from "../roles/Roles.sol";
 
 contract LocalDeploy {
     GnosisSafeProxyFactory public safeProxyFactory = new GnosisSafeProxyFactory();
-    ModuleProxyFactory public moduleProxyFactory = new ModuleProxyFactory();
+    UpgradeableModuleProxyFactory public moduleProxyFactory = new UpgradeableModuleProxyFactory();
     address public safeImpl = address(new GnosisSafe());
     address public rolesImpl = address(new Roles(address(10)));
     address public budgetImpl = address(new Budget(Budget.InitParams(IAvatar(address(10)), IAvatar(address(10)), IRoles(address(10)))));

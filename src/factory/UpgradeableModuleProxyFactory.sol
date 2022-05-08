@@ -24,23 +24,15 @@ contract UpgradeableModuleProxyFactory is ModuleProxyFactory {
             revert TakenAddress(addr);
     }
 
-    function deployModule(
+    function deployUpgradeableModule(
         address masterCopy,
         bytes memory initializer,
-        uint256 saltNonce,
-        bool upgradeable
+        uint256 saltNonce
     ) public returns (address proxy) {
-        if (upgradeable) {
-            proxy = createUpgradeableProxy(
-                masterCopy,
-                keccak256(abi.encodePacked(keccak256(initializer), saltNonce))
-            );
-        } else {
-            proxy = createProxy(
-                masterCopy,
-                keccak256(abi.encodePacked(keccak256(initializer), saltNonce))
-            );
-        }
+        proxy = createUpgradeableProxy(
+            masterCopy,
+            keccak256(abi.encodePacked(keccak256(initializer), saltNonce))
+        );
 
         (bool success, ) = proxy.call(initializer);
         if (!success) revert FailedInitialization();

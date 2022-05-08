@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.13;
 
-import "zodiac/factory/ModuleProxyFactory.sol";
-
 import {FirmTest} from "../../common/test/lib/FirmTest.sol";
 import {RolesStub} from "../../common/test/mocks/RolesStub.sol";
 import {roleFlag} from "../../common/test/mocks/RolesAuthMock.sol";
 import {AvatarStub} from "../../common/test/mocks/AvatarStub.sol";
+import {UpgradeableModuleProxyFactory} from "../../factory/UpgradeableModuleProxyFactory.sol";
 
 import "../Budget.sol";
 
@@ -247,7 +246,7 @@ contract BudgetTest is FirmTest {
 }
 
 contract BudgetWithProxyTest is BudgetTest {
-    ModuleProxyFactory immutable factory = new ModuleProxyFactory();
+    UpgradeableModuleProxyFactory immutable factory = new UpgradeableModuleProxyFactory();
     address immutable budgetImpl =
         address(new Budget(Budget.InitParams(IAvatar(address(10)), IAvatar(address(10)), IRoles(address(10)))));
 
@@ -255,7 +254,7 @@ contract BudgetWithProxyTest is BudgetTest {
         avatar = new AvatarStub();
         roles = new RolesStub();
         budget = Budget(
-            factory.deployModule(
+            factory.deployUpgradeableModule(
                 budgetImpl,
                 abi.encodeCall(Budget.setUp, (Budget.InitParams(avatar, avatar, roles))),
                 0

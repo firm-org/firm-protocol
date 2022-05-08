@@ -4,14 +4,14 @@ pragma solidity 0.8.13;
 import "gnosis-safe/GnosisSafe.sol";
 import "gnosis-safe/proxies/GnosisSafeProxyFactory.sol";
 import "gnosis-safe/common/Enum.sol";
-import "zodiac/factory/ModuleProxyFactory.sol";
 import "zodiac/interfaces/IAvatar.sol";
 
 import {FirmTest} from "../../common/test/lib/FirmTest.sol";
 import {roleFlag} from "../../common/test/mocks/RolesAuthMock.sol";
+import {ModuleMock} from "../../common/test/mocks/ModuleMock.sol";
 import "./lib/ERC20Token.sol";
 
-import {FirmFactory} from "../FirmFactory.sol";
+import {FirmFactory, UpgradeableModuleProxyFactory} from "../FirmFactory.sol";
 import {Budget, TimeShiftLib, TimeShift, NO_PARENT_ID} from "../../budget/Budget.sol";
 import {Roles, IRoles, ONLY_ROOT_ROLE} from "../../roles/Roles.sol";
 
@@ -25,7 +25,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
         token = new ERC20Token();
         factory = new FirmFactory(
             new GnosisSafeProxyFactory(),
-            new ModuleProxyFactory(),
+            new UpgradeableModuleProxyFactory(),
             address(new GnosisSafe()),
             address(new Roles(address(10))),
             address(new Budget(Budget.InitParams(IAvatar(address(10)), IAvatar(address(10)), IRoles(address(10)))))
@@ -79,6 +79,16 @@ contract FirmFactoryIntegrationTest is FirmTest {
         budget.executePayment(allowanceId, receiver, 2);
 
         assertEq(token.balanceOf(receiver), 14);
+    }
+
+    function testModuleUpgrades() public {
+        (GnosisSafe safe, Budget budget,) = createFirm(address(this));
+
+        address moduleMockImpl = address(new ModuleMock(1));
+        vm.prank(address(safe));        
+        budget.upgrade(moduleMockImpl);
+
+        assertEq(ModuleMock(address(budget)).foo(), 1);
     }
 
     function createFirm(address owner) internal returns (GnosisSafe safe, Budget budget, Roles roles) {
