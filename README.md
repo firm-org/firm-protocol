@@ -8,6 +8,11 @@ curl -L https://foundry.paradigm.xyz | bash
 foundryup
 ```
 
+### Install dependencies in `npm`
+```
+yarn install
+```
+
 ### Build and test
 ```
 forge build
