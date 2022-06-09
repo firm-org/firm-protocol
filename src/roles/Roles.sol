@@ -6,13 +6,13 @@ import {UpgradeableModule} from "../bases/UpgradeableModule.sol";
 
 import "./IRoles.sol";
 
-/*
-    Inspired by Solmate's RolesAuthority (https://github.com/Rari-Capital/solmate/blob/main/src/auth/authorities/RolesAuthority.sol)
-    and OpenZeppelin's AccessControl (https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/AccessControl.sol)
-
-    Supports up to 256 roles
+/**
+ * @title Roles
+ * @dev Role management module supporting up to 256 roles optimize for batched actions
+        Inspired by Solmate's RolesAuthority and OpenZeppelin's AccessControl
+        https://github.com/Rari-Capital/solmate/blob/main/src/auth/authorities/RolesAuthority.sol)
+        https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/AccessControl.sol
 */
-
 contract Roles is UpgradeableModule, IRoles {
     mapping(address => bytes32) public getUserRoles;
     mapping(uint8 => bytes32) public getRoleAdmin;

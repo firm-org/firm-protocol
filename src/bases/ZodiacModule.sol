@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import {IERC165} from "openzeppelin/interfaces/IERC165.sol";
 
 import {IZodiacModule, IAvatar, IGuard, SafeEnums} from "./IZodiacModule.sol";
-import "./SafeAware.sol";
+import {SafeAware} from "./SafeAware.sol";
 
 /**
  * @title ZodiacModule
