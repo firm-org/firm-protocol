@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity 0.8.13;
 
+import {UpgradeableModule} from "../bases/UpgradeableModule.sol";
+import {IAvatar} from "../bases/SafeAware.sol";
 import {ERC1155, ERC1155TokenReceiver} from "./ERC1155.sol";
 
-contract Captable is ERC1155 {
+contract Captable is UpgradeableModule, ERC1155 {
     string public name;
     string public symbol;
 
@@ -15,7 +17,20 @@ contract Captable is ERC1155 {
     mapping(uint256 => Class) public classes;
     uint256 classCount;
 
-    constructor(string memory _name, string memory _symbol) {
+    constructor(
+        IAvatar _safe,
+        string memory _name,
+        string memory _symbol
+    ) {
+        initialize(_safe, _name, _symbol);
+    }
+
+    function initialize(
+        IAvatar _safe,
+        string memory _name,
+        string memory _symbol
+    ) public {
+        __init_setSafe(_safe);
         name = _name;
         symbol = _symbol;
     }
