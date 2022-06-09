@@ -68,6 +68,7 @@ contract FirmFactory {
             payable(safeFactory.createProxyWithNonce(safeImpl, safeInitData, 1))
         );
 
+        // TODO: remove this call. We shouldn't be wasting on-chain gas for soemthi
         (address[] memory modules, ) = safe.getModulesPaginated(
             address(0x1),
             1
