@@ -32,7 +32,7 @@ contract Captable is ERC1155 {
 
     error AuthorizedLowerThanOutstanding(uint256 newAuthorized, uint256 issued);
 
-    function setAuthorizedShares(uint256 _id, uint256 _newAuthorized) public {
+    function authorizeShares(uint256 _id, uint256 _newAuthorized) public {
         Class storage class = classes[_id];
 
         if (_newAuthorized < class.issued) {
