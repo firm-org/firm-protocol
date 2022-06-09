@@ -5,65 +5,41 @@ import "zodiac/interfaces/IAvatar.sol";
 import "zodiac/interfaces/IGuard.sol";
 import "zodiac/guard/BaseGuard.sol";
 
-/**
- * @title FirmModule
- * @dev More minimal implementation of Zodiac's Module.sol without an owner
- *      and using unstructured storage
- */
-abstract contract FirmModule {
-    struct ModuleState {
-        IAvatar avatar;
-        IAvatar target;
-        IGuard guard;
-    }
-    
-    // Same events as Zodiac for compatibility
+import "./SafeAware.sol";
+
+abstract contract IZodiacModule {
     event AvatarSet(IAvatar indexed previousAvatar, IAvatar indexed newAvatar);
     event TargetSet(IAvatar indexed previousTarget, IAvatar indexed newTarget);
     event ChangedGuard(address guard);
 
-    event Upgraded(address indexed implementation);
-
-    error AlreadyInitialized();
-    error UnauthorizedNotAvatar();
     error NotIERC165Compliant(address guard_);
 
-    // MODULE_STATE_SLOT = bytes32(uint256(keccak256("firm.module.state")) - 3)
-    bytes32 internal constant MODULE_STATE_SLOT = 0xa5b7510e75e06df92f176662510e3347b687605108b9f72b4260aa7cf56ebb12;
-    // EIP1967_IMPL_SLOT = bytes32(uint256(keccak256('eip1967.proxy.implementation')) - 1)
-    bytes32 internal constant EIP1967_IMPL_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
+    function avatar() public view virtual returns (IAvatar);
 
-    modifier onlyAvatar {
-        if (msg.sender != address(moduleState().avatar)) {
-            revert UnauthorizedNotAvatar();
-        }
-        _;
+    function target() public view virtual returns (IAvatar);
+
+    function guard() public view virtual returns (IGuard);
+}
+
+/**
+ * @title ZodiacModule
+ * @dev More minimal implementation of Zodiac's Module.sol without an owner
+ *      and using unstructured storage
+ */
+abstract contract ZodiacModule is IZodiacModule, SafeAware {
+    struct ZodiacState {
+        IAvatar target;
+        IGuard guard;
     }
 
-    function initialize(IAvatar _avatar, IAvatar _target) public virtual {
-        ModuleState storage state = moduleState();
-
-        if (address(state.avatar) != address(0)) {
-            revert AlreadyInitialized();
-        }
-
-        state.avatar = _avatar;
-        state.target = _target;
-    }
-
-    /// @dev Sets the avatar to a new avatar (`newAvatar`).
-    /// @notice Can only be called by the current avatar
-    function setAvatar(IAvatar _avatar) public onlyAvatar {
-        ModuleState storage state = moduleState();
-        IAvatar previousAvatar = state.avatar;
-        state.avatar = _avatar;
-        emit AvatarSet(previousAvatar, _avatar);
-    }
+    // ZODIAC_STATE_SLOT = bytes32(uint256(keccak256("firm.zodiacmodule.state")) - 2)
+    bytes32 internal constant ZODIAC_STATE_SLOT =
+        0x1bcb284404f22ead428604605be8470a4a8a14c8422630d8a717460f9331147d;
 
     /// @dev Sets the target to a new target (`newTarget`).
     /// @notice Can only be called by the avatar
-    function setTarget(IAvatar _target) public onlyAvatar {
-        ModuleState storage state = moduleState();
+    function setTarget(IAvatar _target) public onlySafe {
+        ZodiacState storage state = zodiacState();
         IAvatar previousTarget = state.target;
         state.target = _target;
         emit TargetSet(previousTarget, _target);
@@ -71,25 +47,14 @@ abstract contract FirmModule {
 
     /// @dev Set a guard that checks transactions before execution.
     /// @param _guard The address of the guard to be used or the 0 address to disable the guard.
-    function setGuard(IGuard _guard) external onlyAvatar {
+    function setGuard(IGuard _guard) external onlySafe {
         if (address(_guard) != address(0)) {
-            if (!BaseGuard(address(_guard)).supportsInterface(type(IGuard).interfaceId))
+            bytes4 iface = type(IGuard).interfaceId;
+            if (!BaseGuard(address(_guard)).supportsInterface(iface))
                 revert NotIERC165Compliant(address(_guard));
         }
-        moduleState().guard = _guard;
+        zodiacState().guard = _guard;
         emit ChangedGuard(address(_guard));
-    }
-
-    /// @notice Upgrades the proxy to a new implementation address
-    /// @dev The new implementation should be a contract that implements a way to perform upgrades as well
-    ////     otherwise the proxy will freeze on that implementation forever, since the proxy doesn't contain logic to change it.
-    /// @param _newImplementation The address of the new implementation address the proxy will use
-    function upgrade(address _newImplementation) public onlyAvatar {
-        assembly {
-            sstore(EIP1967_IMPL_SLOT, _newImplementation)
-        }
-
-        emit Upgraded(_newImplementation);
     }
 
     /// @dev Passes a transaction to be executed by the avatar.
@@ -104,8 +69,7 @@ abstract contract FirmModule {
         bytes memory data,
         Enum.Operation operation
     ) internal returns (bool success) {
-        ModuleState storage state = moduleState();
-        IGuard guard_ = state.guard;
+        IGuard guard_ = guard();
 
         /// Check if a transactioon guard is enabled.
         if (address(guard_) != address(0)) {
@@ -126,7 +90,12 @@ abstract contract FirmModule {
             );
         }
 
-        success = state.target.execTransactionFromModule(to, value, data, operation);
+        success = target().execTransactionFromModule(
+            to,
+            value,
+            data,
+            operation
+        );
 
         if (address(guard_) != address(0)) {
             guard_.checkAfterExecution(bytes32("0x"), success);
@@ -145,8 +114,7 @@ abstract contract FirmModule {
         bytes memory data,
         Enum.Operation operation
     ) internal returns (bool success, bytes memory returnData) {
-        ModuleState storage state = moduleState();
-        IGuard guard_ = state.guard;
+        IGuard guard_ = guard();
 
         /// Check if a transaction guard is enabled.
         if (address(guard_) != address(0)) {
@@ -167,29 +135,34 @@ abstract contract FirmModule {
             );
         }
 
-        (success, returnData) = state.target
-            .execTransactionFromModuleReturnData(to, value, data, operation);
+        (success, returnData) = target().execTransactionFromModuleReturnData(
+            to,
+            value,
+            data,
+            operation
+        );
 
         if (address(guard_) != address(0)) {
             guard_.checkAfterExecution(bytes32("0x"), success);
         }
     }
 
-    function avatar() public view returns (IAvatar) {
-        return moduleState().avatar;
+    function avatar() public view override returns (IAvatar) {
+        return safe();
     }
 
-    function target() public view returns (IAvatar) {
-        return moduleState().target;
+    function target() public view override returns (IAvatar) {
+        IAvatar target_ = zodiacState().target;
+        return address(target_) == address(0) ? safe() : target_;
     }
 
-    function guard() public view returns (IGuard) {
-        return moduleState().guard;
+    function guard() public view override returns (IGuard) {
+        return zodiacState().guard;
     }
 
-    function moduleState() internal pure returns (ModuleState storage state) {
+    function zodiacState() internal pure returns (ZodiacState storage state) {
         assembly {
-            state.slot := MODULE_STATE_SLOT
+            state.slot := ZODIAC_STATE_SLOT
         }
     }
 }

@@ -8,8 +8,4 @@ contract FirmTest is Test {
         addr = vm.addr(uint256(keccak256(abi.encodePacked(_label))));
         vm.label(addr, _label);
     }
-
-    function assertFalse(bool data) internal virtual {
-        assertTrue(!data);
-    }
 }

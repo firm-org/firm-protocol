@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.13;
 
+import "zodiac/interfaces/IAvatar.sol";
+
+import {UpgradeableModule} from "../bases/UpgradeableModule.sol";
+
 /*
     Inspired by Solmate's RolesAuthority (https://github.com/Rari-Capital/solmate/blob/main/src/auth/authorities/RolesAuthority.sol)
     and OpenZeppelin's AccessControl (https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/AccessControl.sol)
@@ -16,48 +20,64 @@ interface IRoles {
     function hasRole(address _user, uint8 _roleId) external view returns (bool);
 }
 
-contract Roles is IRoles {
-    mapping (address => bytes32) public getUserRoles;
-    mapping (uint8 => bytes32) public getRoleAdmin;
+contract Roles is IRoles, UpgradeableModule {
+    mapping(address => bytes32) public getUserRoles;
+    mapping(uint8 => bytes32) public getRoleAdmin;
     uint256 public roleCount;
 
-    event RoleCreated(uint8 indexed roleId, bytes32 roleAdmin, string name, address indexed actor);
-    event RoleAdminSet(uint8 indexed roleId, bytes32 roleAdmin, address indexed actor);
-    event RolesSet(address indexed user, bytes32 userRoles, address indexed actor);
-    
-    error AlreadyInitialized();
+    event RoleCreated(
+        uint8 indexed roleId,
+        bytes32 roleAdmin,
+        string name,
+        address indexed actor
+    );
+    event RoleAdminSet(
+        uint8 indexed roleId,
+        bytes32 roleAdmin,
+        address indexed actor
+    );
+    event RolesSet(
+        address indexed user,
+        bytes32 userRoles,
+        address indexed actor
+    );
+
     error UnauthorizedNoRole(uint8 requiredRole);
     error UnauthorizedNotAdmin(uint8 role);
     error RoleLimitReached();
-    
-    constructor(address _initialRoot) {
-        setUp(_initialRoot);
+
+    constructor(IAvatar _safe) {
+        initialize(_safe);
     }
 
-    function setUp(address _initialRoot) public {
-        // Since setUp creates the first two roles, this function can only be called once
-        if (roleCount != 0)
-            revert AlreadyInitialized();
+    function initialize(IAvatar _safe) public {
+        // SafeAware.__init_setSafe will revert if already initialized
+        __init_setSafe(_safe);
 
         _createRole(ONLY_ROOT_ROLE, "Root");
         _createRole(ONLY_ROOT_ROLE, "Role manager");
 
         // Initial admin just gets root role which gives it permission to do anything
         // (Implicitly gets role manager role immediately)
-        getUserRoles[_initialRoot] = ONLY_ROOT_ROLE;
+        getUserRoles[address(_safe)] = ONLY_ROOT_ROLE;
     }
 
-    function createRole(bytes32 _adminRoles, string memory _name) public returns (uint8 roleId) {
+    function createRole(bytes32 _adminRoles, string memory _name)
+        public
+        returns (uint8 roleId)
+    {
         if (!hasRole(msg.sender, ROLE_MANAGER_ROLE))
             revert UnauthorizedNoRole(ROLE_MANAGER_ROLE);
 
         return _createRole(_adminRoles, _name);
     }
 
-    function _createRole(bytes32 _adminRoles, string memory _name) internal returns (uint8 roleId) {
+    function _createRole(bytes32 _adminRoles, string memory _name)
+        internal
+        returns (uint8 roleId)
+    {
         uint256 roleCount_ = roleCount;
-        if (roleCount_ == 256)
-            revert RoleLimitReached();
+        if (roleCount_ == 256) revert RoleLimitReached();
         unchecked {
             roleCount = roleCount_ + 1;
         }
@@ -84,7 +104,11 @@ contract Roles is IRoles {
         emit RoleAdminSet(_roleId, _adminRoles, msg.sender);
     }
 
-    function setRole(address _user, uint8 _roleId, bool _grant) public {
+    function setRole(
+        address _user,
+        uint8 _roleId,
+        bool _grant
+    ) public {
         bytes32 userRoles = getUserRoles[_user];
 
         if (!_isRoleAdmin(getUserRoles[msg.sender], _roleId))
@@ -101,7 +125,11 @@ contract Roles is IRoles {
         emit RolesSet(_user, userRoles, msg.sender);
     }
 
-    function setRoles(address _user, uint8[] memory _grantingRoles, uint8[] memory _revokingRoles) public {
+    function setRoles(
+        address _user,
+        uint8[] memory _grantingRoles,
+        uint8[] memory _revokingRoles
+    ) public {
         bytes32 senderRoles = getUserRoles[msg.sender];
         bytes32 userRoles = getUserRoles[_user];
 
@@ -132,16 +160,27 @@ contract Roles is IRoles {
         bytes32 userRoles = getUserRoles[_user];
         // either user has the specified role or user has root role (whichs gives it permission to do anything)
         // Note: For root it will return true even if the role hasn't been created yet
-        return uint256(userRoles >> _roleId) & 1 != 0 || _hasRootRole(userRoles);
+        return
+            uint256(userRoles >> _roleId) & 1 != 0 || _hasRootRole(userRoles);
     }
 
-    function isRoleAdmin(address _user, uint8 _roleId) public view returns (bool) {
+    function isRoleAdmin(address _user, uint8 _roleId)
+        public
+        view
+        returns (bool)
+    {
         return _isRoleAdmin(getUserRoles[_user], _roleId);
     }
 
-    function _isRoleAdmin(bytes32 _userRoles, uint8 _roleId) internal view returns (bool) {
+    function _isRoleAdmin(bytes32 _userRoles, uint8 _roleId)
+        internal
+        view
+        returns (bool)
+    {
         // Note: For root it will return true even if the role hasn't been created yet
-        return (_userRoles & getRoleAdmin[_roleId]) != 0 || _hasRootRole(_userRoles);
+        return
+            (_userRoles & getRoleAdmin[_roleId]) != 0 ||
+            _hasRootRole(_userRoles);
     }
 
     function hasRootRole(address _user) public view returns (bool) {
