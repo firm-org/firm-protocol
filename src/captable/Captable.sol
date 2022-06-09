@@ -35,7 +35,10 @@ contract Captable is UpgradeableModule, ERC1155 {
         symbol = _symbol;
     }
 
-    function createClass(string memory _name, uint256 _authorized) public {
+    function createClass(string memory _name, uint256 _authorized)
+        public
+        onlySafe
+    {
         uint256 classId;
         unchecked {
             classId = classCount++;
@@ -47,7 +50,10 @@ contract Captable is UpgradeableModule, ERC1155 {
 
     error AuthorizedLowerThanOutstanding(uint256 newAuthorized, uint256 issued);
 
-    function authorizeShares(uint256 _id, uint256 _newAuthorized) public {
+    function authorizeShares(uint256 _id, uint256 _newAuthorized)
+        public
+        onlySafe
+    {
         Class storage class = classes[_id];
 
         if (_newAuthorized < class.issued) {
@@ -63,7 +69,7 @@ contract Captable is UpgradeableModule, ERC1155 {
         uint256 _id,
         address _to,
         uint256 _amount
-    ) public {
+    ) public onlySafe {
         Class storage class = classes[_id];
 
         uint256 newIssued = class.issued + _amount;
