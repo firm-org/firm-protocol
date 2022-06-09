@@ -1,30 +1,17 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.13;
+pragma solidity ^0.8.13;
 
-import "zodiac/interfaces/IAvatar.sol";
-import "zodiac/interfaces/IGuard.sol";
-import "zodiac/guard/BaseGuard.sol";
+import {IERC165} from "openzeppelin/interfaces/IERC165.sol";
 
+import {IZodiacModule, IAvatar, IGuard} from "./IZodiacModule.sol";
 import "./SafeAware.sol";
-
-abstract contract IZodiacModule {
-    event AvatarSet(IAvatar indexed previousAvatar, IAvatar indexed newAvatar);
-    event TargetSet(IAvatar indexed previousTarget, IAvatar indexed newTarget);
-    event ChangedGuard(address guard);
-
-    error NotIERC165Compliant(address guard_);
-
-    function avatar() public view virtual returns (IAvatar);
-
-    function target() public view virtual returns (IAvatar);
-
-    function guard() public view virtual returns (IGuard);
-}
 
 /**
  * @title ZodiacModule
  * @dev More minimal implementation of Zodiac's Module.sol without an owner
  *      and using unstructured storage
+ * @dev Note that this contract doesn't have an initializer and ZodiacState
+ *      must be set explicly if desired, but defaults to being unset
  */
 abstract contract ZodiacModule is IZodiacModule, SafeAware {
     struct ZodiacState {
@@ -32,37 +19,41 @@ abstract contract ZodiacModule is IZodiacModule, SafeAware {
         IGuard guard;
     }
 
-    // ZODIAC_STATE_SLOT = bytes32(uint256(keccak256("firm.zodiacmodule.state")) - 2)
-    bytes32 internal constant ZODIAC_STATE_SLOT =
+    bytes32 internal constant ZODIAC_STATE_SLOT = // keccak256("firm.zodiacmodule.state") - 2
         0x1bcb284404f22ead428604605be8470a4a8a14c8422630d8a717460f9331147d;
 
-    /// @dev Sets the target to a new target (`newTarget`).
-    /// @notice Can only be called by the avatar
+    /**
+     * @notice Sets the target of this module to `_target`
+     * @dev Unless a target is explictly set through this function, the target is the Safe
+     * @param _target The new target to which this module will execute calls
+     */
     function setTarget(IAvatar _target) public onlySafe {
-        ZodiacState storage state = zodiacState();
-        IAvatar previousTarget = state.target;
-        state.target = _target;
+        IAvatar previousTarget = target();
+        zodiacState().target = _target;
         emit TargetSet(previousTarget, _target);
     }
 
-    /// @dev Set a guard that checks transactions before execution.
-    /// @param _guard The address of the guard to be used or the 0 address to disable the guard.
+    /**
+     * @notice Set the guard to check transactions of this module to `_guard`
+     * @param _guard The address of the guard to be used or 0 to disable the guard
+     */
     function setGuard(IGuard _guard) external onlySafe {
-        if (address(_guard) != address(0)) {
-            bytes4 iface = type(IGuard).interfaceId;
-            if (!BaseGuard(address(_guard)).supportsInterface(iface))
-                revert NotIERC165Compliant(address(_guard));
+        address guardAddr = address(_guard);
+        if (guardAddr != address(0)) {
+            if (!IERC165(guardAddr).supportsInterface(type(IGuard).interfaceId))
+                revert NotIERC165Compliant(guardAddr);
         }
         zodiacState().guard = _guard;
-        emit ChangedGuard(address(_guard));
+        emit ChangedGuard(guardAddr);
     }
 
-    /// @dev Passes a transaction to be executed by the avatar.
-    /// @notice Can only be called by this contract.
-    /// @param to Destination address of module transaction.
-    /// @param value Ether value of module transaction.
-    /// @param data Data payload of module transaction.
-    /// @param operation Operation type of module transaction: 0 == call, 1 == delegate call.
+    /**
+    * @dev Executes a transaction through the target intended to be executed by the avatar
+    * @param to Address being called
+    * @param value Ether value being sent
+    * @param data Calldata
+    * @param operation Operation type of transaction: 0 = call, 1 = delegatecall
+    */
     function exec(
         address to,
         uint256 value,
@@ -70,16 +61,14 @@ abstract contract ZodiacModule is IZodiacModule, SafeAware {
         Enum.Operation operation
     ) internal returns (bool success) {
         IGuard guard_ = guard();
-
-        /// Check if a transactioon guard is enabled.
+        // If the module has a guard enabled, check if it allows the call
         if (address(guard_) != address(0)) {
+            // We zero out data specific to multisig transactions irrelevant in module calls
             guard_.checkTransaction(
-                /// Transaction info used by module transactions.
                 to,
                 value,
                 data,
                 operation,
-                /// Zero out the redundant transaction information only used for Safe multisig transctions.
                 0,
                 0,
                 0,
@@ -90,6 +79,7 @@ abstract contract ZodiacModule is IZodiacModule, SafeAware {
             );
         }
 
+        // Perform the actual call through the target
         success = target().execTransactionFromModule(
             to,
             value,
@@ -97,17 +87,20 @@ abstract contract ZodiacModule is IZodiacModule, SafeAware {
             operation
         );
 
+        // If the module has a guard enabled, notify that the call ocurred and whether it suceeded
         if (address(guard_) != address(0)) {
             guard_.checkAfterExecution(bytes32("0x"), success);
         }
     }
 
-    /// @dev Passes a transaction to be executed by the target and returns data.
-    /// @notice Can only be called by this contract.
-    /// @param to Destination address of module transaction.
-    /// @param value Ether value of module transaction.
-    /// @param data Data payload of module transaction.
-    /// @param operation Operation type of module transaction: 0 == call, 1 == delegate call.
+    /**
+    * @dev Executes a transaction through the target intended to be executed by the avatar
+    *      and returns the call status and the return data of the call
+    * @param to Address being called
+    * @param value Ether value being sent
+    * @param data Calldata
+    * @param operation Operation type of transaction: 0 = call, 1 = delegatecall
+    */
     function execAndReturnData(
         address to,
         uint256 value,
@@ -115,16 +108,14 @@ abstract contract ZodiacModule is IZodiacModule, SafeAware {
         Enum.Operation operation
     ) internal returns (bool success, bytes memory returnData) {
         IGuard guard_ = guard();
-
-        /// Check if a transaction guard is enabled.
+        // If the module has a guard enabled, check if it allows the call
         if (address(guard_) != address(0)) {
+            // We zero out data specific to multisig transactions irrelevant in module calls
             guard_.checkTransaction(
-                /// Transaction info used by module transactions.
                 to,
                 value,
                 data,
                 operation,
-                /// Zero out the redundant transaction information only used for Safe multisig transctions.
                 0,
                 0,
                 0,
@@ -142,20 +133,30 @@ abstract contract ZodiacModule is IZodiacModule, SafeAware {
             operation
         );
 
+        // If the module has a guard enabled, notify that the call ocurred and whether it suceeded
         if (address(guard_) != address(0)) {
             guard_.checkAfterExecution(bytes32("0x"), success);
         }
     }
 
+    /**
+     * @notice Address of the Safe that will ultimately execute module transactions
+     */
     function avatar() public view override returns (IAvatar) {
         return safe();
     }
 
+    /**
+     * @notice Address of the target contract that this module will execute calls through
+     */
     function target() public view override returns (IAvatar) {
         IAvatar target_ = zodiacState().target;
         return address(target_) == address(0) ? safe() : target_;
     }
 
+    /**
+     * @notice Address of the guard contract used for additional transaction checks (zero if unset)
+     */
     function guard() public view override returns (IGuard) {
         return zodiacState().guard;
     }
