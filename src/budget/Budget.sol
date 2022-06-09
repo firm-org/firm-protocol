@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.13;
 
-import "openzeppelin/interfaces/IERC20.sol";
+import {IERC20} from "openzeppelin/interfaces/IERC20.sol";
 
 import {UpgradeableModule} from "../bases/UpgradeableModule.sol";
-import {ZodiacModule, IAvatar} from "../bases/ZodiacModule.sol";
-import "../common/RolesAuth.sol";
+import {ZodiacModule, IAvatar, SafeEnums} from "../bases/ZodiacModule.sol";
+import {IRoles, RolesAuth} from "../common/RolesAuth.sol";
 
-import "./TimeShiftLib.sol";
+import {TimeShiftLib, EncodedTimeShift} from "./TimeShiftLib.sol";
 
 address constant ETH = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 uint256 constant NO_PARENT_ID = 0;
@@ -168,13 +168,13 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
 
         bool success;
         if (token == ETH) {
-            success = exec(_to, _amount, hex"", Enum.Operation.Call);
+            success = exec(_to, _amount, hex"", SafeEnums.Operation.Call);
         } else {
             (bool callSuccess, bytes memory retData) = execAndReturnData(
                 token,
                 0,
                 abi.encodeCall(IERC20.transfer, (_to, _amount)),
-                Enum.Operation.Call
+                SafeEnums.Operation.Call
             );
 
             success =

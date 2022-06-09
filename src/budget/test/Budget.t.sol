@@ -7,8 +7,9 @@ import {roleFlag} from "../../common/test/mocks/RolesAuthMock.sol";
 import {AvatarStub} from "../../common/test/mocks/AvatarStub.sol";
 import {UpgradeableModuleProxyFactory} from "../../factory/UpgradeableModuleProxyFactory.sol";
 
-import "../Budget.sol";
+import {TimeShift, DateTimeLib} from "../../budget/TimeShiftLib.sol";
 import {SafeAware} from "../../bases/SafeAware.sol";
+import "../Budget.sol";
 
 contract BudgetTest is FirmTest {
     AvatarStub avatar;

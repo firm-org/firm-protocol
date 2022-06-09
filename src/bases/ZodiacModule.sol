@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import {IERC165} from "openzeppelin/interfaces/IERC165.sol";
 
-import {IZodiacModule, IAvatar, IGuard} from "./IZodiacModule.sol";
+import {IZodiacModule, IAvatar, IGuard, SafeEnums} from "./IZodiacModule.sol";
 import "./SafeAware.sol";
 
 /**
@@ -58,7 +58,7 @@ abstract contract ZodiacModule is IZodiacModule, SafeAware {
         address to,
         uint256 value,
         bytes memory data,
-        Enum.Operation operation
+        SafeEnums.Operation operation
     ) internal returns (bool success) {
         IGuard guard_ = guard();
         // If the module has a guard enabled, check if it allows the call
@@ -105,7 +105,7 @@ abstract contract ZodiacModule is IZodiacModule, SafeAware {
         address to,
         uint256 value,
         bytes memory data,
-        Enum.Operation operation
+        SafeEnums.Operation operation
     ) internal returns (bool success, bytes memory returnData) {
         IGuard guard_ = guard();
         // If the module has a guard enabled, check if it allows the call

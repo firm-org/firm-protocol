@@ -2,7 +2,7 @@
 pragma solidity 0.8.13;
 
 import {UpgradeableModule} from "../../../bases/UpgradeableModule.sol";
-import {ZodiacModule, IAvatar, Enum} from "../../../bases/ZodiacModule.sol";
+import {ZodiacModule, IAvatar, SafeEnums} from "../../../bases/ZodiacModule.sol";
 
 contract ModuleMock is UpgradeableModule, ZodiacModule {
     uint256 public immutable foo;
@@ -26,6 +26,6 @@ contract ModuleMock is UpgradeableModule, ZodiacModule {
         uint256 value,
         bytes memory data
     ) public returns (bool success) {
-        return exec(to, value, data, Enum.Operation.Call);
+        return exec(to, value, data, SafeEnums.Operation.Call);
     }
 }

@@ -3,8 +3,6 @@ pragma solidity 0.8.13;
 
 import "gnosis-safe/GnosisSafe.sol";
 import "gnosis-safe/proxies/GnosisSafeProxyFactory.sol";
-import "gnosis-safe/common/Enum.sol";
-import "zodiac/interfaces/IAvatar.sol";
 
 import {FirmTest} from "../../common/test/lib/FirmTest.sol";
 import {roleFlag} from "../../common/test/mocks/RolesAuthMock.sol";
@@ -12,8 +10,10 @@ import {ModuleMock} from "../../common/test/mocks/ModuleMock.sol";
 import "./lib/ERC20Token.sol";
 
 import {FirmFactory, UpgradeableModuleProxyFactory} from "../FirmFactory.sol";
-import {Budget, TimeShiftLib, TimeShift, NO_PARENT_ID} from "../../budget/Budget.sol";
+import {Budget, TimeShiftLib, NO_PARENT_ID} from "../../budget/Budget.sol";
+import {TimeShift} from "../../budget/TimeShiftLib.sol";
 import {Roles, IRoles, IAvatar, ONLY_ROOT_ROLE} from "../../roles/Roles.sol";
+import {SafeEnums} from "../../bases/IZodiacModule.sol";
 
 contract FirmFactoryIntegrationTest is FirmTest {
     using TimeShiftLib for *;

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.13;
 
-import "gnosis-safe/GnosisSafe.sol";
-import "gnosis-safe/proxies/GnosisSafeProxyFactory.sol";
-import "zodiac/interfaces/IAvatar.sol";
+import {GnosisSafe} from "gnosis-safe/GnosisSafe.sol";
+import {GnosisSafeProxyFactory} from "gnosis-safe/proxies/GnosisSafeProxyFactory.sol";
 
+import {IAvatar} from "../bases/IZodiacModule.sol";
 import {Roles} from "../roles/Roles.sol";
 import {Budget} from "../budget/Budget.sol";
 

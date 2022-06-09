@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.13;
 
-import {IAvatar} from "zodiac/interfaces/IAvatar.sol";
+import {IAvatar, Enum as SafeEnums} from "zodiac/interfaces/IAvatar.sol";
 import {IGuard} from "zodiac/interfaces/IGuard.sol";
 
 abstract contract IZodiacModule {
