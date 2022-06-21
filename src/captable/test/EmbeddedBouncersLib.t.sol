@@ -2,10 +2,10 @@
 pragma solidity 0.8.13;
 
 import {FirmTest} from "../../common/test/lib/FirmTest.sol";
-import {EmbeddedBouncersLib, IBouncer} from "../Captable.sol";
+import {EmbeddedBouncersLib, IBouncer} from "../EmbeddedBouncersLib.sol";
 
 contract EmbeddedBouncersLibTest is FirmTest {
-    using EmbeddedBouncersLib for IBouncer;
+    using EmbeddedBouncersLib for *;
 
     function testRandomAddressIsNotEmbedded() public {
         assertBouncerType(
@@ -37,6 +37,29 @@ contract EmbeddedBouncersLibTest is FirmTest {
         );
         assertBouncerType(
             0x0500000000000000000000000000000000000000,
+            EmbeddedBouncersLib.BouncerType.NotEmbedded
+        );
+    }
+
+    function testTwoWayConversion() public {
+        assertBouncerType(
+            EmbeddedBouncersLib.BouncerType.AllowAll.addrFlag(),
+            EmbeddedBouncersLib.BouncerType.AllowAll
+        );
+        assertBouncerType(
+            EmbeddedBouncersLib.BouncerType.DenyAll.addrFlag(),
+            EmbeddedBouncersLib.BouncerType.DenyAll
+        );
+        assertBouncerType(
+            EmbeddedBouncersLib.BouncerType.AllowClassHolders.addrFlag(),
+            EmbeddedBouncersLib.BouncerType.AllowClassHolders
+        );
+        assertBouncerType(
+            EmbeddedBouncersLib.BouncerType.AllowAllHolders.addrFlag(),
+            EmbeddedBouncersLib.BouncerType.AllowAllHolders
+        );
+        assertBouncerType(
+            EmbeddedBouncersLib.BouncerType.NotEmbedded.addrFlag(),
             EmbeddedBouncersLib.BouncerType.NotEmbedded
         );
     }

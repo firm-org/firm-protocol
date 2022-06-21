@@ -3,41 +3,10 @@ pragma solidity 0.8.13;
 
 import {UpgradeableModule} from "../bases/UpgradeableModule.sol";
 import {IAvatar} from "../bases/SafeAware.sol";
+
 import {ERC1155, ERC1155TokenReceiver} from "./ERC1155.sol";
-
-interface IBouncer {
-    function isTransferAllowed(
-        address from,
-        address to,
-        uint256 classId,
-        uint256 amount
-    ) external view returns (bool);
-}
-
-library EmbeddedBouncersLib {
-    enum BouncerType {
-        AllowAll,
-        DenyAll,
-        AllowClassHolders,
-        AllowAllHolders,
-        NotEmbedded
-    }
-
-    function bouncerType(IBouncer bouncer) internal pure returns (BouncerType) {
-        // An embedded bouncer is an address whose first byte is the embededded bouncer type
-        // followed by all 0s
-        // 0x0100..00 would signal embedded bouncer type 1 which is BlockAll
-        uint256 x = uint256(uint160(bytes20(address(bouncer))));
-
-        if (x & type(uint152).max != 0) return BouncerType.NotEmbedded;
-
-        uint256 typeId = x >> 152;
-        if (typeId >= uint256(uint8(BouncerType.NotEmbedded)))
-            return BouncerType.NotEmbedded;
-
-        return BouncerType(uint8(typeId));
-    }
-}
+import {IBouncer} from "./IBouncer.sol";
+import {EmbeddedBouncersLib} from "./EmbeddedBouncersLib.sol";
 
 contract Captable is UpgradeableModule, ERC1155 {
     using EmbeddedBouncersLib for IBouncer;
@@ -91,8 +60,7 @@ contract Captable is UpgradeableModule, ERC1155 {
         uint256 _authorized,
         IBouncer _bouncer,
         address[] calldata _classIssuers
-    ) external onlySafe {
-        uint256 classId;
+    ) external onlySafe returns (uint256 classId) {
         unchecked {
             classId = classCount++;
         }
@@ -202,13 +170,13 @@ contract Captable is UpgradeableModule, ERC1155 {
         }
 
         if (bouncerType == EmbeddedBouncersLib.BouncerType.AllowClassHolders) {
-            return balanceOf[msg.sender][classId] > 0;
+            return balanceOf[to][classId] > 0;
         }
 
         if (bouncerType == EmbeddedBouncersLib.BouncerType.AllowAllHolders) {
             uint256 classesLength = classCount;
             for (uint256 i = 0; i < classesLength; i++) {
-                if (balanceOf[msg.sender][i] > 0) {
+                if (balanceOf[to][i] > 0) {
                     return true;
                 }
             }

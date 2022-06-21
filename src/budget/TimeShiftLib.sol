@@ -9,6 +9,7 @@ struct TimeShift {
     TimeShiftLib.TimeUnit unit; // in the special case of seconds, offset doesn't apply
     int64 offset;
 }
+// NOTE: `encode` is unused in production code paths, here for ease of testing
 function encode(TimeShift memory shift) pure returns (EncodedTimeShift) {
     return EncodedTimeShift.wrap(bytes9(abi.encodePacked(uint8(shift.unit), shift.offset)));
 }
