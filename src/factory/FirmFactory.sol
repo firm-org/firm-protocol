@@ -100,7 +100,6 @@ contract FirmFactory {
             )
         );
 
-        // Could optimize it by writing to Safe storage directly
         safe.enableModule(address(budget));
     }
 }
