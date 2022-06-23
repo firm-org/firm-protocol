@@ -6,6 +6,7 @@ interface IBouncer {
         address from,
         address to,
         uint256 classId,
-        uint256 amount
+        uint256 amount,
+        bytes calldata data
     ) external view returns (bool);
 }

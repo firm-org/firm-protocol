@@ -31,7 +31,7 @@ contract Captable is UpgradeableModule, ERC1155 {
     Controls public globalControls;
 
     // TODO: all the events
-    // TODO: post initialization param customization (global controls, per class controls)
+    // TODO: post initialization param customization (global + class controls)
 
     constructor(
         IAvatar _safe,
@@ -122,9 +122,10 @@ contract Captable is UpgradeableModule, ERC1155 {
         address from,
         address to,
         uint256 id,
-        uint256 amount
+        uint256 amount,
+        bytes memory data
     ) internal view override {
-        if (!_checkBouncer(globalControls.bouncer, from, to, id, amount))
+        if (!_checkBouncer(globalControls.bouncer, from, to, id, amount, data))
             revert TransferBlocked(
                 globalControls.bouncer,
                 from,
@@ -132,7 +133,9 @@ contract Captable is UpgradeableModule, ERC1155 {
                 id,
                 amount
             );
-        if (!_checkBouncer(classes[id].controls.bouncer, from, to, id, amount))
+
+        Class storage class = classes[id];
+        if (!_checkBouncer(class.controls.bouncer, from, to, id, amount, data))
             revert TransferBlocked(
                 classes[id].controls.bouncer,
                 from,
@@ -147,7 +150,8 @@ contract Captable is UpgradeableModule, ERC1155 {
         address from,
         address to,
         uint256 classId,
-        uint256 amount
+        uint256 amount,
+        bytes memory data
     ) internal view returns (bool bouncerAllows) {
         EmbeddedBouncersLib.BouncerType bouncerType = bouncer.bouncerType();
 
@@ -156,9 +160,9 @@ contract Captable is UpgradeableModule, ERC1155 {
         }
 
         if (bouncerType == EmbeddedBouncersLib.BouncerType.NotEmbedded) {
-            try bouncer.isTransferAllowed(from, to, classId, amount) returns (
-                bool allow
-            ) {
+            try
+                bouncer.isTransferAllowed(from, to, classId, amount, data)
+            returns (bool allow) {
                 return allow;
             } catch {
                 return false;

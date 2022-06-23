@@ -59,7 +59,8 @@ abstract contract ERC1155 {
         address from,
         address to,
         uint256 id,
-        uint256 amount
+        uint256 amount,
+        bytes memory data
     ) internal virtual {}
 
     function setApprovalForAll(address operator, bool approved) public virtual {
@@ -80,7 +81,7 @@ abstract contract ERC1155 {
             "NOT_AUTHORIZED"
         );
 
-        _beforeTransfer(from, to, id, amount);
+        _beforeTransfer(from, to, id, amount, data);
 
         balanceOf[from][id] -= amount;
         balanceOf[to][id] += amount;
@@ -123,7 +124,7 @@ abstract contract ERC1155 {
             id = ids[i];
             amount = amounts[i];
 
-            _beforeTransfer(from, to, id, amount);
+            _beforeTransfer(from, to, id, amount, data);
 
             balanceOf[from][id] -= amount;
             balanceOf[to][id] += amount;
