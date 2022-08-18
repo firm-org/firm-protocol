@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.13;
+pragma solidity 0.8.16;
 
 import "gnosis-safe/GnosisSafe.sol";
 import "gnosis-safe/proxies/GnosisSafeProxyFactory.sol";
