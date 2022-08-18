@@ -1,2 +1,11 @@
+# foundry/sol unneeded files
 cache/
 out/
+broadcast/
+
+# vscode settings
+.vscode/
+
+# env vars
+.env
+.env.prod
