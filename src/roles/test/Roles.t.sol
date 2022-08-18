@@ -31,9 +31,7 @@ contract RolesTest is FirmTest {
     }
 
     function testCannotReinit() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(SafeAware.AlreadyInitialized.selector)
-        );
+        vm.expectRevert(abi.encodeWithSelector(SafeAware.AlreadyInitialized.selector));
         roles.initialize(IAvatar(address(2)));
     }
 
@@ -47,12 +45,7 @@ contract RolesTest is FirmTest {
     }
 
     function testCannotCreateRolesWithoutRolesManagerRole() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                Roles.UnauthorizedNoRole.selector,
-                ROLE_MANAGER_ROLE
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNoRole.selector, ROLE_MANAGER_ROLE));
         roles.createRole(ONLY_ROOT_ROLE, "");
     }
 
@@ -78,9 +71,7 @@ contract RolesTest is FirmTest {
         }
         assertEq(roles.roleCount(), 256);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(Roles.RoleLimitReached.selector)
-        );
+        vm.expectRevert(abi.encodeWithSelector(Roles.RoleLimitReached.selector));
         roles.createRole(ONLY_ROOT_ROLE, "");
     }
 
@@ -103,19 +94,14 @@ contract RolesTest is FirmTest {
         vm.stopPrank();
 
         vm.prank(SOMEONE);
-        vm.expectRevert(
-            abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, roleId)
-        );
+        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, roleId));
         roles.setRole(SOMEONE_ELSE, roleId, true);
     }
 
     function testCanSetMultipleRoles() public {
         vm.startPrank(ADMIN);
         uint8 roleOne = roles.createRole(ONLY_ROOT_ROLE, ""); // Admin for role one is ROOT_ROLE_ID
-        uint8 roleTwo = roles.createRole(
-            ONLY_ROOT_ROLE | bytes32(1 << uint256(roleOne)),
-            ""
-        ); // Admin for role 2 is ROOT_ROLE_ID and roleOne
+        uint8 roleTwo = roles.createRole(ONLY_ROOT_ROLE | bytes32(1 << uint256(roleOne)), ""); // Admin for role 2 is ROOT_ROLE_ID and roleOne
 
         uint8[] memory rolesSomeone = new uint8[](2);
         rolesSomeone[0] = roleOne;
@@ -143,17 +129,11 @@ contract RolesTest is FirmTest {
         vm.stopPrank();
 
         vm.prank(SOMEONE);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                Roles.UnauthorizedNotAdmin.selector,
-                newRoleId
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, newRoleId));
         roles.setRole(SOMEONE_ELSE, newRoleId, true);
 
         vm.prank(ADMIN);
-        bytes32 newRoleAdmin = ONLY_ROOT_ROLE |
-            bytes32(1 << uint256(newRoleId));
+        bytes32 newRoleAdmin = ONLY_ROOT_ROLE | bytes32(1 << uint256(newRoleId));
         roles.setRoleAdmin(newRoleId, newRoleAdmin); // those with newRoleId are admins
         assertEq(roles.getRoleAdmin(newRoleId), newRoleAdmin);
 
@@ -170,18 +150,12 @@ contract RolesTest is FirmTest {
         vm.stopPrank();
 
         vm.prank(SOMEONE);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                Roles.UnauthorizedNoRole.selector,
-                ROLE_MANAGER_ROLE
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNoRole.selector, ROLE_MANAGER_ROLE));
         roles.setRoleAdmin(newRoleId, ONLY_ROOT_ROLE);
     }
 
     function testAdminCanChangeAdminForAdminRole() public {
-        bytes32 newRoleAdmin = ONLY_ROOT_ROLE |
-            bytes32(1 << uint256(ROLE_MANAGER_ROLE));
+        bytes32 newRoleAdmin = ONLY_ROOT_ROLE | bytes32(1 << uint256(ROLE_MANAGER_ROLE));
         vm.prank(ADMIN);
         roles.setRoleAdmin(ROOT_ROLE_ID, newRoleAdmin);
         assertEq(roles.getRoleAdmin(ROOT_ROLE_ID), newRoleAdmin);
@@ -193,35 +167,22 @@ contract RolesTest is FirmTest {
 
         // As SOMEONE is granted ROLE_MANAGER_ROLE, it can change the admin for all roles, including ROLE_MANAGER_ROLE
         vm.startPrank(SOMEONE);
-        bytes32 newRoleAdmin = ONLY_ROOT_ROLE |
-            bytes32(1 << uint256(ROLE_MANAGER_ROLE));
+        bytes32 newRoleAdmin = ONLY_ROOT_ROLE | bytes32(1 << uint256(ROLE_MANAGER_ROLE));
         roles.setRoleAdmin(ROLE_MANAGER_ROLE, newRoleAdmin);
         assertEq(roles.getRoleAdmin(ROLE_MANAGER_ROLE), newRoleAdmin);
 
         // However, when attempting to change the admin role, it will fail
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                Roles.UnauthorizedNotAdmin.selector,
-                ROOT_ROLE_ID
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, ROOT_ROLE_ID));
         roles.setRoleAdmin(ROOT_ROLE_ID, newRoleAdmin);
     }
 }
 
 contract RolesWithProxyTest is RolesTest {
-    UpgradeableModuleProxyFactory immutable factory =
-        new UpgradeableModuleProxyFactory();
+    UpgradeableModuleProxyFactory immutable factory = new UpgradeableModuleProxyFactory();
     address immutable rolesImpl = address(new Roles(IAvatar(address(1))));
 
     function setUp() public override {
-        roles = Roles(
-            factory.deployUpgradeableModule(
-                rolesImpl,
-                abi.encodeCall(Roles.initialize, (IAvatar(ADMIN))),
-                0
-            )
-        );
+        roles = Roles(factory.deployUpgradeableModule(rolesImpl, abi.encodeCall(Roles.initialize, (IAvatar(ADMIN))), 0));
         vm.label(address(roles), "RolesProxy");
     }
 }

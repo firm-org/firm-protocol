@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import {FirmTest} from  "../../common/test/lib/FirmTest.sol";
+import {FirmTest} from "../../common/test/lib/FirmTest.sol";
 import {UpgradeableModuleProxyFactoryMock} from "./mocks/UpgradeableModuleProxyFactoryMock.sol";
 
 contract Target {
     error SomeError();
 
     function upgrade(address _newTarget) external {
-        bytes32 slot = bytes32(uint256(keccak256('eip1967.proxy.implementation')) - 1);
+        bytes32 slot = bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1);
         assembly {
             sstore(slot, _newTarget)
         }
     }
 
-    function foo() virtual public pure returns (uint256) {
+    function foo() public pure virtual returns (uint256) {
         return 42;
     }
 
@@ -24,7 +24,7 @@ contract Target {
 }
 
 contract UpgradedTarget is Target {
-    function foo() override public pure returns (uint256) {
+    function foo() public pure override returns (uint256) {
         return 43;
     }
 }

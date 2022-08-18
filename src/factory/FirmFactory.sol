@@ -20,12 +20,7 @@ contract FirmFactory {
 
     error EnableModuleFailed();
 
-    event NewFirm(
-        address indexed creator,
-        GnosisSafe indexed safe,
-        Roles roles,
-        Budget budget
-    );
+    event NewFirm(address indexed creator, GnosisSafe indexed safe, Roles roles, Budget budget);
 
     constructor(
         GnosisSafeProxyFactory _safeFactory,
@@ -41,14 +36,7 @@ contract FirmFactory {
         budgetImpl = _budgetImpl;
     }
 
-    function createFirm(address _creator)
-        public
-        returns (
-            GnosisSafe safe,
-            Budget budget,
-            Roles roles
-        )
-    {
+    function createFirm(address _creator) public returns (GnosisSafe safe, Budget budget, Roles roles) {
         address[] memory owners = new address[](1);
         owners[0] = _creator;
         // TODO: Use abi.encodeCall when it supports implicit type conversion for external calls (memory -> calldata)
@@ -64,14 +52,9 @@ contract FirmFactory {
             0,
             address(0)
         );
-        safe = GnosisSafe(
-            payable(safeFactory.createProxyWithNonce(safeImpl, safeInitData, 1))
-        );
+        safe = GnosisSafe(payable(safeFactory.createProxyWithNonce(safeImpl, safeInitData, 1)));
 
-        (address[] memory modules, ) = safe.getModulesPaginated(
-            address(0x1),
-            1
-        );
+        (address[] memory modules,) = safe.getModulesPaginated(address(0x1), 1);
         budget = Budget(modules[0]);
         roles = Roles(address(budget.roles()));
 
@@ -84,20 +67,10 @@ contract FirmFactory {
         // since we both perform calls on 'this' with the ABI of a Safe (will fail on this contract)
 
         IAvatar safe = IAvatar(address(this));
-        Roles roles = Roles(
-            moduleFactory.deployUpgradeableModule(
-                rolesImpl,
-                abi.encodeCall(Roles.initialize, (safe)),
-                1
-            )
-        );
-        Budget budget = Budget(
-            moduleFactory.deployUpgradeableModule(
-                budgetImpl,
-                abi.encodeCall(Budget.initialize, (safe, roles)),
-                1
-            )
-        );
+        Roles roles =
+            Roles(moduleFactory.deployUpgradeableModule(rolesImpl, abi.encodeCall(Roles.initialize, (safe)), 1));
+        Budget budget =
+            Budget(moduleFactory.deployUpgradeableModule(budgetImpl, abi.encodeCall(Budget.initialize, (safe, roles)), 1));
 
         // Could optimize it by writing to Safe storage directly
         safe.enableModule(address(budget));

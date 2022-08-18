@@ -5,10 +5,12 @@ pragma solidity 0.8.16;
 import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsDateTimeLibrary.sol";
 
 type EncodedTimeShift is bytes9;
+
 struct TimeShift {
     TimeShiftLib.TimeUnit unit; // in the special case of seconds, offset doesn't apply
     int64 offset;
 }
+
 function encode(TimeShift memory shift) pure returns (EncodedTimeShift) {
     return EncodedTimeShift.wrap(bytes9(abi.encodePacked(uint8(shift.unit), shift.offset)));
 }
@@ -18,6 +20,7 @@ function decode(EncodedTimeShift encoded) pure returns (TimeShiftLib.TimeUnit un
     unit = TimeShiftLib.TimeUnit(uint8(encodedValue >> 64));
     offset = int64(uint64(uint72(encodedValue)));
 }
+
 function isInherited(EncodedTimeShift encoded) pure returns (bool) {
     return EncodedTimeShift.unwrap(encoded) == bytes9(0);
 }
@@ -43,11 +46,7 @@ library TimeShiftLib {
 
     error InvalidTimeShift();
 
-    function applyShift(uint64 time, EncodedTimeShift shift)
-        internal
-        pure
-        returns (uint64)
-    {
+    function applyShift(uint64 time, EncodedTimeShift shift) internal pure returns (uint64) {
         (TimeUnit unit, int64 offset) = shift.decode();
 
         uint64 realTime = uint64(int64(time) + offset);
@@ -76,22 +75,18 @@ library TimeShiftLib {
     /**
      * @dev IT WILL ONLY TRANSITION ONE MONTH IF NECESSARY
      */
-    function addDays(uint256 y, uint256 m, uint256 d, uint256 daysToAdd) private pure returns (uint256, uint256, uint256) {
+    function addDays(uint256 y, uint256 m, uint256 d, uint256 daysToAdd)
+        private
+        pure
+        returns (uint256, uint256, uint256)
+    {
         uint256 daysInMonth = DateTimeLib._getDaysInMonth(y, m);
         uint256 d2 = d + daysToAdd;
 
-        return d2 <= daysInMonth
-            ? (y, m, d2)
-            : m < 12
-                ? (y, m + 1, d2 - daysInMonth)
-                : (y + 1, 1, d2 - daysInMonth);
+        return d2 <= daysInMonth ? (y, m, d2) : m < 12 ? (y, m + 1, d2 - daysInMonth) : (y + 1, 1, d2 - daysInMonth);
     }
 
-    function toDate(uint64 timestamp)
-        internal
-        pure
-        returns (uint256 y, uint256 m, uint256 d)
-    {
+    function toDate(uint64 timestamp) internal pure returns (uint256 y, uint256 m, uint256 d) {
         return DateTimeLib._daysToDate(timestamp / 1 days);
     }
 }

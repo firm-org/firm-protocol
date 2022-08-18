@@ -28,9 +28,7 @@ contract BasesTest is FirmTest {
         avatar = new AvatarStub();
         module = ModuleMock(
             factory.deployUpgradeableModule(
-                address(moduleOneImpl),
-                abi.encodeCall(moduleOneImpl.initialize, (avatar, INITIAL_BAR)),
-                0
+                address(moduleOneImpl), abi.encodeCall(moduleOneImpl.initialize, (avatar, INITIAL_BAR)), 0
             )
         );
         vm.label(address(module), "Proxy");
@@ -42,9 +40,6 @@ contract BasesTest is FirmTest {
         assertEq(uint256(vm.load(address(module), 0)), INITIAL_BAR);
 
         uint256 safeSlot = 0xb2c095c1a3cccf4bf97d6c0d6a44ba97fddb514f560087d9bf71be2c324b6c44;
-        assertEq(
-            vm.load(address(module), bytes32(safeSlot)).fromLast20Bytes(),
-            address(avatar)
-        );
+        assertEq(vm.load(address(module), bytes32(safeSlot)).fromLast20Bytes(), address(avatar));
     }
 }

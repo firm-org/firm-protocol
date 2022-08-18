@@ -4,10 +4,7 @@ pragma solidity 0.8.16;
 import "zodiac/factory/ModuleProxyFactory.sol";
 
 contract UpgradeableModuleProxyFactory is ModuleProxyFactory {
-    function createUpgradeableProxy(address _initialTarget, bytes32 _salt)
-        internal
-        returns (address addr)
-    {
+    function createUpgradeableProxy(address _initialTarget, bytes32 _salt) internal returns (address addr) {
         // if (address(target) == address(0)) revert ZeroAddress(target);
         // Removed as this is a responsibility of the caller and we shouldn't pay for the check on each proxy creation
         bytes memory initcode = abi.encodePacked(
@@ -20,23 +17,22 @@ contract UpgradeableModuleProxyFactory is ModuleProxyFactory {
             addr := create2(0, add(initcode, 0x20), mload(initcode), _salt)
         }
 
-        if (addr == address(0))
+        if (addr == address(0)) {
             revert TakenAddress(addr);
+        }
     }
 
-    function deployUpgradeableModule(
-        address masterCopy,
-        bytes memory initializer,
-        uint256 saltNonce
-    ) public returns (address proxy) {
-        proxy = createUpgradeableProxy(
-            masterCopy,
-            keccak256(abi.encodePacked(keccak256(initializer), saltNonce))
-        );
+    function deployUpgradeableModule(address masterCopy, bytes memory initializer, uint256 saltNonce)
+        public
+        returns (address proxy)
+    {
+        proxy = createUpgradeableProxy(masterCopy, keccak256(abi.encodePacked(keccak256(initializer), saltNonce)));
 
-        (bool success, ) = proxy.call(initializer);
-        if (!success) revert FailedInitialization();
+        (bool success,) = proxy.call(initializer);
+        if (!success) {
+            revert FailedInitialization();
+        }
 
         emit ModuleProxyCreation(proxy, masterCopy);
     }
-} 
+}

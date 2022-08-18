@@ -21,11 +21,7 @@ contract ModuleMock is UpgradeableModule, ZodiacModule {
         bar = _bar;
     }
 
-    function execCall(
-        address to,
-        uint256 value,
-        bytes memory data
-    ) public returns (bool success) {
+    function execCall(address to, uint256 value, bytes memory data) public returns (bool success) {
         return exec(to, value, data, SafeEnums.Operation.Call);
     }
 }
