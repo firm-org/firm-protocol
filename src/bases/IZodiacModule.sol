@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.13;
+pragma solidity 0.8.16;
 
 import {IAvatar, Enum as SafeEnums} from "zodiac/interfaces/IAvatar.sol";
 import {IGuard} from "zodiac/interfaces/IGuard.sol";

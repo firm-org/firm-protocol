@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.13;
+pragma solidity 0.8.16;
 
 import "../factory/FirmFactory.sol";
 import {IRoles, IAvatar} from "../roles/Roles.sol";

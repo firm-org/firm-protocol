@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.13;
+pragma solidity 0.8.16;
 
 import {UpgradeableModule} from "../../../bases/UpgradeableModule.sol";
 import {ZodiacModule, IAvatar, SafeEnums} from "../../../bases/ZodiacModule.sol";
