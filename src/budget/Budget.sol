@@ -67,19 +67,8 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
     error UnauthorizedForAllowance(uint256 allowanceId, address actor);
     error TokenMismatch(address token);
     error ExecutionDisallowed(uint256 allowanceId, address actor);
-    error Overbudget(
-        uint256 allowanceId,
-        address token,
-        address to,
-        uint256 amount,
-        uint256 remainingBudget
-    );
-    error ExecutionFailed(
-        uint256 allowanceId,
-        address token,
-        address to,
-        uint256 amount
-    );
+    error Overbudget(uint256 allowanceId, address token, address to, uint256 amount, uint256 remainingBudget);
+    error ExecutionFailed(uint256 allowanceId, address token, address to, uint256 amount);
 
     function createAllowance(
         uint256 _parentAllowanceId,
@@ -87,7 +76,10 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
         address _token,
         uint256 _amount,
         EncodedTimeShift _recurrency
-    ) public returns (uint256 allowanceId) {
+    )
+        public
+        returns (uint256 allowanceId)
+    {
         uint64 nextResetTime;
 
         if (_parentAllowanceId == NO_PARENT_ID) {
@@ -97,18 +89,18 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
             nextResetTime = uint64(block.timestamp).applyShift(_recurrency);
 
             // Top-level allowances can only be created by the avatar
-            if (msg.sender != address(safe())) revert UnauthorizedNotSafe();
+            if (msg.sender != address(safe())) {
+                revert UnauthorizedNotSafe();
+            }
         } else {
             // Sub-allowances can be created by entities authorized to spend from a particular allowance
             // Implicit check that the allowanceId exists as there's
-            if (
-                !_isAuthorized(
-                    msg.sender,
-                    getAllowance[_parentAllowanceId].spender
-                )
-            ) revert UnauthorizedForAllowance(_parentAllowanceId, msg.sender);
-            if (_token != getAllowance[_parentAllowanceId].token)
+            if (!_isAuthorized(msg.sender, getAllowance[_parentAllowanceId].spender)) {
+                revert UnauthorizedForAllowance(_parentAllowanceId, msg.sender);
+            }
+            if (_token != getAllowance[_parentAllowanceId].token) {
                 revert TokenMismatch(_token);
+            }
 
             // Recurrency can be zero in sub-allowances and is inherited from the parent
             if (!_recurrency.isInherited()) {
@@ -133,93 +125,52 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
         allowance.token = _token;
         allowance.amount = _amount;
 
-        emit AllowanceCreated(
-            allowanceId,
-            _parentAllowanceId,
-            _spender,
-            _token,
-            _amount,
-            _recurrency,
-            nextResetTime
-        );
+        emit AllowanceCreated(allowanceId, _parentAllowanceId, _spender, _token, _amount, _recurrency, nextResetTime);
     }
 
-    function executePayment(
-        uint256 _allowanceId,
-        address _to,
-        uint256 _amount
-    ) external {
+    function executePayment(uint256 _allowanceId, address _to, uint256 _amount) external {
         Allowance storage allowance = getAllowance[_allowanceId];
 
         // Implicitly checks that the allowance exists as if spender hasn't been set, it will revert
-        if (
-            !_isAuthorized(msg.sender, allowance.spender) ||
-            allowance.isDisabled
-        ) revert ExecutionDisallowed(_allowanceId, msg.sender);
+        if (!_isAuthorized(msg.sender, allowance.spender) || allowance.isDisabled) {
+            revert ExecutionDisallowed(_allowanceId, msg.sender);
+        }
 
         address token = allowance.token;
 
-        (uint64 nextResetTime, ) = _checkAndUpdateAllowanceChain(
-            _allowanceId,
-            token,
-            _to,
-            _amount
-        );
+        (uint64 nextResetTime,) = _checkAndUpdateAllowanceChain(_allowanceId, token, _to, _amount);
 
         bool success;
         if (token == ETH) {
             success = exec(_to, _amount, hex"", SafeEnums.Operation.Call);
         } else {
-            (bool callSuccess, bytes memory retData) = execAndReturnData(
-                token,
-                0,
-                abi.encodeCall(IERC20.transfer, (_to, _amount)),
-                SafeEnums.Operation.Call
-            );
+            (bool callSuccess, bytes memory retData) =
+                execAndReturnData(token, 0, abi.encodeCall(IERC20.transfer, (_to, _amount)), SafeEnums.Operation.Call);
 
-            success =
-                callSuccess &&
-                (
-                    ((retData.length == 32 && abi.decode(retData, (bool))) ||
-                        retData.length == 0)
-                );
+            success = callSuccess && (((retData.length == 32 && abi.decode(retData, (bool))) || retData.length == 0));
         }
-        if (!success) revert ExecutionFailed(_allowanceId, token, _to, _amount);
+        if (!success) {
+            revert ExecutionFailed(_allowanceId, token, _to, _amount);
+        }
 
-        emit PaymentExecuted(
-            _allowanceId,
-            msg.sender,
-            allowance.token,
-            _to,
-            _amount,
-            nextResetTime
-        );
+        emit PaymentExecuted(_allowanceId, msg.sender, allowance.token, _to, _amount, nextResetTime);
     }
 
-    function _checkAndUpdateAllowanceChain(
-        uint256 _allowanceId,
-        address _token,
-        address _to,
-        uint256 _amount
-    ) internal returns (uint64 nextResetTime, bool allowanceResets) {
+    function _checkAndUpdateAllowanceChain(uint256 _allowanceId, address _token, address _to, uint256 _amount)
+        internal
+        returns (uint64 nextResetTime, bool allowanceResets)
+    {
         Allowance storage allowance = getAllowance[_allowanceId];
 
         if (allowance.nextResetTime == 0) {
             // Sub-budget's recurrency is inherited from parent
-            (nextResetTime, allowanceResets) = _checkAndUpdateAllowanceChain(
-                allowance.parentId,
-                _token,
-                _to,
-                _amount
-            );
+            (nextResetTime, allowanceResets) = _checkAndUpdateAllowanceChain(allowance.parentId, _token, _to, _amount);
         } else {
             nextResetTime = allowance.nextResetTime;
 
             if (uint64(block.timestamp) >= nextResetTime) {
                 allowanceResets = true;
-                nextResetTime = uint64(block.timestamp).applyShift(
-                    allowance.recurrency
-                );
+                nextResetTime = uint64(block.timestamp).applyShift(allowance.recurrency);
             }
 
             if (allowanceResets) {
@@ -229,25 +180,13 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
             }
 
             if (allowance.parentId != NO_PARENT_ID) {
-                _checkAndUpdateAllowanceChain(
-                    allowance.parentId,
-                    _token,
-                    _to,
-                    _amount
-                );
+                _checkAndUpdateAllowanceChain(allowance.parentId, _token, _to, _amount);
             }
         }
 
-        uint256 spentAfterPayment = (allowanceResets ? 0 : allowance.spent) +
-            _amount;
+        uint256 spentAfterPayment = (allowanceResets ? 0 : allowance.spent) + _amount;
         if (spentAfterPayment > allowance.amount) {
-            revert Overbudget(
-                _allowanceId,
-                _token,
-                _to,
-                _amount,
-                allowance.amount - allowance.spent
-            );
+            revert Overbudget(_allowanceId, _token, _to, _amount, allowance.amount - allowance.spent);
         }
 
         allowance.spent = spentAfterPayment;

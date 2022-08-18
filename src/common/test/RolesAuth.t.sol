@@ -24,7 +24,7 @@ contract RolesAuthTest is FirmTest {
 
     function testRoleFlags(uint8 roleId) public {
         roles.setRole(SOMEONE, roleId, true);
-        
+
         assertTrue(rolesAuth.isAuthorized(SOMEONE, roleFlag(roleId)));
         assertFalse(rolesAuth.isAuthorized(address(this), roleFlag(roleId)));
     }
@@ -32,7 +32,7 @@ contract RolesAuthTest is FirmTest {
     function testRoleFlagsEdgeCases() public {
         roles.setRole(SOMEONE, 2, true);
 
-        assertTrue(rolesAuth.isAuthorized(SOMEONE,  0x0000000000000000000000000000000000000201));
+        assertTrue(rolesAuth.isAuthorized(SOMEONE, 0x0000000000000000000000000000000000000201));
         assertFalse(rolesAuth.isAuthorized(SOMEONE, 0x0000000000000000000000000000000000000301));
         assertFalse(rolesAuth.isAuthorized(SOMEONE, 0x0000000000000000000000000000000000000200));
         assertFalse(rolesAuth.isAuthorized(SOMEONE, 0x0000000000000000000000000000000000000202));

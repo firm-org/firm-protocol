@@ -9,9 +9,9 @@ import {SafeAware} from "./SafeAware.sol";
 /**
  * @title ZodiacModule
  * @dev More minimal implementation of Zodiac's Module.sol without an owner
- *      and using unstructured storage
+ * and using unstructured storage
  * @dev Note that this contract doesn't have an initializer and ZodiacState
- *      must be set explicly if desired, but defaults to being unset
+ * must be set explicly if desired, but defaults to being unset
  */
 abstract contract ZodiacModule is IZodiacModule, SafeAware {
     struct ZodiacState {
@@ -19,8 +19,7 @@ abstract contract ZodiacModule is IZodiacModule, SafeAware {
         IGuard guard;
     }
 
-    bytes32 internal constant ZODIAC_STATE_SLOT = // keccak256("firm.zodiacmodule.state") - 2
-        0x1bcb284404f22ead428604605be8470a4a8a14c8422630d8a717460f9331147d;
+    bytes32 internal constant ZODIAC_STATE_SLOT = 0x1bcb284404f22ead428604605be8470a4a8a14c8422630d8a717460f9331147d; // keccak256("firm.zodiacmodule.state") - 2
 
     /**
      * @notice Sets the target of this module to `_target`
@@ -40,52 +39,36 @@ abstract contract ZodiacModule is IZodiacModule, SafeAware {
     function setGuard(IGuard _guard) external onlySafe {
         address guardAddr = address(_guard);
         if (guardAddr != address(0)) {
-            if (!IERC165(guardAddr).supportsInterface(type(IGuard).interfaceId))
+            if (!IERC165(guardAddr).supportsInterface(type(IGuard).interfaceId)) {
                 revert NotIERC165Compliant(guardAddr);
+            }
         }
         zodiacState().guard = _guard;
         emit ChangedGuard(guardAddr);
     }
 
     /**
-    * @dev Executes a transaction through the target intended to be executed by the avatar
-    * @param to Address being called
-    * @param value Ether value being sent
-    * @param data Calldata
-    * @param operation Operation type of transaction: 0 = call, 1 = delegatecall
-    */
-    function exec(
-        address to,
-        uint256 value,
-        bytes memory data,
-        SafeEnums.Operation operation
-    ) internal returns (bool success) {
+     * @dev Executes a transaction through the target intended to be executed by the avatar
+     * @param to Address being called
+     * @param value Ether value being sent
+     * @param data Calldata
+     * @param operation Operation type of transaction: 0 = call, 1 = delegatecall
+     */
+    function exec(address to, uint256 value, bytes memory data, SafeEnums.Operation operation)
+        internal
+        returns (bool success)
+    {
         IGuard guard_ = guard();
         // If the module has a guard enabled, check if it allows the call
         if (address(guard_) != address(0)) {
             // We zero out data specific to multisig transactions irrelevant in module calls
             guard_.checkTransaction(
-                to,
-                value,
-                data,
-                operation,
-                0,
-                0,
-                0,
-                address(0),
-                payable(0),
-                bytes("0x"),
-                msg.sender
+                to, value, data, operation, 0, 0, 0, address(0), payable(0), bytes("0x"), msg.sender
             );
         }
 
         // Perform the actual call through the target
-        success = target().execTransactionFromModule(
-            to,
-            value,
-            data,
-            operation
-        );
+        success = target().execTransactionFromModule(to, value, data, operation);
 
         // If the module has a guard enabled, notify that the call ocurred and whether it suceeded
         if (address(guard_) != address(0)) {
@@ -94,44 +77,27 @@ abstract contract ZodiacModule is IZodiacModule, SafeAware {
     }
 
     /**
-    * @dev Executes a transaction through the target intended to be executed by the avatar
-    *      and returns the call status and the return data of the call
-    * @param to Address being called
-    * @param value Ether value being sent
-    * @param data Calldata
-    * @param operation Operation type of transaction: 0 = call, 1 = delegatecall
-    */
-    function execAndReturnData(
-        address to,
-        uint256 value,
-        bytes memory data,
-        SafeEnums.Operation operation
-    ) internal returns (bool success, bytes memory returnData) {
+     * @dev Executes a transaction through the target intended to be executed by the avatar
+     * and returns the call status and the return data of the call
+     * @param to Address being called
+     * @param value Ether value being sent
+     * @param data Calldata
+     * @param operation Operation type of transaction: 0 = call, 1 = delegatecall
+     */
+    function execAndReturnData(address to, uint256 value, bytes memory data, SafeEnums.Operation operation)
+        internal
+        returns (bool success, bytes memory returnData)
+    {
         IGuard guard_ = guard();
         // If the module has a guard enabled, check if it allows the call
         if (address(guard_) != address(0)) {
             // We zero out data specific to multisig transactions irrelevant in module calls
             guard_.checkTransaction(
-                to,
-                value,
-                data,
-                operation,
-                0,
-                0,
-                0,
-                address(0),
-                payable(0),
-                bytes("0x"),
-                msg.sender
+                to, value, data, operation, 0, 0, 0, address(0), payable(0), bytes("0x"), msg.sender
             );
         }
 
-        (success, returnData) = target().execTransactionFromModuleReturnData(
-            to,
-            value,
-            data,
-            operation
-        );
+        (success, returnData) = target().execTransactionFromModuleReturnData(to, value, data, operation);
 
         // If the module has a guard enabled, notify that the call ocurred and whether it suceeded
         if (address(guard_) != address(0)) {

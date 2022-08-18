@@ -23,9 +23,7 @@ contract UpgradeableModuleTest is BasesTest {
     }
 
     function assertImplAtEIP1967Slot(address _impl) internal {
-        bytes32 implSlot = bytes32(
-            uint256(keccak256("eip1967.proxy.implementation")) - 1
-        );
+        bytes32 implSlot = bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1);
         assertEq(vm.load(address(module), implSlot).fromLast20Bytes(), _impl);
     }
 
@@ -43,9 +41,7 @@ contract UpgradeableModuleTest is BasesTest {
     }
 
     function testNonAvatarCannotUpgrade() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(SafeAware.UnauthorizedNotSafe.selector)
-        );
+        vm.expectRevert(abi.encodeWithSelector(SafeAware.UnauthorizedNotSafe.selector));
         module.upgrade(address(moduleTwoImpl));
     }
 }

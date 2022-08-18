@@ -9,31 +9,18 @@ import "./IRoles.sol";
 /**
  * @title Roles
  * @dev Role management module supporting up to 256 roles optimize for batched actions
-        Inspired by Solmate's RolesAuthority and OpenZeppelin's AccessControl
-        https://github.com/Rari-Capital/solmate/blob/main/src/auth/authorities/RolesAuthority.sol)
-        https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/AccessControl.sol
-*/
+ * Inspired by Solmate's RolesAuthority and OpenZeppelin's AccessControl
+ * https://github.com/Rari-Capital/solmate/blob/main/src/auth/authorities/RolesAuthority.sol)
+ * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/AccessControl.sol
+ */
 contract Roles is UpgradeableModule, IRoles {
     mapping(address => bytes32) public getUserRoles;
     mapping(uint8 => bytes32) public getRoleAdmin;
     uint256 public roleCount;
 
-    event RoleCreated(
-        uint8 indexed roleId,
-        bytes32 roleAdmin,
-        string name,
-        address indexed actor
-    );
-    event RoleAdminSet(
-        uint8 indexed roleId,
-        bytes32 roleAdmin,
-        address indexed actor
-    );
-    event RolesSet(
-        address indexed user,
-        bytes32 userRoles,
-        address indexed actor
-    );
+    event RoleCreated(uint8 indexed roleId, bytes32 roleAdmin, string name, address indexed actor);
+    event RoleAdminSet(uint8 indexed roleId, bytes32 roleAdmin, address indexed actor);
+    event RolesSet(address indexed user, bytes32 userRoles, address indexed actor);
 
     error UnauthorizedNoRole(uint8 requiredRole);
     error UnauthorizedNotAdmin(uint8 role);
@@ -55,22 +42,19 @@ contract Roles is UpgradeableModule, IRoles {
         getUserRoles[address(_safe)] = ONLY_ROOT_ROLE;
     }
 
-    function createRole(bytes32 _adminRoles, string memory _name)
-        public
-        returns (uint8 roleId)
-    {
-        if (!hasRole(msg.sender, ROLE_MANAGER_ROLE))
+    function createRole(bytes32 _adminRoles, string memory _name) public returns (uint8 roleId) {
+        if (!hasRole(msg.sender, ROLE_MANAGER_ROLE)) {
             revert UnauthorizedNoRole(ROLE_MANAGER_ROLE);
+        }
 
         return _createRole(_adminRoles, _name);
     }
 
-    function _createRole(bytes32 _adminRoles, string memory _name)
-        internal
-        returns (uint8 roleId)
-    {
+    function _createRole(bytes32 _adminRoles, string memory _name) internal returns (uint8 roleId) {
         uint256 roleCount_ = roleCount;
-        if (roleCount_ == 256) revert RoleLimitReached();
+        if (roleCount_ == 256) {
+            revert RoleLimitReached();
+        }
         unchecked {
             roleCount = roleCount_ + 1;
         }
@@ -84,12 +68,14 @@ contract Roles is UpgradeableModule, IRoles {
     function setRoleAdmin(uint8 _roleId, bytes32 _adminRoles) public {
         if (_roleId == ROOT_ROLE_ID) {
             // Root role is treated as a special case. Only root role admins can change it
-            if (!isRoleAdmin(msg.sender, ROOT_ROLE_ID))
+            if (!isRoleAdmin(msg.sender, ROOT_ROLE_ID)) {
                 revert UnauthorizedNotAdmin(ROOT_ROLE_ID);
+            }
         } else {
             // For all other roles, the general role manager role can change any roles admins
-            if (!hasRole(msg.sender, ROLE_MANAGER_ROLE))
+            if (!hasRole(msg.sender, ROLE_MANAGER_ROLE)) {
                 revert UnauthorizedNoRole(ROLE_MANAGER_ROLE);
+            }
         }
 
         getRoleAdmin[_roleId] = _adminRoles;
@@ -97,15 +83,12 @@ contract Roles is UpgradeableModule, IRoles {
         emit RoleAdminSet(_roleId, _adminRoles, msg.sender);
     }
 
-    function setRole(
-        address _user,
-        uint8 _roleId,
-        bool _grant
-    ) public {
+    function setRole(address _user, uint8 _roleId, bool _grant) public {
         bytes32 userRoles = getUserRoles[_user];
 
-        if (!_isRoleAdmin(getUserRoles[msg.sender], _roleId))
+        if (!_isRoleAdmin(getUserRoles[msg.sender], _roleId)) {
             revert UnauthorizedNotAdmin(_roleId);
+        }
 
         if (_grant) {
             userRoles |= bytes32(1 << _roleId);
@@ -118,19 +101,16 @@ contract Roles is UpgradeableModule, IRoles {
         emit RolesSet(_user, userRoles, msg.sender);
     }
 
-    function setRoles(
-        address _user,
-        uint8[] memory _grantingRoles,
-        uint8[] memory _revokingRoles
-    ) public {
+    function setRoles(address _user, uint8[] memory _grantingRoles, uint8[] memory _revokingRoles) public {
         bytes32 senderRoles = getUserRoles[msg.sender];
         bytes32 userRoles = getUserRoles[_user];
 
         uint256 grantsLength = _grantingRoles.length;
         for (uint256 i = 0; i < grantsLength; i++) {
             uint8 roleId = _grantingRoles[i];
-            if (!_isRoleAdmin(senderRoles, roleId))
+            if (!_isRoleAdmin(senderRoles, roleId)) {
                 revert UnauthorizedNotAdmin(roleId);
+            }
 
             userRoles |= bytes32(1 << roleId);
         }
@@ -138,8 +118,9 @@ contract Roles is UpgradeableModule, IRoles {
         uint256 revokesLength = _revokingRoles.length;
         for (uint256 i = 0; i < revokesLength; i++) {
             uint8 roleId = _revokingRoles[i];
-            if (!_isRoleAdmin(senderRoles, roleId))
+            if (!_isRoleAdmin(senderRoles, roleId)) {
                 revert UnauthorizedNotAdmin(roleId);
+            }
 
             userRoles &= ~(bytes32(1 << roleId));
         }
@@ -153,27 +134,16 @@ contract Roles is UpgradeableModule, IRoles {
         bytes32 userRoles = getUserRoles[_user];
         // either user has the specified role or user has root role (whichs gives it permission to do anything)
         // Note: For root it will return true even if the role hasn't been created yet
-        return
-            uint256(userRoles >> _roleId) & 1 != 0 || _hasRootRole(userRoles);
+        return uint256(userRoles >> _roleId) & 1 != 0 || _hasRootRole(userRoles);
     }
 
-    function isRoleAdmin(address _user, uint8 _roleId)
-        public
-        view
-        returns (bool)
-    {
+    function isRoleAdmin(address _user, uint8 _roleId) public view returns (bool) {
         return _isRoleAdmin(getUserRoles[_user], _roleId);
     }
 
-    function _isRoleAdmin(bytes32 _userRoles, uint8 _roleId)
-        internal
-        view
-        returns (bool)
-    {
+    function _isRoleAdmin(bytes32 _userRoles, uint8 _roleId) internal view returns (bool) {
         // Note: For root it will return true even if the role hasn't been created yet
-        return
-            (_userRoles & getRoleAdmin[_roleId]) != 0 ||
-            _hasRootRole(_userRoles);
+        return (_userRoles & getRoleAdmin[_roleId]) != 0 || _hasRootRole(_userRoles);
     }
 
     function hasRootRole(address _user) public view returns (bool) {
