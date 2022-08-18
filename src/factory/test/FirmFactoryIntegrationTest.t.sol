@@ -15,6 +15,8 @@ import {TimeShift} from "../../budget/TimeShiftLib.sol";
 import {Roles, IRoles, IAvatar, ONLY_ROOT_ROLE} from "../../roles/Roles.sol";
 import {SafeEnums} from "../../bases/IZodiacModule.sol";
 
+import {FirmDeploy} from "../../../scripts/Deploy.sol";
+
 contract FirmFactoryIntegrationTest is FirmTest {
     using TimeShiftLib for *;
 
@@ -23,13 +25,10 @@ contract FirmFactoryIntegrationTest is FirmTest {
 
     function setUp() public {
         token = new ERC20Token();
-        factory = new FirmFactory(
-            new GnosisSafeProxyFactory(),
-            new UpgradeableModuleProxyFactory(),
-            address(new GnosisSafe()),
-            address(new Roles(IAvatar(address(10)))),
-            address(new Budget(IAvatar(address(10)), IRoles(address(10))))
-        );
+
+        FirmDeploy deployer = new FirmDeploy();
+
+        factory = deployer.run();
     }
 
     function testFactoryGas() public {
