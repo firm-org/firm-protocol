@@ -19,7 +19,8 @@ abstract contract ZodiacModule is IZodiacModule, SafeAware {
         IGuard guard;
     }
 
-    bytes32 internal constant ZODIAC_STATE_SLOT = 0x1bcb284404f22ead428604605be8470a4a8a14c8422630d8a717460f9331147d; // keccak256("firm.zodiacmodule.state") - 2
+    // ZODIAC_STATE_SLOT = keccak256("firm.zodiacmodule.state") - 2
+    bytes32 internal constant ZODIAC_STATE_SLOT = 0x1bcb284404f22ead428604605be8470a4a8a14c8422630d8a717460f9331147d;
 
     /**
      * @notice Sets the target of this module to `_target`

@@ -9,7 +9,8 @@ import {IAvatar} from "zodiac/interfaces/IAvatar.sol";
  * as their admin
  */
 abstract contract SafeAware {
-    bytes32 internal constant SAFE_SLOT = 0xb2c095c1a3cccf4bf97d6c0d6a44ba97fddb514f560087d9bf71be2c324b6c44; // keccak256("firm.safeaware.safe") - 1
+    // SAFE_SLOT = keccak256("firm.safeaware.safe") - 1
+    bytes32 internal constant SAFE_SLOT = 0xb2c095c1a3cccf4bf97d6c0d6a44ba97fddb514f560087d9bf71be2c324b6c44;
 
     /**
      * @notice Address of the Safe that this module is tied to
