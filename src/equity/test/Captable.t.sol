@@ -50,6 +50,7 @@ contract CaptableTest is FirmTest {
         vm.prank(address(avatar));
         uint256 classId = captable.createClass(
             "Common",
+            0,
             COMMON_AUTHORIZED,
             classBouncer,
             classIssuers
@@ -87,6 +88,7 @@ contract CaptableTest is FirmTest {
         vm.prank(address(avatar));
         uint256 classId = captable.createClass(
             "Common",
+            0,
             COMMON_AUTHORIZED,
             revertingBouncer,
             new address[](0)

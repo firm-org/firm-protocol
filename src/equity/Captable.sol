@@ -17,18 +17,38 @@ contract Captable is UpgradeableModule, ERC1155 {
     struct Controls {
         IBouncer bouncer;
         mapping(address => bool) canIssue;
+        mapping(address => bool) canForceConversion;
     }
 
     struct Class {
         string name;
+        uint256 convertsIntoClassId;
         uint256 authorized;
         Controls controls;
         uint256 issued;
+        uint256 reserved;
     }
     mapping(uint256 => Class) classes;
     uint256 public classCount;
 
     Controls public globalControls;
+
+    error UnauthorizedIssuer(uint256 classId, address issuer);
+    error AuthorizedSharesOverflow(
+        uint256 classId,
+        uint256 authorized,
+        uint256 issued,
+        uint256 reserved
+    );
+    error TransferBlocked(
+        IBouncer bouncer,
+        address from,
+        address to,
+        uint256 classId,
+        uint256 amount
+    );
+    error UnexistentClass(uint256 classId);
+    error AuthorizedLowerThanOutstanding(uint256 newAuthorized, uint256 issued);
 
     // TODO: all the events
     // TODO: post initialization param customization (global + class controls)
@@ -57,6 +77,7 @@ contract Captable is UpgradeableModule, ERC1155 {
 
     function createClass(
         string calldata _name,
+        uint256 _convertsIntoClassId,
         uint256 _authorized,
         IBouncer _bouncer,
         address[] calldata _classIssuers
@@ -64,7 +85,29 @@ contract Captable is UpgradeableModule, ERC1155 {
         unchecked {
             classId = classCount++;
         }
+
         Class storage class = classes[classId];
+
+        // Units of the first stock class can't be converted into other classes
+        // Therefore, `_convertsIntoClassId` is purposely ignored
+        if (classId != 0) {
+            Class storage convertsIntoClass = _getClass(_convertsIntoClassId);
+            uint256 newReserved = convertsIntoClass.reserved + _authorized;
+            uint256 convertsIntoAuthorized = convertsIntoClass.authorized;
+            uint256 convertsIntoIssued = convertsIntoClass.issued;
+
+            if (convertsIntoIssued + newReserved > convertsIntoAuthorized)
+                revert AuthorizedSharesOverflow(
+                    _convertsIntoClassId,
+                    convertsIntoAuthorized,
+                    convertsIntoIssued,
+                    newReserved
+                );
+
+            convertsIntoClass.reserved = newReserved;
+            class.convertsIntoClassId = _convertsIntoClassId;
+        }
+
         class.name = _name;
         class.authorized = _authorized;
         class.controls.bouncer = _bouncer;
@@ -73,7 +116,10 @@ contract Captable is UpgradeableModule, ERC1155 {
         }
     }
 
-    error AuthorizedLowerThanOutstanding(uint256 newAuthorized, uint256 issued);
+    function _getClass(uint256 _classId) internal view returns (Class storage) {
+        if (_classId >= classCount) revert UnexistentClass(_classId);
+        return classes[_classId];
+    }
 
     function authorize(uint256 _classId, uint256 _newAuthorized)
         public
@@ -81,14 +127,11 @@ contract Captable is UpgradeableModule, ERC1155 {
     {
         Class storage class = classes[_classId];
 
-        if (_newAuthorized < class.issued)
+        if (_newAuthorized < class.issued + class.reserved)
             revert AuthorizedLowerThanOutstanding(_newAuthorized, class.issued);
 
         class.authorized = _newAuthorized;
     }
-
-    error UnauthorizedIssuer(uint256 classId, address issuer);
-    error IssuanceAboveAuthorized(uint256 newIssued, uint256 authorized);
 
     function issue(
         uint256 _classId,
@@ -104,19 +147,16 @@ contract Captable is UpgradeableModule, ERC1155 {
 
         uint256 newIssued = class.issued + _amount;
         if (newIssued > class.authorized)
-            revert IssuanceAboveAuthorized(newIssued, class.authorized);
+            revert AuthorizedSharesOverflow(
+                _classId,
+                class.authorized,
+                newIssued,
+                class.reserved
+            );
 
         class.issued = newIssued;
         _mint(_to, _classId, _amount, "");
     }
-
-    error TransferBlocked(
-        IBouncer bouncer,
-        address from,
-        address to,
-        uint256 classId,
-        uint256 amount
-    );
 
     function _beforeTransfer(
         address from,
@@ -145,6 +185,7 @@ contract Captable is UpgradeableModule, ERC1155 {
             );
     }
 
+    // TODO: Move to Bouncer Lib
     function _checkBouncer(
         IBouncer bouncer,
         address from,

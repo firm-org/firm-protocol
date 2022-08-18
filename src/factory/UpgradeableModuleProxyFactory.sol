@@ -20,8 +20,7 @@ contract UpgradeableModuleProxyFactory is ModuleProxyFactory {
             addr := create2(0, add(initcode, 0x20), mload(initcode), _salt)
         }
 
-        if (addr == address(0))
-            revert TakenAddress(addr);
+        if (addr == address(0)) revert TakenAddress(addr);
     }
 
     function deployUpgradeableModule(
@@ -39,4 +38,4 @@ contract UpgradeableModuleProxyFactory is ModuleProxyFactory {
 
         emit ModuleProxyCreation(proxy, masterCopy);
     }
-} 
+}
