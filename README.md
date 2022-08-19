@@ -36,7 +36,8 @@ Run the deployment script:
  forge script ./scripts/deploy.sol:FirmDeploy --fork-url http://localhost:8545 --broadcast --private-key 0x56be6b8d0f4319371c440be28e1e209ec2615a00b67c25dd5c40fb12b6d55c4b
 ```
 
-Fetch FirmFactory address:
+The FirmFactory address will be the last deployed contract, you can verify that it
+was completely deployed by performing a call to it:
 ```
-cast call [LocalDeploy addr] "firmFactory()(address)"
+cast call [FirmFactory address] "safeImpl()(address)"
 ```
