@@ -11,12 +11,12 @@ import {Budget} from "../budget/Budget.sol";
 import {UpgradeableModuleProxyFactory} from "./UpgradeableModuleProxyFactory.sol";
 
 contract FirmFactory {
-    GnosisSafeProxyFactory immutable safeFactory;
-    UpgradeableModuleProxyFactory immutable moduleFactory;
+    GnosisSafeProxyFactory immutable public safeFactory;
+    UpgradeableModuleProxyFactory immutable public moduleFactory;
 
-    address immutable safeImpl;
-    address immutable rolesImpl;
-    address immutable budgetImpl;
+    address immutable public safeImpl;
+    address immutable public rolesImpl;
+    address immutable public budgetImpl;
 
     error EnableModuleFailed();
 
