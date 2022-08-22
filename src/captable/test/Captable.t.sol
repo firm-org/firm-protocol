@@ -90,7 +90,9 @@ contract CaptableWithClassTest is FirmTest {
 
         vm.startPrank(HOLDER1);
         vm.warp(vestingParams.startDate - 1);
-        vm.expectRevert(abi.encodeWithSelector(Captable.TransferBlocked.selector, vestingController, HOLDER1, HOLDER2, classId, 1));
+        vm.expectRevert(
+            abi.encodeWithSelector(Captable.TransferBlocked.selector, vestingController, HOLDER1, HOLDER2, classId, 1)
+        );
         token.transfer(HOLDER2, 1);
 
         vm.warp(vestingParams.cliffDate);

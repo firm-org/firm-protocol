@@ -86,7 +86,11 @@ contract VestingController is AccountController {
         return true;
     }
 
-    function calculateLockedAmount(uint256 amount, VestingParams memory params, uint256 time) internal view returns (uint256) {
+    function calculateLockedAmount(uint256 amount, VestingParams memory params, uint256 time)
+        internal
+        view
+        returns (uint256)
+    {
         if (time >= params.endDate) {
             return 0;
         }
