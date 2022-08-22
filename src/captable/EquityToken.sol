@@ -13,12 +13,12 @@ contract EquityToken is ERC20Votes {
 
     uint256 public authorized;
 
-    error NotCaptable();
+    error UnauthorizedNotCaptable();
     error IssuingOverAuthorized();
 
     modifier onlyCaptable() {
         if (msg.sender != address(captable)) {
-            revert NotCaptable();
+            revert UnauthorizedNotCaptable();
         }
 
         _;
@@ -42,10 +42,15 @@ contract EquityToken is ERC20Votes {
         _burn(account, amount);
     }
 
+    function forfeit(address from, address to, uint256 amount) external onlyCaptable {
+        _transfer(from, to, amount);
+        // TODO: emit event since Forfeit is otherwise undetectable from observing events
+    }
+
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal override {
         // Transfers triggered by Captable are always allowed and not checked
         if (msg.sender != address(captable)) {
-            captable.ensureTransferIsAllowed(classId, from, to, amount);
+            captable.ensureTransferIsAllowed(from, to, classId, amount);
         }
     }
 
