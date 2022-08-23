@@ -155,4 +155,13 @@ contract Roles is UpgradeableModule, IRoles {
         // Since root role is always at ID 0, we don't need to shift
         return uint256(_userRoles) & 1 != 0;
     }
+
+    function moduleId() internal pure override returns (bytes32) {
+        // keccak256("org.firm.roles")
+        return 0x18558bcad45d1d10ed91362f8a29bc94caac4a181f85c102d573e77d67a084f1;
+    }
+
+    function moduleVersion() internal pure override returns (uint256) {
+        return 0;
+    }
 }

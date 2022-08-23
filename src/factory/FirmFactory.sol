@@ -20,7 +20,7 @@ contract FirmFactory {
 
     error EnableModuleFailed();
 
-    event NewFirm(address indexed creator, GnosisSafe indexed safe, Roles roles, Budget budget);
+    event NewFirm(address indexed creator, GnosisSafe indexed safe);
 
     constructor(
         GnosisSafeProxyFactory _safeFactory,
@@ -36,7 +36,7 @@ contract FirmFactory {
         budgetImpl = _budgetImpl;
     }
 
-    function createFirm(address _creator) public returns (GnosisSafe safe, Budget budget, Roles roles) {
+    function createFirm(address _creator) public returns (GnosisSafe safe) {
         address[] memory owners = new address[](1);
         owners[0] = _creator;
         // TODO: Use abi.encodeCall when it supports implicit type conversion for external calls (memory -> calldata)
@@ -54,11 +54,7 @@ contract FirmFactory {
         );
         safe = GnosisSafe(payable(safeFactory.createProxyWithNonce(safeImpl, safeInitData, 1)));
 
-        (address[] memory modules,) = safe.getModulesPaginated(address(0x1), 1);
-        budget = Budget(modules[0]);
-        roles = Roles(address(budget.roles()));
-
-        emit NewFirm(_creator, safe, roles, budget);
+        emit NewFirm(_creator, safe);
     }
 
     function installModules() public {
