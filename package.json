@@ -7,6 +7,9 @@
         "/out",
         "/src"
     ],
+    "scripts": {
+        "deploy:local": "source scripts/deploy-local.sh"
+    },
     "devDependencies": {},
     "dependencies": {}
 }
