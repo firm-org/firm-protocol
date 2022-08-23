@@ -156,12 +156,12 @@ contract Roles is UpgradeableModule, IRoles {
         return uint256(_userRoles) & 1 != 0;
     }
 
-    function moduleId() internal pure override returns (bytes32) {
+    function moduleId() public pure override returns (bytes32) {
         // keccak256("org.firm.roles")
         return 0x18558bcad45d1d10ed91362f8a29bc94caac4a181f85c102d573e77d67a084f1;
     }
 
-    function moduleVersion() internal pure override returns (uint256) {
+    function moduleVersion() public pure override returns (uint256) {
         return 0;
     }
 }
