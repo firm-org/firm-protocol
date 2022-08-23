@@ -9,13 +9,9 @@ curl -L https://foundry.paradigm.xyz | bash
 foundryup
 ```
 
-### Install dependencies using `pnpm`
-```
-pnpm install
-```
-
 ### Build and test
 ```
+forge install
 forge build
 forge test
 ```
