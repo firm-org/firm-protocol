@@ -192,12 +192,12 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
         allowance.spent = spentAfterPayment;
     }
 
-    function moduleId() internal pure override returns (bytes32) {
+    function moduleId() public pure override returns (bytes32) {
         // keccak256("org.firm.budget")
         return 0x5e8829aaf265e7dba2771b042c214b094da4848735379a3cb9c26d5077740923;
     }
 
-    function moduleVersion() internal pure override returns (uint256) {
+    function moduleVersion() public pure override returns (uint256) {
         return 0;
     }
 }

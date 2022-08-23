@@ -3,12 +3,14 @@ pragma solidity ^0.8.16;
 
 import {IAvatar} from "zodiac/interfaces/IAvatar.sol";
 
+import {IModuleMetadata} from "./IModuleMetadata.sol";
+
 /**
  * @title SafeAware
  * @dev Base contract for Firm components that need to be aware of a Safe
  * as their admin
  */
-abstract contract SafeAware {
+abstract contract SafeAware is IModuleMetadata {
     // SAFE_SLOT = keccak256("firm.safeaware.safe") - 1
     bytes32 internal constant SAFE_SLOT = 0xb2c095c1a3cccf4bf97d6c0d6a44ba97fddb514f560087d9bf71be2c324b6c44;
 
@@ -23,11 +25,6 @@ abstract contract SafeAware {
 
     error SafeAddressZero();
     error AlreadyInitialized();
-
-    event FirmModuleInit(address indexed safe, bytes32 indexed moduleId, uint256 moduleVersion);
-
-    function moduleId() internal pure virtual returns (bytes32);
-    function moduleVersion() internal pure virtual returns (uint256);
 
     /**
      * @dev Contracts that inherit from SafeAware, including derived contracts as
@@ -46,8 +43,6 @@ abstract contract SafeAware {
         assembly {
             sstore(SAFE_SLOT, _safe)
         }
-
-        emit FirmModuleInit(address(_safe), moduleId(), moduleVersion());
     }
 
     error UnauthorizedNotSafe();

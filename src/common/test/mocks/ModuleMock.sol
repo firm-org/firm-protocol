@@ -25,11 +25,11 @@ contract ModuleMock is UpgradeableModule, ZodiacModule {
         return exec(to, value, data, SafeEnums.Operation.Call);
     }
 
-    function moduleId() internal pure override returns (bytes32) {
+    function moduleId() public pure override returns (bytes32) {
         return keccak256("org.firm.modulemock");
     }
 
-    function moduleVersion() internal pure override returns (uint256) {
+    function moduleVersion() public pure override returns (uint256) {
         return 0;
     }
 }
