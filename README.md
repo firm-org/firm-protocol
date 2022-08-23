@@ -29,7 +29,7 @@ anvil
 
 Run the deployment script for the contracts; the sender address will be 0xF1F182B70255AC4846E28fd56038F9019c8d36b0:
 ```
-source src/deploy-local.sh
+scripts/deploy-local.sh
 ```
 
 The FirmFactory address will be the last deployed contract, you can verify that it
