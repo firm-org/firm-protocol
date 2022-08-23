@@ -24,6 +24,11 @@ contract Captable is UpgradeableModule {
 
     mapping(address => mapping(uint256 => IAccountController)) controllers;
 
+    // Above this limit, voting power getters that iterate through all tokens become
+    // very expensive. See `CaptableClassLimitTest` tests for a worst-case benchmark
+    uint256 constant internal CLASSES_LIMIT = 128;
+
+    error ClassCreationAboveLimit();
     error UnexistentClass(uint256 classId);
     error BadInput();
     error TransferBlocked(IBouncer bouncer, address from, address to, uint256 classId, uint256 amount);
@@ -51,7 +56,9 @@ contract Captable is UpgradeableModule {
         returns (uint256 classId, EquityToken token)
     {
         unchecked {
-            classId = classCount++;
+            if ((classId = classCount++) >= CLASSES_LIMIT) {
+                revert ClassCreationAboveLimit();
+            }
         }
 
         // Consider using proxies as this is >2m gas

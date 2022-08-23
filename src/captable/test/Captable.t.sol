@@ -53,6 +53,20 @@ contract CaptableInitTest is BaseCaptableTest {
         assertEq(token.authorized(), 100);
         assertEq(token.totalSupply(), 0);
     }
+
+    function testCannotCreateMoreClassesThanLimit() public {
+        uint256 CLASSES_LIMIT = 128;
+
+        for (uint256 i = 0; i < CLASSES_LIMIT; i++) {
+            vm.prank(address(safe));
+            captable.createClass("", "", 0, 0);
+        }
+        assertEq(captable.classCount(), CLASSES_LIMIT);
+
+        vm.prank(address(safe));
+        vm.expectRevert(abi.encodeWithSelector(Captable.ClassCreationAboveLimit.selector));
+        captable.createClass("", "", 0, 0);
+    }
 }
 
 contract CaptableOneClassTest is BaseCaptableTest {
@@ -202,8 +216,8 @@ contract CaptableMulticlassTest is BaseCaptableTest {
 }
 
 contract CaptableClassLimit1Test is BaseCaptableTest {
-    uint256 constant classesLimit = 100;
-    uint256 constant transfersLimit = 50;
+    uint256 constant classesLimit = 128;
+    uint256 constant transfersLimit = 64;
 
     // Holder gets token in each of the classes
     function setUp() override public {
@@ -247,8 +261,8 @@ contract CaptableClassLimit1Test is BaseCaptableTest {
 }
 
 contract CaptableClassLimit2Test is BaseCaptableTest {
-    uint256 constant classesLimit = 100;
-    uint256 constant transfersLimit = 50;
+    uint256 constant classesLimit = 128;
+    uint256 constant transfersLimit = 64;
 
     // Holder just has tokens in one class
     function setUp() override public {
