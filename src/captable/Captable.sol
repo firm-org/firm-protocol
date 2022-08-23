@@ -168,4 +168,13 @@ contract Captable is UpgradeableModule {
         }
         return classes[classId];
     }
+
+    function moduleId() internal pure override returns (bytes32) {
+        // keccak256("org.firm.captable")
+        return 0x5608553f5ed138b8964793359c86f41e88b210dc65b74d47f2b17dd82194b8b6;
+    }
+
+    function moduleVersion() internal pure override returns (uint256) {
+        return 0;
+    }
 }
