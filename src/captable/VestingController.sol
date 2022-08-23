@@ -23,6 +23,8 @@ contract VestingController is AccountController {
 
     mapping(address => Account) public accounts;
 
+    error InvalidVestingParameters();
+
     constructor(Captable captable_) {
         initialize(captable_);
     }
@@ -38,7 +40,9 @@ contract VestingController is AccountController {
     {
         VestingParams memory params = abi.decode(extraParams, (VestingParams));
 
-        // TODO: sanity check params
+        if (params.startDate > params.cliffDate || params.cliffDate > params.endDate) {
+            revert InvalidVestingParameters();
+        }
 
         Account storage account = accounts[owner];
         if (account.amount > 0) {
@@ -91,7 +95,7 @@ contract VestingController is AccountController {
 
     function calculateLockedAmount(uint256 amount, VestingParams memory params, uint256 time)
         internal
-        view
+        pure
         returns (uint256)
     {
         if (time >= params.endDate) {
