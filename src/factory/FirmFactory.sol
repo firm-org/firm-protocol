@@ -39,18 +39,10 @@ contract FirmFactory {
     function createFirm(address _creator) public returns (GnosisSafe safe) {
         address[] memory owners = new address[](1);
         owners[0] = _creator;
-        // TODO: Use abi.encodeCall when it supports implicit type conversion for external calls (memory -> calldata)
-        // https://github.com/ethereum/solidity/issues/12718
-        bytes memory safeInitData = abi.encodeWithSelector(
-            GnosisSafe.setup.selector,
-            owners,
-            1,
-            address(this),
-            abi.encodeCall(this.installModules, ()),
-            address(0),
-            address(0),
-            0,
-            address(0)
+
+        bytes memory installModulesData = abi.encodeCall(this.installModules, ());
+        bytes memory safeInitData = abi.encodeCall(
+            GnosisSafe.setup, (owners, 1, address(this), installModulesData, address(0), address(0), 0, payable(0))
         );
         safe = GnosisSafe(payable(safeFactory.createProxyWithNonce(safeImpl, safeInitData, 1)));
 
