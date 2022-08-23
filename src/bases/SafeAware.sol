@@ -24,6 +24,11 @@ abstract contract SafeAware {
     error SafeAddressZero();
     error AlreadyInitialized();
 
+    event FirmModuleInit(address indexed safe, bytes32 indexed moduleId, uint256 moduleVersion);
+
+    function moduleId() internal pure virtual returns (bytes32);
+    function moduleVersion() internal pure virtual returns (uint256);
+
     /**
      * @dev Contracts that inherit from SafeAware, including derived contracts as
      * UpgradeableModule or Zodiac, should call this function on initialization
@@ -41,6 +46,8 @@ abstract contract SafeAware {
         assembly {
             sstore(SAFE_SLOT, _safe)
         }
+
+        emit FirmModuleInit(address(_safe), moduleId(), moduleVersion());
     }
 
     error UnauthorizedNotSafe();
