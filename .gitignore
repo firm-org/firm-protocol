@@ -9,3 +9,7 @@ broadcast/
 # env vars
 .env
 .env.prod
+
+# npm/yarn locks
+npm.lock
+yarn.lock
