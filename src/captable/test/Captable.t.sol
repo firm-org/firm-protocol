@@ -18,6 +18,14 @@ contract BaseCaptableTest is FirmTest {
     function setUp() public virtual {
         captable = new Captable(safe, "TestCo", IBouncer(address(0)));
     }
+
+    // votes only count when a delegation is set
+    function _selfDelegateHolders(EquityToken token) internal {
+        vm.prank(HOLDER1);
+        token.delegate(HOLDER1);
+        vm.prank(HOLDER2);
+        token.delegate(HOLDER2);
+    }
 }
 
 contract CaptableInitTest is BaseCaptableTest {
@@ -148,7 +156,8 @@ contract CaptableMulticlassTest is BaseCaptableTest {
         vm.prank(address(safe));
         (classId2, token2) = captable.createClass("Founder", "TST-B", 1000, weight2);
         
-        _selfDelegateHolders();
+        _selfDelegateHolders(token1);
+        _selfDelegateHolders(token2);
 
         vm.roll(2); // set block number to 2
         _issueInitialShares();
@@ -184,22 +193,101 @@ contract CaptableMulticlassTest is BaseCaptableTest {
         assertEq(captable.getPastVotes(HOLDER2, 2), holder2InitialBalance2 * weight2);
     }
 
-    // votes only count when a delegation is set
-    function _selfDelegateHolders() internal {
-        vm.prank(HOLDER1);
-        token1.delegate(HOLDER1);
-        vm.prank(HOLDER1);
-        token2.delegate(HOLDER1);
-        vm.prank(HOLDER2);
-        token1.delegate(HOLDER2);
-        vm.prank(HOLDER2);
-        token2.delegate(HOLDER2);
-    }
-
     function _issueInitialShares() internal {
         captable.issue(HOLDER1, classId1, holder1InitialBalance1);
         captable.issue(HOLDER1, classId2, holder1InitialBalance2);
         // captable.issue(HOLDER2, classId1, holder2InitialBalance1); // issuing 0 fails
         captable.issue(HOLDER2, classId2, holder2InitialBalance2);
+    }
+}
+
+contract CaptableClassLimit1Test is BaseCaptableTest {
+    uint256 constant classesLimit = 100;
+    uint256 constant transfersLimit = 50;
+
+    // Holder gets token in each of the classes
+    function setUp() override public {
+        super.setUp();
+
+        for (uint256 i = 0; i < classesLimit; i++) {
+            vm.roll(0);
+            vm.prank(address(safe));
+            (uint256 classId, EquityToken token) = captable.createClass("", "", transfersLimit, 1);
+            _selfDelegateHolders(token);
+        
+            // Artificially create checkpoints by issuing one share per block
+            for (uint256 j = 0; j < transfersLimit; j++) {
+                vm.roll(j);
+                captable.issue(HOLDER1, classId, 1);
+            }
+        }
+    }
+
+    function testGetVotesGas() public {
+        vm.roll(transfersLimit);
+        assertEq(captable.getVotes(HOLDER1), classesLimit * transfersLimit);
+    }
+
+    function testGetTotalVotesGas() public {
+        vm.roll(transfersLimit);
+        assertEq(captable.getTotalVotes(), classesLimit * transfersLimit);
+    }
+
+    function testGetPastVotesGas() public {
+        vm.roll(transfersLimit);
+        // look for a checkpoint close to the worst case in the binary search
+        assertEq(captable.getPastVotes(HOLDER1, transfersLimit - 2), classesLimit * (transfersLimit - 1));
+    }
+
+    function testGetPastTotalSupplyGas() public {
+        vm.roll(transfersLimit);
+        // look for a checkpoint close to the worst case in the binary search
+        assertEq(captable.getPastTotalSupply(transfersLimit - 2), classesLimit * (transfersLimit - 1));
+    }
+}
+
+contract CaptableClassLimit2Test is BaseCaptableTest {
+    uint256 constant classesLimit = 100;
+    uint256 constant transfersLimit = 50;
+
+    // Holder just has tokens in one class
+    function setUp() override public {
+        super.setUp();
+
+        for (uint256 i = 0; i < classesLimit; i++) {
+            vm.roll(0);
+            vm.prank(address(safe));
+            (uint256 classId, EquityToken token) = captable.createClass("", "", transfersLimit, 1);
+            _selfDelegateHolders(token);
+        
+            if (i == 0) {
+                for (uint256 j = 0; j < transfersLimit; j++) {
+                    vm.roll(j);
+                    captable.issue(HOLDER1, classId, 1);
+                }
+            }
+        }
+    }
+
+    function testGetVotesGas() public {
+        vm.roll(transfersLimit);
+        assertEq(captable.getVotes(HOLDER1), transfersLimit);
+    }
+
+    function testGetTotalVotesGas() public {
+        vm.roll(transfersLimit);
+        assertEq(captable.getTotalVotes(), transfersLimit);
+    }
+
+    function testGetPastVotesGas() public {
+        vm.roll(transfersLimit);
+        // look for a checkpoint close to the worst case in the binary search
+        assertEq(captable.getPastVotes(HOLDER1, transfersLimit - 2), transfersLimit - 1);
+    }
+
+    function testGetPastTotalSupplyGas() public {
+        vm.roll(transfersLimit);
+        // look for a checkpoint close to the worst case in the binary search
+        assertEq(captable.getPastTotalSupply(transfersLimit - 2), transfersLimit - 1);
     }
 }
