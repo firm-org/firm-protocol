@@ -52,6 +52,8 @@ contract EquityToken is ERC20Votes {
         if (msg.sender != address(captable)) {
             captable.ensureTransferIsAllowed(from, to, classId, amount);
         }
+        
+        super._beforeTokenTransfer(from, to, amount);
     }
 
     function name() public view override returns (string memory) {

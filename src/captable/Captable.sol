@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import {UpgradeableModule} from "../bases/UpgradeableModule.sol";
 import {IAvatar} from "../bases/SafeAware.sol";
 
-import {EquityToken} from "./EquityToken.sol";
+import {EquityToken, ERC20, ERC20Votes} from "./EquityToken.sol";
 import {IBouncer} from "./IBouncer.sol";
 import {IAccountController} from "./AccountController.sol";
 
@@ -13,6 +13,8 @@ contract Captable is UpgradeableModule {
 
     struct Class {
         EquityToken token;
+        uint64 votingWeight;
+
         string name;
         string ticker;
     }
@@ -41,11 +43,9 @@ contract Captable is UpgradeableModule {
     function createClass(
         string calldata className,
         string calldata ticker,
-        // uint256 _convertsIntoClassId,
-        uint256 authorized
+        uint256 authorized,
+        uint64 votingWeight
     )
-        // IBouncer _bouncer,
-        // address[] calldata _classIssuers
         external
         onlySafe
         returns (uint256 classId, EquityToken token)
@@ -59,6 +59,7 @@ contract Captable is UpgradeableModule {
 
         Class storage class = classes[classId];
         class.token = token;
+        class.votingWeight = votingWeight;
         class.name = className;
         class.ticker = ticker;
     }
@@ -117,6 +118,33 @@ contract Captable is UpgradeableModule {
 
     function balanceOf(address account, uint256 classId) public view returns (uint256) {
         return _getClass(classId).token.balanceOf(account);
+    }
+
+    function getVotes(address account) external view returns (uint256 totalVotes) {
+        return _weightedSumAllClasses(abi.encodeCall(ERC20Votes.getVotes, (account)));
+    }
+
+    function getPastVotes(address account, uint256 blockNumber) external view returns (uint256) {
+        return _weightedSumAllClasses(abi.encodeCall(ERC20Votes.getPastVotes, (account, blockNumber)));
+    }
+
+    function getPastTotalSupply(uint256 blockNumber) external view returns (uint256) {
+        return _weightedSumAllClasses(abi.encodeCall(ERC20Votes.getPastTotalSupply, (blockNumber)));
+    }
+
+    function getTotalVotes() external view returns (uint256) {
+        return _weightedSumAllClasses(abi.encodeCall(ERC20.totalSupply, ()));
+    }
+
+    function _weightedSumAllClasses(bytes memory data) internal view returns (uint256 total) {
+        uint256 n = classCount;
+        for (uint256 i = 0; i < n;) {
+            Class storage class = classes[i];
+            (bool result, bytes memory returnData) = address(class.token).staticcall(data);
+            require(result && returnData.length == 32);
+            total += abi.decode(returnData, (uint256)) * uint256(class.votingWeight);
+            unchecked { i++; }
+        }
     }
 
     function nameFor(uint256 classId) public view returns (string memory) {
