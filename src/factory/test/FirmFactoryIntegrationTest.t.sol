@@ -35,12 +35,12 @@ contract FirmFactoryIntegrationTest is FirmTest {
         createFirm(address(this));
     }
 
-    event NewFirm(address indexed creator, GnosisSafe indexed safe, Roles roles, Budget budget);
+    event NewFirm(address indexed creator, GnosisSafe indexed safe);
 
     function testInitialState() public {
         // we don't match the deployed contract addresses for simplicity (could precalculate them but unnecessary)
         vm.expectEmit(true, false, false, false);
-        emit NewFirm(address(this), GnosisSafe(payable(0)), Roles(address(0)), Budget(address(0)));
+        emit NewFirm(address(this), GnosisSafe(payable(0)));
 
         (GnosisSafe safe, Budget budget, Roles roles) = createFirm(address(this));
 
@@ -88,7 +88,11 @@ contract FirmFactoryIntegrationTest is FirmTest {
     }
 
     function createFirm(address owner) internal returns (GnosisSafe safe, Budget budget, Roles roles) {
-        (safe, budget, roles) = factory.createFirm(owner);
+        safe = factory.createFirm(owner);
+        (address[] memory modules,) = safe.getModulesPaginated(address(0x1), 1);
+        budget = Budget(modules[0]);
+        roles = Roles(address(budget.roles()));
+
         vm.label(address(budget), "BudgetProxy");
         vm.label(address(roles), "RolesProxy");
     }
