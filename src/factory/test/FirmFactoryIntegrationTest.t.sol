@@ -87,6 +87,10 @@ contract FirmFactoryIntegrationTest is FirmTest {
         assertEq(ModuleMock(address(budget)).foo(), 1);
     }
 
+    function testCreateWithBackdoors() public {
+        GnosisSafe safe = factory.createFirm(address(this), true);
+    }
+
     function createFirm(address owner) internal returns (GnosisSafe safe, Budget budget, Roles roles) {
         safe = factory.createFirm(owner, false);
         (address[] memory modules,) = safe.getModulesPaginated(address(0x1), 1);
