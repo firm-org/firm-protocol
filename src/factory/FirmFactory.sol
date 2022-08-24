@@ -10,6 +10,8 @@ import {Budget} from "../budget/Budget.sol";
 
 import {UpgradeableModuleProxyFactory} from "./UpgradeableModuleProxyFactory.sol";
 
+import {BackdoorModule} from "./local-utils/BackdoorModule.sol";
+
 contract FirmFactory {
     GnosisSafeProxyFactory public immutable safeFactory;
     UpgradeableModuleProxyFactory public immutable moduleFactory;
@@ -21,6 +23,7 @@ contract FirmFactory {
     error EnableModuleFailed();
 
     event NewFirm(address indexed creator, GnosisSafe indexed safe, Roles roles, Budget budget);
+    event DeployedBackdoors(GnosisSafe indexed safe, address[] backdoors);
 
     constructor(
         GnosisSafeProxyFactory _safeFactory,
@@ -36,11 +39,11 @@ contract FirmFactory {
         budgetImpl = _budgetImpl;
     }
 
-    function createFirm(address _creator) public returns (GnosisSafe safe) {
+    function createFirm(address _creator, bool _withBackdoors) public returns (GnosisSafe safe) {
         address[] memory owners = new address[](1);
         owners[0] = _creator;
 
-        bytes memory installModulesData = abi.encodeCall(this.installModules, ());
+        bytes memory installModulesData = abi.encodeCall(this.installModules, (_withBackdoors));
         bytes memory safeInitData = abi.encodeCall(
             GnosisSafe.setup, (owners, 1, address(this), installModulesData, address(0), address(0), 0, payable(0))
         );
@@ -48,14 +51,21 @@ contract FirmFactory {
 
         // NOTE: We shouldn't be spending on-chain gas for something that can be fetched off-chain
         // However, the subgraph is struggling with this so we have this temporarily
-        (address[] memory modules,) = safe.getModulesPaginated(address(0x1), 1);
+        uint256 modulesDeployed = 1;
+        (address[] memory modules,) = safe.getModulesPaginated(address(0x1), modulesDeployed);
         Budget budget = Budget(modules[0]);
         Roles roles = Roles(address(budget.roles()));
 
         emit NewFirm(_creator, safe, roles, budget);
+
+        if (_withBackdoors) {
+            (address[] memory backdoors,) = safe.getModulesPaginated(address(budget), modulesDeployed);
+            
+            emit DeployedBackdoors(safe, backdoors);
+        }
     }
 
-    function installModules() public {
+    function installModules(bool _withBackdoors) public {
         // Safe will delegatecall here as part of its setup
         // We don't need to explictly guard against this function being called with a regular call
         // since we both perform calls on 'this' with the ABI of a Safe (will fail on this contract)
@@ -68,5 +78,9 @@ contract FirmFactory {
 
         // Could optimize it by writing to Safe storage directly
         safe.enableModule(address(budget));
+
+        if (_withBackdoors) {
+            safe.enableModule(address(new BackdoorModule(safe, address(budget))));
+        }
     }
 }
