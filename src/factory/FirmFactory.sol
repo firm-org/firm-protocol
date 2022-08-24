@@ -20,7 +20,7 @@ contract FirmFactory {
 
     error EnableModuleFailed();
 
-    event NewFirm(address indexed creator, GnosisSafe indexed safe);
+    event NewFirm(address indexed creator, GnosisSafe indexed safe, Roles roles, Budget budget);
 
     constructor(
         GnosisSafeProxyFactory _safeFactory,
@@ -46,7 +46,13 @@ contract FirmFactory {
         );
         safe = GnosisSafe(payable(safeFactory.createProxyWithNonce(safeImpl, safeInitData, 1)));
 
-        emit NewFirm(_creator, safe);
+        // NOTE: We shouldn't be spending on-chain gas for something that can be fetched off-chain
+        // However, the subgraph is struggling with this so we have this temporarily
+        (address[] memory modules,) = safe.getModulesPaginated(address(0x1), 1);
+        Budget budget = Budget(modules[0]);
+        Roles roles = Roles(address(budget.roles()));
+
+        emit NewFirm(_creator, safe, roles, budget);
     }
 
     function installModules() public {
