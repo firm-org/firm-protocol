@@ -17,7 +17,6 @@ contract Captable is UpgradeableModule {
     struct Class {
         EquityToken token;
         uint64 votingWeight;
-
         string name;
         string ticker;
     }
@@ -29,7 +28,7 @@ contract Captable is UpgradeableModule {
 
     // Above this limit, voting power getters that iterate through all tokens become
     // very expensive. See `CaptableClassLimitTest` tests for a worst-case benchmark
-    uint256 constant internal CLASSES_LIMIT = 128;
+    uint256 internal constant CLASSES_LIMIT = 128;
 
     error ClassCreationAboveLimit();
     error UnexistentClass(uint256 classId);
@@ -48,12 +47,7 @@ contract Captable is UpgradeableModule {
         // globalControls.canIssue[address(_safe)] = true;
     }
 
-    function createClass(
-        string calldata className,
-        string calldata ticker,
-        uint256 authorized,
-        uint64 votingWeight
-    )
+    function createClass(string calldata className, string calldata ticker, uint256 authorized, uint64 votingWeight)
         external
         onlySafe
         returns (uint256 classId, EquityToken token)
@@ -150,10 +144,15 @@ contract Captable is UpgradeableModule {
         uint256 n = classCount;
         for (uint256 i = 0; i < n;) {
             Class storage class = classes[i];
-            (bool result, bytes memory returnData) = address(class.token).staticcall(data);
-            require(result && returnData.length == 32);
-            total += abi.decode(returnData, (uint256)) * uint256(class.votingWeight);
-            unchecked { i++; }
+            uint256 votingWeight = class.votingWeight;
+            if (votingWeight > 0) {
+                (bool result, bytes memory returnData) = address(class.token).staticcall(data);
+                require(result && returnData.length == 32);
+                total += votingWeight * abi.decode(returnData, (uint256));
+            }
+            unchecked {
+                i++;
+            }
         }
     }
 

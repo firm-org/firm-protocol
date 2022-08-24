@@ -151,7 +151,7 @@ contract CaptableMulticlassTest is BaseCaptableTest {
     uint256 classId1;
     EquityToken token1;
     uint64 weight1 = 1;
-    
+
     uint256 classId2;
     EquityToken token2;
     uint64 weight2 = 5;
@@ -169,7 +169,7 @@ contract CaptableMulticlassTest is BaseCaptableTest {
         (classId1, token1) = captable.createClass("Common", "TST-A", 1000, weight1);
         vm.prank(address(safe));
         (classId2, token2) = captable.createClass("Founder", "TST-B", 1000, weight2);
-        
+
         _selfDelegateHolders(token1);
         _selfDelegateHolders(token2);
 
@@ -182,7 +182,9 @@ contract CaptableMulticlassTest is BaseCaptableTest {
 
         assertEq(captable.getVotes(HOLDER1), holder1InitialBalance1 + holder1InitialBalance2 * weight2);
         assertEq(captable.getVotes(HOLDER2), holder2InitialBalance2 * weight2);
-        assertEq(captable.getTotalVotes(), holder1InitialBalance1 + (holder1InitialBalance1 + holder2InitialBalance2) * weight2);
+        assertEq(
+            captable.getTotalVotes(), holder1InitialBalance1 + (holder1InitialBalance1 + holder2InitialBalance2) * weight2
+        );
 
         assertEq(captable.getPastVotes(HOLDER1, 1), 0);
         assertEq(captable.getPastVotes(HOLDER2, 1), 0);
@@ -190,12 +192,15 @@ contract CaptableMulticlassTest is BaseCaptableTest {
 
         assertEq(captable.getPastVotes(HOLDER1, 2), holder1InitialBalance1 + holder1InitialBalance2 * weight2);
         assertEq(captable.getPastVotes(HOLDER2, 2), holder2InitialBalance2 * weight2);
-        assertEq(captable.getPastTotalSupply(2), holder1InitialBalance1 + (holder1InitialBalance1 + holder2InitialBalance2) * weight2);
+        assertEq(
+            captable.getPastTotalSupply(2),
+            holder1InitialBalance1 + (holder1InitialBalance1 + holder2InitialBalance2) * weight2
+        );
     }
 
     function testVotesUpdateOnTransfer() public {
         vm.roll(3);
-        
+
         vm.prank(HOLDER1);
         token1.transfer(HOLDER2, 50);
 
@@ -220,7 +225,7 @@ contract CaptableClassLimit1Test is BaseCaptableTest {
     uint256 constant transfersLimit = 64;
 
     // Holder gets token in each of the classes
-    function setUp() override public {
+    function setUp() public override {
         super.setUp();
 
         for (uint256 i = 0; i < classesLimit; i++) {
@@ -228,7 +233,7 @@ contract CaptableClassLimit1Test is BaseCaptableTest {
             vm.prank(address(safe));
             (uint256 classId, EquityToken token) = captable.createClass("", "", transfersLimit, 1);
             _selfDelegateHolders(token);
-        
+
             // Artificially create checkpoints by issuing one share per block
             for (uint256 j = 0; j < transfersLimit; j++) {
                 vm.roll(j);
@@ -265,7 +270,7 @@ contract CaptableClassLimit2Test is BaseCaptableTest {
     uint256 constant transfersLimit = 64;
 
     // Holder just has tokens in one class
-    function setUp() override public {
+    function setUp() public override {
         super.setUp();
 
         for (uint256 i = 0; i < classesLimit; i++) {
@@ -273,7 +278,7 @@ contract CaptableClassLimit2Test is BaseCaptableTest {
             vm.prank(address(safe));
             (uint256 classId, EquityToken token) = captable.createClass("", "", transfersLimit, 1);
             _selfDelegateHolders(token);
-        
+
             if (i == 0) {
                 for (uint256 j = 0; j < transfersLimit; j++) {
                     vm.roll(j);
