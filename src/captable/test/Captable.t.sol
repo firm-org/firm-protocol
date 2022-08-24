@@ -7,6 +7,7 @@ import {AvatarStub} from "../../common/test/mocks/AvatarStub.sol";
 import {Captable, IBouncer, NO_CONVERSION_FLAG} from "../Captable.sol";
 import {EquityToken} from "../EquityToken.sol";
 import {VestingController} from "../VestingController.sol";
+import {DisallowController} from "./mocks/DisallowController.sol";
 
 contract BaseCaptableTest is FirmTest {
     Captable captable;
@@ -246,6 +247,17 @@ contract CaptableMulticlassTest is BaseCaptableTest {
         vm.prank(address(safe));
         vm.expectRevert(abi.encodeWithSelector(Captable.ConvertibleOverAuthorized.selector, classId2));
         captable.createClass("", "", 1000, uint32(classId2), 1);
+    }
+
+    function testCantConvertIfControllerDisallows() public {
+        DisallowController controller = new DisallowController();
+
+        // This rogue controller starts controlling all of HOLDER2's classId2 shares
+        captable.issueControlled(HOLDER2, classId2, 1, controller, "");
+
+        vm.prank(HOLDER2);
+        vm.expectRevert(abi.encodeWithSelector(Captable.ConversionBlocked.selector, controller, HOLDER2, classId2, 1));
+        captable.convert(classId2, 1);
     }
 
     function _issueInitialShares() internal {

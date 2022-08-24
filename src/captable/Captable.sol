@@ -9,6 +9,7 @@ import {IBouncer} from "./IBouncer.sol";
 import {IAccountController} from "./AccountController.sol";
 
 uint32 constant NO_CONVERSION_FLAG = type(uint32).max;
+
 contract Captable is UpgradeableModule {
     string public constant moduleId = "org.firm.captable";
     uint256 public constant moduleVersion = 0;
@@ -19,10 +20,8 @@ contract Captable is UpgradeableModule {
         EquityToken token;
         uint64 votingWeight;
         uint32 convertsIntoClassId;
-
         uint256 authorized;
         uint256 convertible;
-
         string name;
         string ticker;
     }
@@ -40,6 +39,7 @@ contract Captable is UpgradeableModule {
     error UnexistentClass(uint256 classId);
     error BadInput();
     error TransferBlocked(IBouncer bouncer, address from, address to, uint256 classId, uint256 amount);
+    error ConversionBlocked(IAccountController controller, address account, uint256 classId, uint256 amount);
     error UnauthorizedNotController();
     error IssuingOverAuthorized(uint256 classId);
     error ConvertibleOverAuthorized(uint256 classId);
@@ -55,7 +55,13 @@ contract Captable is UpgradeableModule {
         // globalControls.canIssue[address(_safe)] = true;
     }
 
-    function createClass(string calldata className, string calldata ticker, uint256 authorized, uint32 convertsIntoClassId, uint64 votingWeight)
+    function createClass(
+        string calldata className,
+        string calldata ticker,
+        uint256 authorized,
+        uint32 convertsIntoClassId,
+        uint64 votingWeight
+    )
         external
         onlySafe
         returns (uint256 classId, EquityToken token)
@@ -133,6 +139,14 @@ contract Captable is UpgradeableModule {
     function convert(uint256 classId, uint256 amount) external {
         Class storage fromClass = _getClass(classId);
         Class storage toClass = _getClass(fromClass.convertsIntoClassId);
+
+        IAccountController controller = controllers[msg.sender][classId];
+        // converter has a controller for the converting class id
+        if (address(controller) != address(0)) {
+            if (!controller.isTransferAllowed(msg.sender, msg.sender, classId, amount)) {
+                revert ConversionBlocked(controller, msg.sender, classId, amount);
+            }
+        }
 
         fromClass.authorized -= amount;
         toClass.convertible -= amount;
