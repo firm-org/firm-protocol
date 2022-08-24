@@ -76,7 +76,7 @@ contract BudgetTest is FirmTest {
 
         vm.expectRevert(abi.encodeWithSelector(TimeShiftLib.InvalidTimeShift.selector));
         budget.createAllowance(
-            NO_PARENT_ID, SPENDER, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode()
+            NO_PARENT_ID, SPENDER, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode(), ""
         );
     }
 
@@ -96,7 +96,7 @@ contract BudgetTest is FirmTest {
 
         vm.prank(SPENDER);
         vm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, allowanceId, address(0), RECEIVER, 7, 1));
-        budget.executePayment(allowanceId, RECEIVER, 7);
+        budget.executePayment(allowanceId, RECEIVER, 7, "");
     }
 
     function testMultipleAllowances() public {
@@ -125,11 +125,11 @@ contract BudgetTest is FirmTest {
 
         vm.prank(address(avatar));
         uint256 topLevelAllowance = budget.createAllowance(
-            NO_PARENT_ID, SPENDER, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Monthly, 0).encode()
+            NO_PARENT_ID, SPENDER, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Monthly, 0).encode(), ""
         );
         vm.prank(SPENDER);
         uint256 subAllowance = budget.createAllowance(
-            topLevelAllowance, SOMEONE_ELSE, address(0), 5, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode()
+            topLevelAllowance, SOMEONE_ELSE, address(0), 5, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
         );
 
         assertExecutePayment(SOMEONE_ELSE, subAllowance, RECEIVER, 5, initialTime + 1 days);
@@ -141,11 +141,11 @@ contract BudgetTest is FirmTest {
 
         vm.prank(address(avatar));
         uint256 topLevelAllowance = budget.createAllowance(
-            NO_PARENT_ID, SPENDER, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode()
+            NO_PARENT_ID, SPENDER, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
         );
         vm.prank(SPENDER);
         uint256 subAllowance = budget.createAllowance(
-            topLevelAllowance, SOMEONE_ELSE, address(0), 5, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode()
+            topLevelAllowance, SOMEONE_ELSE, address(0), 5, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode(), ""
         );
 
         assertExecutePayment(SOMEONE_ELSE, subAllowance, RECEIVER, 5, initialTime + 1 days);
@@ -157,15 +157,15 @@ contract BudgetTest is FirmTest {
 
         vm.prank(address(avatar));
         uint256 allowance1 = budget.createAllowance(
-            NO_PARENT_ID, SPENDER, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Monthly, 0).encode()
+            NO_PARENT_ID, SPENDER, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Monthly, 0).encode(), ""
         );
         vm.startPrank(SPENDER);
         uint256 allowance2 =
-            budget.createAllowance(allowance1, SPENDER, address(0), 5, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode());
+            budget.createAllowance(allowance1, SPENDER, address(0), 5, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode(), "");
         uint256 allowance3 =
-            budget.createAllowance(allowance2, SPENDER, address(0), 2, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode());
+            budget.createAllowance(allowance2, SPENDER, address(0), 2, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), "");
         uint256 allowance4 =
-            budget.createAllowance(allowance3, SPENDER, address(0), 1, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode());
+            budget.createAllowance(allowance3, SPENDER, address(0), 1, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode(), "");
         vm.stopPrank();
 
         assertExecutePayment(SPENDER, allowance4, RECEIVER, 1, initialTime + 1 days);
@@ -185,7 +185,7 @@ contract BudgetTest is FirmTest {
 
         vm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, allowance3, address(0), SPENDER, 1, 0));
         vm.prank(SPENDER);
-        budget.executePayment(allowance4, SPENDER, 1);
+        budget.executePayment(allowance4, SPENDER, 1, "");
     }
 
     function testCantExecuteIfNotAuthorized() public {
@@ -195,13 +195,13 @@ contract BudgetTest is FirmTest {
 
         vm.prank(RECEIVER);
         vm.expectRevert(abi.encodeWithSelector(Budget.ExecutionDisallowed.selector, allowanceId, RECEIVER));
-        budget.executePayment(allowanceId, RECEIVER, 7);
+        budget.executePayment(allowanceId, RECEIVER, 7, "");
     }
 
     function testCantExecuteInexistentAllowance() public {
         vm.prank(SPENDER);
         vm.expectRevert(abi.encodeWithSelector(Budget.ExecutionDisallowed.selector, 0, SPENDER));
-        budget.executePayment(0, RECEIVER, 7);
+        budget.executePayment(0, RECEIVER, 7, "");
     }
 
     function testAllowanceSpenderWithRoleFlags() public {
@@ -212,15 +212,15 @@ contract BudgetTest is FirmTest {
 
         vm.startPrank(SPENDER);
         vm.expectRevert(abi.encodeWithSelector(Budget.ExecutionDisallowed.selector, allowanceId, SPENDER));
-        budget.executePayment(allowanceId, RECEIVER, 7); // execution fails since SPENDER doesn't have the required role yet
+        budget.executePayment(allowanceId, RECEIVER, 7, ""); // execution fails since SPENDER doesn't have the required role yet
 
         roles.setRole(SPENDER, roleId, true);
-        budget.executePayment(allowanceId, RECEIVER, 7); // as soon as it gets the role, the payment executes
+        budget.executePayment(allowanceId, RECEIVER, 7, ""); // as soon as it gets the role, the payment executes
     }
 
     function createDailyAllowance(address spender, uint256 expectedId) public {
         uint256 allowanceId = budget.createAllowance(
-            NO_PARENT_ID, spender, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode()
+            NO_PARENT_ID, spender, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
         );
         assertEq(allowanceId, expectedId);
     }
@@ -231,7 +231,8 @@ contract BudgetTest is FirmTest {
         address token,
         address indexed to,
         uint256 amount,
-        uint64 nextResetTime
+        uint64 nextResetTime,
+        string descrition
     );
 
     function assertExecutePayment(
@@ -252,8 +253,8 @@ contract BudgetTest is FirmTest {
 
         vm.prank(actor);
         vm.expectEmit(true, true, true, true);
-        emit PaymentExecuted(allowanceId, actor, token, to, amount, expectedNextResetTime);
-        budget.executePayment(allowanceId, to, amount);
+        emit PaymentExecuted(allowanceId, actor, token, to, amount, expectedNextResetTime, "");
+        budget.executePayment(allowanceId, to, amount, "");
 
         (,, uint256 spent,, uint64 nextResetTime,,,) = budget.getAllowance(allowanceId);
 

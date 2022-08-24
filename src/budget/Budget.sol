@@ -56,7 +56,8 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
         address token,
         uint256 amount,
         EncodedTimeShift recurrency,
-        uint64 nextResetTime
+        uint64 nextResetTime,
+        string name
     );
     event PaymentExecuted(
         uint256 indexed allowanceId,
@@ -64,7 +65,8 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
         address token,
         address indexed to,
         uint256 amount,
-        uint64 nextResetTime
+        uint64 nextResetTime,
+        string description
     );
 
     error UnauthorizedForAllowance(uint256 allowanceId, address actor);
@@ -78,7 +80,8 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
         address _spender,
         address _token,
         uint256 _amount,
-        EncodedTimeShift _recurrency
+        EncodedTimeShift _recurrency,
+        string memory _name
     )
         public
         returns (uint256 allowanceId)
@@ -128,10 +131,10 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
         allowance.token = _token;
         allowance.amount = _amount;
 
-        emit AllowanceCreated(allowanceId, _parentAllowanceId, _spender, _token, _amount, _recurrency, nextResetTime);
+        emit AllowanceCreated(allowanceId, _parentAllowanceId, _spender, _token, _amount, _recurrency, nextResetTime, _name);
     }
 
-    function executePayment(uint256 _allowanceId, address _to, uint256 _amount) external {
+    function executePayment(uint256 _allowanceId, address _to, uint256 _amount, string memory _description) external {
         Allowance storage allowance = getAllowance[_allowanceId];
 
         // Implicitly checks that the allowance exists as if spender hasn't been set, it will revert
@@ -156,7 +159,7 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
             revert ExecutionFailed(_allowanceId, token, _to, _amount);
         }
 
-        emit PaymentExecuted(_allowanceId, msg.sender, allowance.token, _to, _amount, nextResetTime);
+        emit PaymentExecuted(_allowanceId, msg.sender, allowance.token, _to, _amount, nextResetTime, _description);
     }
 
     function _checkAndUpdateAllowanceChain(uint256 _allowanceId, address _token, address _to, uint256 _amount)

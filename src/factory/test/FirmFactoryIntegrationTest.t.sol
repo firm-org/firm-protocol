@@ -60,19 +60,19 @@ contract FirmFactoryIntegrationTest is FirmTest {
         roles.setRole(spender, roleId, true);
 
         uint256 allowanceId = budget.createAllowance(
-            NO_PARENT_ID, roleFlag(roleId), address(token), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode()
+            NO_PARENT_ID, roleFlag(roleId), address(token), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
         );
         vm.stopPrank();
 
         vm.startPrank(spender);
-        budget.executePayment(allowanceId, receiver, 4);
-        budget.executePayment(allowanceId, receiver, 1);
+        budget.executePayment(allowanceId, receiver, 4, "");
+        budget.executePayment(allowanceId, receiver, 1, "");
 
         vm.warp(block.timestamp + 1 days);
-        budget.executePayment(allowanceId, receiver, 9);
+        budget.executePayment(allowanceId, receiver, 9, "");
 
         vm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, allowanceId, address(token), receiver, 2, 1));
-        budget.executePayment(allowanceId, receiver, 2);
+        budget.executePayment(allowanceId, receiver, 2, "");
 
         assertEq(token.balanceOf(receiver), 14);
     }
