@@ -214,6 +214,20 @@ contract CaptableMulticlassTest is BaseCaptableTest {
         );
     }
 
+    function testVotesUpdateOnTransfer() public {
+        vm.roll(3);
+
+        vm.prank(HOLDER1);
+        token1.transfer(HOLDER2, 50);
+
+        assertEq(captable.getVotes(HOLDER1), holder1InitialBalance1 - 50 + holder1InitialBalance2 * weight2);
+        assertEq(captable.getVotes(HOLDER2), 50 + holder2InitialBalance2 * weight2);
+
+        // at height 2, balances stay unchanged
+        assertEq(captable.getPastVotes(HOLDER1, 2), holder1InitialBalance1 + holder1InitialBalance2 * weight2);
+        assertEq(captable.getPastVotes(HOLDER2, 2), holder2InitialBalance2 * weight2);
+    }
+
     function testConvertBetweenClasses() public {
         vm.roll(3);
 
@@ -228,18 +242,10 @@ contract CaptableMulticlassTest is BaseCaptableTest {
         assertEq(token1.balanceOf(HOLDER2), holder2InitialBalance2);
     }
 
-    function testVotesUpdateOnTransfer() public {
-        vm.roll(3);
-
-        vm.prank(HOLDER1);
-        token1.transfer(HOLDER2, 50);
-
-        assertEq(captable.getVotes(HOLDER1), holder1InitialBalance1 - 50 + holder1InitialBalance2 * weight2);
-        assertEq(captable.getVotes(HOLDER2), 50 + holder2InitialBalance2 * weight2);
-
-        // at height 2, balances stay unchanged
-        assertEq(captable.getPastVotes(HOLDER1, 2), holder1InitialBalance1 + holder1InitialBalance2 * weight2);
-        assertEq(captable.getPastVotes(HOLDER2, 2), holder2InitialBalance2 * weight2);
+    function testCantCreateConvertibleClassIfNotEnoughAuthorized() public {
+        vm.prank(address(safe));
+        vm.expectRevert(abi.encodeWithSelector(Captable.ConvertibleOverAuthorized.selector, classId2));
+        captable.createClass("", "", 1000, uint32(classId2), 1);
     }
 
     function _issueInitialShares() internal {
