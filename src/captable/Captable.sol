@@ -108,7 +108,7 @@ contract Captable is UpgradeableModule {
         class.token.mint(account, amount);
     }
 
-    function issueWithController(
+    function issueControlled(
         address account,
         uint256 classId,
         uint256 amount,

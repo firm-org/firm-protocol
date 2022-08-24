@@ -123,7 +123,7 @@ contract CaptableOneClassTest is BaseCaptableTest {
         vestingParams.cliffDate = 120;
         vestingParams.endDate = 200;
 
-        captable.issueWithController(HOLDER1, classId, amount, vestingController, abi.encode(vestingParams));
+        captable.issueControlled(HOLDER1, classId, amount, vestingController, abi.encode(vestingParams));
         assertEq(token.balanceOf(HOLDER1), amount);
 
         vm.startPrank(HOLDER1);
@@ -151,7 +151,7 @@ contract CaptableOneClassTest is BaseCaptableTest {
         vestingParams.cliffDate = 100;
         vestingParams.endDate = 200;
 
-        captable.issueWithController(HOLDER1, classId, amount, vestingController, abi.encode(vestingParams));
+        captable.issueControlled(HOLDER1, classId, amount, vestingController, abi.encode(vestingParams));
         assertEq(token.balanceOf(HOLDER1), amount);
 
         vm.warp(150);
