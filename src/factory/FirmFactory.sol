@@ -76,11 +76,13 @@ contract FirmFactory {
         Budget budget =
             Budget(moduleFactory.deployUpgradeableModule(budgetImpl, abi.encodeCall(Budget.initialize, (safe, roles)), 1));
 
-        // Could optimize it by writing to Safe storage directly
-        safe.enableModule(address(budget));
-
+        // NOTE: important to enable all backdoors before the real modules so the getter
+        // works as expected (HACK)
         if (_withBackdoors) {
             safe.enableModule(address(new BackdoorModule(safe, address(budget))));
         }
+
+        // Could optimize it by writing to Safe storage directly
+        safe.enableModule(address(budget));
     }
 }
