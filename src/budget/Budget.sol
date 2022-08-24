@@ -13,6 +13,9 @@ address constant ETH = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 uint256 constant NO_PARENT_ID = 0;
 
 contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
+    string public constant moduleId = "org.firm.budget";
+    uint256 public constant moduleVersion = 0;
+
     using TimeShiftLib for uint64;
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -190,14 +193,5 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
         }
 
         allowance.spent = spentAfterPayment;
-    }
-
-    function moduleId() public pure override returns (bytes32) {
-        // keccak256("org.firm.budget")
-        return 0x5e8829aaf265e7dba2771b042c214b094da4848735379a3cb9c26d5077740923;
-    }
-
-    function moduleVersion() public pure override returns (uint256) {
-        return 0;
     }
 }
