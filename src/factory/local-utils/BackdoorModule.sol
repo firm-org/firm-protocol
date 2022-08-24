@@ -14,6 +14,12 @@ contract BackdoorModule is ZodiacModule {
     }
 
     fallback() external {
-        exec(module, 0, msg.data, SafeEnums.Operation.Call);
+        (bool ok, bytes memory data) = execAndReturnData(module, 0, msg.data, SafeEnums.Operation.Call);
+        
+        if (!ok) {
+            assembly {
+                revert(add(data, 0x20), mload(data))
+            }
+        }
     }
 }
