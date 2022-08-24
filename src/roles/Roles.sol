@@ -14,6 +14,9 @@ import "./IRoles.sol";
  * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/AccessControl.sol
  */
 contract Roles is UpgradeableModule, IRoles {
+    string public constant moduleId = "org.firm.roles";
+    uint256 public constant moduleVersion = 0;
+
     mapping(address => bytes32) public getUserRoles;
     mapping(uint8 => bytes32) public getRoleAdmin;
     uint256 public roleCount;
@@ -154,14 +157,5 @@ contract Roles is UpgradeableModule, IRoles {
     function _hasRootRole(bytes32 _userRoles) internal pure returns (bool) {
         // Since root role is always at ID 0, we don't need to shift
         return uint256(_userRoles) & 1 != 0;
-    }
-
-    function moduleId() public pure override returns (bytes32) {
-        // keccak256("org.firm.roles")
-        return 0x18558bcad45d1d10ed91362f8a29bc94caac4a181f85c102d573e77d67a084f1;
-    }
-
-    function moduleVersion() public pure override returns (uint256) {
-        return 0;
     }
 }

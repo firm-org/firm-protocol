@@ -5,6 +5,9 @@ import {UpgradeableModule} from "../../../bases/UpgradeableModule.sol";
 import {ZodiacModule, IAvatar, SafeEnums} from "../../../bases/ZodiacModule.sol";
 
 contract ModuleMock is UpgradeableModule, ZodiacModule {
+    string public constant moduleId = "org.firm.modulemock";
+    uint256 public constant moduleVersion = 0;
+
     uint256 public immutable foo;
     uint256 public bar;
 
@@ -23,13 +26,5 @@ contract ModuleMock is UpgradeableModule, ZodiacModule {
 
     function execCall(address to, uint256 value, bytes memory data) public returns (bool success) {
         return exec(to, value, data, SafeEnums.Operation.Call);
-    }
-
-    function moduleId() public pure override returns (bytes32) {
-        return keccak256("org.firm.modulemock");
-    }
-
-    function moduleVersion() public pure override returns (uint256) {
-        return 0;
     }
 }
