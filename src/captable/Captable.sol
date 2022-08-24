@@ -32,7 +32,7 @@ contract Captable is UpgradeableModule {
     mapping(address => mapping(uint256 => IAccountController)) controllers;
 
     // Above this limit, voting power getters that iterate through all tokens become
-    // very expensive. See `CaptableClassLimitTest` tests for a worst-case benchmark
+    // very expensive. See `CaptableClassLimitTest` tests for worst-case benchmarks
     uint32 internal constant CLASSES_LIMIT = 128;
 
     error ClassCreationAboveLimit();
