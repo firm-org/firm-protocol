@@ -5,8 +5,8 @@ import {UpgradeableModule} from "../bases/UpgradeableModule.sol";
 import {IAvatar} from "../bases/SafeAware.sol";
 
 import {EquityToken, ERC20, ERC20Votes} from "./EquityToken.sol";
-import {IBouncer} from "./IBouncer.sol";
-import {IAccountController} from "./AccountController.sol";
+import {IBouncer} from "./bouncers/IBouncer.sol";
+import {IAccountController} from "./controllers/AccountController.sol";
 
 uint32 constant NO_CONVERSION_FLAG = type(uint32).max;
 

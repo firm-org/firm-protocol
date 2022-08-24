@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.16;
 
-import {Captable} from "./Captable.sol";
-import {IBouncer} from "./IBouncer.sol";
+import {Captable} from "../Captable.sol";
+import {IBouncer} from "../bouncers/IBouncer.sol";
 
 abstract contract IAccountController is IBouncer {
     function addAccount(address owner, uint256 classId, uint256 amount, bytes calldata extraParams) external virtual;

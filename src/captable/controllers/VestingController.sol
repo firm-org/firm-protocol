@@ -2,7 +2,7 @@
 pragma solidity 0.8.16;
 
 import {AccountController, Captable} from "./AccountController.sol";
-import {EquityToken} from "./EquityToken.sol";
+import {EquityToken} from "../EquityToken.sol";
 
 // NOTE: it should also be possible for VestingController to be a global contract
 // that all orgs can just use. Multiple Captables could use the same VestingController

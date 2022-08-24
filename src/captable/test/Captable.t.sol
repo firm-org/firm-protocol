@@ -6,7 +6,7 @@ import {AvatarStub} from "../../common/test/mocks/AvatarStub.sol";
 
 import {Captable, IBouncer, NO_CONVERSION_FLAG} from "../Captable.sol";
 import {EquityToken} from "../EquityToken.sol";
-import {VestingController} from "../VestingController.sol";
+import {VestingController} from "../controllers/VestingController.sol";
 import {DisallowController} from "./mocks/DisallowController.sol";
 
 contract BaseCaptableTest is FirmTest {
