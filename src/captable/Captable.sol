@@ -146,8 +146,8 @@ contract Captable is UpgradeableModule {
             Class storage class = classes[i];
             uint256 votingWeight = class.votingWeight;
             if (votingWeight > 0) {
-                (bool result, bytes memory returnData) = address(class.token).staticcall(data);
-                require(result && returnData.length == 32);
+                (bool ok, bytes memory returnData) = address(class.token).staticcall(data);
+                require(ok && returnData.length == 32);
                 total += votingWeight * abi.decode(returnData, (uint256));
             }
             unchecked {
