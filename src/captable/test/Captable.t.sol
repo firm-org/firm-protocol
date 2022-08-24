@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import {FirmTest} from "../../common/test/lib/FirmTest.sol";
 import {AvatarStub} from "../../common/test/mocks/AvatarStub.sol";
 
-import {Captable, IBouncer} from "../Captable.sol";
+import {Captable, IBouncer, NO_CONVERSION_FLAG} from "../Captable.sol";
 import {EquityToken} from "../EquityToken.sol";
 import {VestingController} from "../VestingController.sol";
 
@@ -45,13 +45,29 @@ contract CaptableInitTest is BaseCaptableTest {
 
     function testCreateClass() public {
         vm.prank(address(safe));
-        (uint256 id, EquityToken token) = captable.createClass("Common", "TST-A", 100, 1);
+        (uint256 id, EquityToken token) = captable.createClass("Common", "TST-A", 100, NO_CONVERSION_FLAG, 1);
         assertEq(id, 0);
 
         assertEq(token.name(), "TestCo: Common");
         assertEq(token.symbol(), "TST-A");
-        assertEq(token.authorized(), 100);
         assertEq(token.totalSupply(), 0);
+
+        (
+            EquityToken token_,
+            uint64 votingWeight,
+            uint32 convertsIntoClassId,
+            uint256 authorized,
+            uint256 convertible,
+            string memory name,
+            string memory ticker
+        ) = captable.classes(id);
+        assertEq(address(token_), address(token));
+        assertEq(votingWeight, 1);
+        assertEq(convertsIntoClassId, NO_CONVERSION_FLAG);
+        assertEq(authorized, 100);
+        assertEq(convertible, 0);
+        assertEq(name, "Common");
+        assertEq(ticker, "TST-A");
     }
 
     function testCannotCreateMoreClassesThanLimit() public {
@@ -59,13 +75,13 @@ contract CaptableInitTest is BaseCaptableTest {
 
         for (uint256 i = 0; i < CLASSES_LIMIT; i++) {
             vm.prank(address(safe));
-            captable.createClass("", "", 0, 0);
+            captable.createClass("", "", 0, NO_CONVERSION_FLAG, 0);
         }
         assertEq(captable.classCount(), CLASSES_LIMIT);
 
         vm.prank(address(safe));
         vm.expectRevert(abi.encodeWithSelector(Captable.ClassCreationAboveLimit.selector));
-        captable.createClass("", "", 0, 0);
+        captable.createClass("", "", 0, NO_CONVERSION_FLAG, 0);
     }
 }
 
@@ -79,7 +95,7 @@ contract CaptableOneClassTest is BaseCaptableTest {
         super.setUp();
 
         vm.prank(address(safe));
-        (classId, token) = captable.createClass("Common", "TST-A", INITIAL_AUTHORIZED, 1);
+        (classId, token) = captable.createClass("Common", "TST-A", INITIAL_AUTHORIZED, NO_CONVERSION_FLAG, 1);
     }
 
     function testCanIssue(uint256 amount) public {
@@ -94,7 +110,7 @@ contract CaptableOneClassTest is BaseCaptableTest {
     }
 
     function testCantIssueAboveAuthorized() public {
-        vm.expectRevert(abi.encodeWithSelector(EquityToken.IssuingOverAuthorized.selector));
+        vm.expectRevert(abi.encodeWithSelector(Captable.IssuingOverAuthorized.selector, classId));
         captable.issue(HOLDER1, classId, INITIAL_AUTHORIZED + 1);
     }
 
@@ -166,9 +182,9 @@ contract CaptableMulticlassTest is BaseCaptableTest {
         super.setUp();
 
         vm.prank(address(safe));
-        (classId1, token1) = captable.createClass("Common", "TST-A", 1000, weight1);
+        (classId1, token1) = captable.createClass("Common", "TST-A", 2000, NO_CONVERSION_FLAG, weight1);
         vm.prank(address(safe));
-        (classId2, token2) = captable.createClass("Founder", "TST-B", 1000, weight2);
+        (classId2, token2) = captable.createClass("Founder", "TST-B", 1000, uint32(classId1), weight2);
 
         _selfDelegateHolders(token1);
         _selfDelegateHolders(token2);
@@ -196,6 +212,20 @@ contract CaptableMulticlassTest is BaseCaptableTest {
             captable.getPastTotalSupply(2),
             holder1InitialBalance1 + (holder1InitialBalance1 + holder2InitialBalance2) * weight2
         );
+    }
+
+    function testConvertBetweenClasses() public {
+        vm.roll(3);
+
+        assertEq(captable.getVotes(HOLDER2), holder2InitialBalance2 * weight2);
+
+        vm.prank(HOLDER2);
+        captable.convert(classId2, holder2InitialBalance2);
+
+        assertEq(captable.getVotes(HOLDER2), holder2InitialBalance2);
+
+        assertEq(token2.balanceOf(HOLDER2), 0);
+        assertEq(token1.balanceOf(HOLDER2), holder2InitialBalance2);
     }
 
     function testVotesUpdateOnTransfer() public {
@@ -231,7 +261,7 @@ contract CaptableClassLimit1Test is BaseCaptableTest {
         for (uint256 i = 0; i < classesLimit; i++) {
             vm.roll(0);
             vm.prank(address(safe));
-            (uint256 classId, EquityToken token) = captable.createClass("", "", transfersLimit, 1);
+            (uint256 classId, EquityToken token) = captable.createClass("", "", transfersLimit, NO_CONVERSION_FLAG, 1);
             _selfDelegateHolders(token);
 
             // Artificially create checkpoints by issuing one share per block
@@ -276,7 +306,7 @@ contract CaptableClassLimit2Test is BaseCaptableTest {
         for (uint256 i = 0; i < classesLimit; i++) {
             vm.roll(0);
             vm.prank(address(safe));
-            (uint256 classId, EquityToken token) = captable.createClass("", "", transfersLimit, 1);
+            (uint256 classId, EquityToken token) = captable.createClass("", "", transfersLimit, NO_CONVERSION_FLAG, 1);
             _selfDelegateHolders(token);
 
             if (i == 0) {

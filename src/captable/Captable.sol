@@ -8,6 +8,7 @@ import {EquityToken, ERC20, ERC20Votes} from "./EquityToken.sol";
 import {IBouncer} from "./IBouncer.sol";
 import {IAccountController} from "./AccountController.sol";
 
+uint32 constant NO_CONVERSION_FLAG = type(uint32).max;
 contract Captable is UpgradeableModule {
     string public constant moduleId = "org.firm.captable";
     uint256 public constant moduleVersion = 0;
@@ -17,6 +18,11 @@ contract Captable is UpgradeableModule {
     struct Class {
         EquityToken token;
         uint64 votingWeight;
+        uint32 convertsIntoClassId;
+
+        uint256 authorized;
+        uint256 convertible;
+
         string name;
         string ticker;
     }
@@ -28,13 +34,15 @@ contract Captable is UpgradeableModule {
 
     // Above this limit, voting power getters that iterate through all tokens become
     // very expensive. See `CaptableClassLimitTest` tests for a worst-case benchmark
-    uint256 internal constant CLASSES_LIMIT = 128;
+    uint32 internal constant CLASSES_LIMIT = 128;
 
     error ClassCreationAboveLimit();
     error UnexistentClass(uint256 classId);
     error BadInput();
     error TransferBlocked(IBouncer bouncer, address from, address to, uint256 classId, uint256 amount);
     error UnauthorizedNotController();
+    error IssuingOverAuthorized(uint256 classId);
+    error ConvertibleOverAuthorized(uint256 classId);
 
     constructor(IAvatar safe_, string memory name_, IBouncer globalBouncer_) {
         initialize(safe_, name_, globalBouncer_);
@@ -47,7 +55,7 @@ contract Captable is UpgradeableModule {
         // globalControls.canIssue[address(_safe)] = true;
     }
 
-    function createClass(string calldata className, string calldata ticker, uint256 authorized, uint64 votingWeight)
+    function createClass(string calldata className, string calldata ticker, uint256 authorized, uint32 convertsIntoClassId, uint64 votingWeight)
         external
         onlySafe
         returns (uint256 classId, EquityToken token)
@@ -58,14 +66,30 @@ contract Captable is UpgradeableModule {
             }
         }
 
+        // When creating the first class, unless convertsIntoClassId == NO_CONVERSION_FLAG,
+        // this will implicitly revert, since there's no convertsIntoClassId for which
+        // _getClass() won't revert
+        if (convertsIntoClassId != NO_CONVERSION_FLAG) {
+            Class storage conversionClass = _getClass(convertsIntoClassId);
+            uint256 newConvertible = conversionClass.convertible + authorized;
+
+            if (conversionClass.token.totalSupply() + newConvertible > conversionClass.authorized) {
+                revert ConvertibleOverAuthorized(convertsIntoClassId);
+            }
+
+            conversionClass.convertible = newConvertible;
+        }
+
         // Consider using proxies as this is >2m gas
-        token = new EquityToken(this, classId, authorized);
+        token = new EquityToken(this, classId);
 
         Class storage class = classes[classId];
         class.token = token;
         class.votingWeight = votingWeight;
+        class.authorized = authorized;
         class.name = className;
         class.ticker = ticker;
+        class.convertsIntoClassId = convertsIntoClassId;
     }
 
     function issue(address account, uint256 classId, uint256 amount) public {
@@ -73,9 +97,13 @@ contract Captable is UpgradeableModule {
             revert BadInput();
         }
 
-        // TODO: issue controls
+        // TODO: issue access control
 
         Class storage class = _getClass(classId);
+
+        if (class.token.totalSupply() + class.convertible + amount > class.authorized) {
+            revert IssuingOverAuthorized(classId);
+        }
 
         class.token.mint(account, amount);
     }
@@ -100,6 +128,17 @@ contract Captable is UpgradeableModule {
         }
 
         _getClass(classId).token.forfeit(account, to, amount);
+    }
+
+    function convert(uint256 classId, uint256 amount) external {
+        Class storage fromClass = _getClass(classId);
+        Class storage toClass = _getClass(fromClass.convertsIntoClassId);
+
+        fromClass.authorized -= amount;
+        toClass.convertible -= amount;
+
+        fromClass.token.burn(msg.sender, amount);
+        toClass.token.mint(msg.sender, amount);
     }
 
     // Reverts if transfer isn't allowed so that the revert reason can bubble up

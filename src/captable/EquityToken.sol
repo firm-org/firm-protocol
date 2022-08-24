@@ -11,10 +11,7 @@ contract EquityToken is ERC20Votes {
     Captable public immutable captable;
     uint256 public immutable classId;
 
-    uint256 public authorized;
-
     error UnauthorizedNotCaptable();
-    error IssuingOverAuthorized();
 
     modifier onlyCaptable() {
         if (msg.sender != address(captable)) {
@@ -24,17 +21,12 @@ contract EquityToken is ERC20Votes {
         _;
     }
 
-    constructor(Captable captable_, uint256 classId_, uint256 authorized_) ERC20("", "") ERC20Permit("") {
+    constructor(Captable captable_, uint256 classId_) ERC20("", "") ERC20Permit("") {
         captable = captable_;
         classId = classId_;
-        authorized = authorized_;
     }
 
     function mint(address account, uint256 amount) external onlyCaptable {
-        if (totalSupply() + amount > authorized) {
-            revert IssuingOverAuthorized();
-        }
-
         _mint(account, amount);
     }
 
