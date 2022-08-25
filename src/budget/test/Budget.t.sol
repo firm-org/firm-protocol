@@ -51,7 +51,7 @@ contract BudgetTest is FirmTest {
             address spender,
             EncodedTimeShift recurrency,
             bool isDisabled
-        ) = budget.getAllowance(allowanceId);
+        ) = budget.allowances(allowanceId);
 
         assertEq(parentId, NO_PARENT_ID);
         assertEq(amount, 10);
@@ -173,10 +173,10 @@ contract BudgetTest is FirmTest {
         vm.warp(initialTime + 1 days);
         assertExecutePayment(SPENDER, allowance3, RECEIVER, 2, initialTime + 2 days);
 
-        (,, uint256 spent1,,,,,) = budget.getAllowance(allowance1);
-        (,, uint256 spent2,,,,,) = budget.getAllowance(allowance2);
-        (,, uint256 spent3,,,,,) = budget.getAllowance(allowance3);
-        (,, uint256 spent4,,,,,) = budget.getAllowance(allowance4);
+        (,, uint256 spent1,,,,,) = budget.allowances(allowance1);
+        (,, uint256 spent2,,,,,) = budget.allowances(allowance2);
+        (,, uint256 spent3,,,,,) = budget.allowances(allowance3);
+        (,, uint256 spent4,,,,,) = budget.allowances(allowance4);
 
         assertEq(spent1, 3);
         assertEq(spent2, 3);
@@ -188,19 +188,48 @@ contract BudgetTest is FirmTest {
         budget.executePayment(allowance4, SPENDER, 1, "");
     }
 
+    function testDisablingAllowanceBreaksChain() public {
+        uint256 topLevelAllowanceId = 1;
+        uint256 childAllowanceId = 4;
+
+        testAllowanceChain(); // sets up the chain
+
+        vm.prank(address(avatar));
+        budget.setAllowanceState(topLevelAllowanceId, false);
+
+        vm.prank(SPENDER);
+        vm.expectRevert(abi.encodeWithSelector(Budget.DisabledAllowance.selector, topLevelAllowanceId));
+        budget.executePayment(childAllowanceId, RECEIVER, 1, "");
+    }
+
+    function testOnlyParentAdminCanDisableAllowance() public {
+        uint256 topLevelAllowanceId = 1;
+        uint256 childAllowanceId = 4;
+
+        testAllowanceChain(); // sets up the chain
+
+        vm.prank(SPENDER);
+        vm.expectRevert(abi.encodeWithSelector(SafeAware.UnauthorizedNotSafe.selector));
+        budget.setAllowanceState(topLevelAllowanceId, false);
+
+        vm.prank(address(avatar));
+        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedForAllowance.selector, childAllowanceId - 1, address(avatar)));
+        budget.setAllowanceState(childAllowanceId, false);
+    }
+
     function testCantExecuteIfNotAuthorized() public {
         vm.prank(address(avatar));
         uint256 allowanceId = 1;
         createDailyAllowance(SPENDER, allowanceId);
 
         vm.prank(RECEIVER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.ExecutionDisallowed.selector, allowanceId, RECEIVER));
+        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedExecution.selector, allowanceId, RECEIVER));
         budget.executePayment(allowanceId, RECEIVER, 7, "");
     }
 
     function testCantExecuteInexistentAllowance() public {
         vm.prank(SPENDER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.ExecutionDisallowed.selector, 0, SPENDER));
+        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedExecution.selector, 0, SPENDER));
         budget.executePayment(0, RECEIVER, 7, "");
     }
 
@@ -211,7 +240,7 @@ contract BudgetTest is FirmTest {
         createDailyAllowance(roleFlag(roleId), allowanceId);
 
         vm.startPrank(SPENDER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.ExecutionDisallowed.selector, allowanceId, SPENDER));
+        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedExecution.selector, allowanceId, SPENDER));
         budget.executePayment(allowanceId, RECEIVER, 7, ""); // execution fails since SPENDER doesn't have the required role yet
 
         roles.setRole(SPENDER, roleId, true);
@@ -245,7 +274,7 @@ contract BudgetTest is FirmTest {
         public
     {
         (,, uint256 initialSpent, address token, uint64 initialNextReset,, EncodedTimeShift shift,) =
-            budget.getAllowance(allowanceId);
+            budget.allowances(allowanceId);
 
         if (block.timestamp >= initialNextReset) {
             initialSpent = 0;
@@ -256,7 +285,7 @@ contract BudgetTest is FirmTest {
         emit PaymentExecuted(allowanceId, actor, token, to, amount, expectedNextResetTime, "");
         budget.executePayment(allowanceId, to, amount, "");
 
-        (,, uint256 spent,, uint64 nextResetTime,,,) = budget.getAllowance(allowanceId);
+        (,, uint256 spent,, uint64 nextResetTime,,,) = budget.allowances(allowanceId);
 
         assertEq(spent, initialSpent + amount);
         assertEq(nextResetTime, shift.isInherited() ? 0 : expectedNextResetTime);

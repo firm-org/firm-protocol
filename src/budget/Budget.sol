@@ -46,8 +46,8 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
         bool isDisabled;
     }
 
-    mapping(uint256 => Allowance) public getAllowance;
-    uint256 public allowancesCount = 0;
+    mapping(uint256 => Allowance) public allowances;
+    uint256 public allowancesCount;
 
     event AllowanceCreated(
         uint256 indexed allowanceId,
@@ -68,10 +68,13 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
         uint64 nextResetTime,
         string description
     );
+    event AllowanceStateChanged(uint256 indexed allowanceId, bool isEnabled);
 
+    error UnexistentAllowance(uint256 allowanceId);
+    error DisabledAllowance(uint256 allowanceId);
     error UnauthorizedForAllowance(uint256 allowanceId, address actor);
-    error TokenMismatch(address token);
-    error ExecutionDisallowed(uint256 allowanceId, address actor);
+    error TokenMismatch(address patentToken, address childToken);
+    error UnauthorizedExecution(uint256 allowanceId, address actor);
     error Overbudget(uint256 allowanceId, address token, address to, uint256 amount, uint256 remainingBudget);
     error ExecutionFailed(uint256 allowanceId, address token, address to, uint256 amount);
 
@@ -89,25 +92,30 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
         uint64 nextResetTime;
 
         if (_parentAllowanceId == NO_PARENT_ID) {
-            // For top-level allowances, _recurrency needs to be set and cannot be zero
-            // applyShift reverts with InvalidTimeShift if _recurrency is unspecified
-            // Therefore, nextResetTime is implicitly ensured to always be greater than the current time
-            nextResetTime = uint64(block.timestamp).applyShift(_recurrency);
-
             // Top-level allowances can only be created by the avatar
             if (msg.sender != address(safe())) {
                 revert UnauthorizedNotSafe();
             }
+
+            // For top-level allowances, _recurrency needs to be set and cannot be zero
+            // applyShift reverts with InvalidTimeShift if _recurrency is unspecified
+            // Therefore, nextResetTime is implicitly ensured to always be greater than the current time
+            nextResetTime = uint64(block.timestamp).applyShift(_recurrency);
         } else {
+            Allowance storage parentAllowance = _getAllowance(_parentAllowanceId);
+            // Not checking whether the parentAllowance is enabled is a explicit decision
+            // Disabling any allowance in a given allowance chain will result in the child-most
+            // allowance being disabled and payments not executable.
+            // This allows for disabling a certain allowance to reconfigure the whole tree
+            // of suballowances below it, before enabling it again
+
             // Sub-allowances can be created by entities authorized to spend from a particular allowance
-            // Implicit check that the allowanceId exists as there's
-            if (!_isAuthorized(msg.sender, getAllowance[_parentAllowanceId].spender)) {
+            if (!_isAuthorized(msg.sender, parentAllowance.spender)) {
                 revert UnauthorizedForAllowance(_parentAllowanceId, msg.sender);
             }
-            if (_token != getAllowance[_parentAllowanceId].token) {
-                revert TokenMismatch(_token);
+            if (_token != parentAllowance.token) {
+                revert TokenMismatch(parentAllowance.token, _token);
             }
-
             // Recurrency can be zero in sub-allowances and is inherited from the parent
             if (!_recurrency.isInherited()) {
                 // Will revert with InvalidTimeShift if _recurrency is invalid
@@ -119,7 +127,7 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
             allowanceId = ++allowancesCount;
         }
 
-        Allowance storage allowance = getAllowance[allowanceId];
+        Allowance storage allowance = allowances[allowanceId];
         if (_parentAllowanceId != 0) {
             allowance.parentId = _parentAllowanceId;
         }
@@ -134,12 +142,35 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
         emit AllowanceCreated(allowanceId, _parentAllowanceId, _spender, _token, _amount, _recurrency, nextResetTime, _name);
     }
 
-    function executePayment(uint256 _allowanceId, address _to, uint256 _amount, string memory _description) external {
-        Allowance storage allowance = getAllowance[_allowanceId];
+    function setAllowanceState(uint256 _allowanceId, bool _isEnabled) external {
+        Allowance storage allowance = _getAllowance(_allowanceId);
 
-        // Implicitly checks that the allowance exists as if spender hasn't been set, it will revert
-        if (!_isAuthorized(msg.sender, allowance.spender) || allowance.isDisabled) {
-            revert ExecutionDisallowed(_allowanceId, msg.sender);
+        // Changes to the allowance state can be done by the same entity that could
+        // create that allowance in the first place
+        // In the case of top-level allowances, only the safe can enable/disable them
+        // For child allowances, spenders of the parent can change the state of the child
+
+        if (allowance.parentId == NO_PARENT_ID) {
+            if (msg.sender != address(safe())) {
+                revert UnauthorizedNotSafe();
+            }
+        } else {
+            Allowance storage parentAllowance = _getAllowance(allowance.parentId);
+            if (!_isAuthorized(msg.sender, parentAllowance.spender)) {
+                revert UnauthorizedForAllowance(allowance.parentId, msg.sender);
+            }
+        }
+
+        allowance.isDisabled = !_isEnabled;
+
+        emit AllowanceStateChanged(_allowanceId, _isEnabled);
+    }
+
+    function executePayment(uint256 _allowanceId, address _to, uint256 _amount, string memory _description) external {
+        Allowance storage allowance = _getAllowance(_allowanceId);
+
+        if (!_isAuthorized(msg.sender, allowance.spender)) {
+            revert UnauthorizedExecution(_allowanceId, msg.sender);
         }
 
         address token = allowance.token;
@@ -162,11 +193,23 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
         emit PaymentExecuted(_allowanceId, msg.sender, allowance.token, _to, _amount, nextResetTime, _description);
     }
 
+    function _getAllowance(uint256 allowanceId) internal view returns (Allowance storage) {
+        if (allowanceId > allowancesCount) {
+            revert UnexistentAllowance(allowanceId);
+        }
+
+        return allowances[allowanceId];
+    }
+
     function _checkAndUpdateAllowanceChain(uint256 _allowanceId, address _token, address _to, uint256 _amount)
         internal
         returns (uint64 nextResetTime, bool allowanceResets)
     {
-        Allowance storage allowance = getAllowance[_allowanceId];
+        Allowance storage allowance = allowances[_allowanceId]; // _allowanceId always points to an existing allowance
+
+        if (allowance.isDisabled) {
+            revert DisabledAllowance(_allowanceId);
+        }
 
         if (allowance.nextResetTime == 0) {
             // Sub-budget's recurrency is inherited from parent
