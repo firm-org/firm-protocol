@@ -188,6 +188,35 @@ contract BudgetTest is FirmTest {
         budget.executePayment(allowance4, SPENDER, 1, "");
     }
 
+    function testDisablingAllowanceBreaksChain() public {
+        uint256 topLevelAllowanceId = 1;
+        uint256 childAllowanceId = 4;
+
+        testAllowanceChain(); // sets up the chain
+
+        vm.prank(address(avatar));
+        budget.setAllowanceState(topLevelAllowanceId, false);
+
+        vm.prank(SPENDER);
+        vm.expectRevert(abi.encodeWithSelector(Budget.DisabledAllowance.selector, topLevelAllowanceId));
+        budget.executePayment(childAllowanceId, RECEIVER, 1, "");
+    }
+
+    function testOnlyParentAdminCanDisableAllowance() public {
+        uint256 topLevelAllowanceId = 1;
+        uint256 childAllowanceId = 4;
+
+        testAllowanceChain(); // sets up the chain
+
+        vm.prank(SPENDER);
+        vm.expectRevert(abi.encodeWithSelector(SafeAware.UnauthorizedNotSafe.selector));
+        budget.setAllowanceState(topLevelAllowanceId, false);
+
+        vm.prank(address(avatar));
+        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedForAllowance.selector, childAllowanceId - 1, address(avatar)));
+        budget.setAllowanceState(childAllowanceId, false);
+    }
+
     function testCantExecuteIfNotAuthorized() public {
         vm.prank(address(avatar));
         uint256 allowanceId = 1;
