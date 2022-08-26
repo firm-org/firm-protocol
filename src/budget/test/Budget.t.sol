@@ -66,8 +66,8 @@ contract BudgetTest is FirmTest {
         assertFalse(isDisabled);
     }
 
-    function testNotOwnerCannotCreateAllowance() public {
-        vm.expectRevert(abi.encodeWithSelector(SafeAware.UnauthorizedNotSafe.selector));
+    function testNotOwnerCannotCreateTopLevelAllowance() public {
+        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, 0));
         createDailyAllowance(SPENDER, 0);
     }
 
@@ -160,12 +160,15 @@ contract BudgetTest is FirmTest {
             NO_PARENT_ID, SPENDER, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Monthly, 0).encode(), ""
         );
         vm.startPrank(SPENDER);
-        uint256 allowance2 =
-            budget.createAllowance(allowance1, SPENDER, address(0), 5, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode(), "");
-        uint256 allowance3 =
-            budget.createAllowance(allowance2, SPENDER, address(0), 2, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), "");
-        uint256 allowance4 =
-            budget.createAllowance(allowance3, SPENDER, address(0), 1, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode(), "");
+        uint256 allowance2 = budget.createAllowance(
+            allowance1, SPENDER, address(0), 5, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode(), ""
+        );
+        uint256 allowance3 = budget.createAllowance(
+            allowance2, SPENDER, address(0), 2, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
+        );
+        uint256 allowance4 = budget.createAllowance(
+            allowance3, SPENDER, address(0), 1, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode(), ""
+        );
         vm.stopPrank();
 
         assertExecutePayment(SPENDER, allowance4, RECEIVER, 1, initialTime + 1 days);
@@ -209,11 +212,13 @@ contract BudgetTest is FirmTest {
         testAllowanceChain(); // sets up the chain
 
         vm.prank(SPENDER);
-        vm.expectRevert(abi.encodeWithSelector(SafeAware.UnauthorizedNotSafe.selector));
+        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, 0));
         budget.setAllowanceState(topLevelAllowanceId, false);
 
         vm.prank(address(avatar));
-        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedForAllowance.selector, childAllowanceId - 1, address(avatar)));
+        vm.expectRevert(
+            abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, childAllowanceId - 1)
+        );
         budget.setAllowanceState(childAllowanceId, false);
     }
 
