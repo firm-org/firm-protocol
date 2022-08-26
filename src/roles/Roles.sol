@@ -22,6 +22,7 @@ contract Roles is UpgradeableModule, IRoles {
     uint256 public roleCount;
 
     event RoleCreated(uint8 indexed roleId, bytes32 roleAdmin, string name, address indexed actor);
+    event RoleNameChanged(uint8 indexed roleId, string name);
     event RoleAdminSet(uint8 indexed roleId, bytes32 roleAdmin, address indexed actor);
     event RolesSet(address indexed user, bytes32 userRoles, address indexed actor);
 
@@ -54,18 +55,26 @@ contract Roles is UpgradeableModule, IRoles {
     }
 
     function _createRole(bytes32 _adminRoles, string memory _name) internal returns (uint8 roleId) {
-        uint256 roleCount_ = roleCount;
-        if (roleCount_ == 256) {
+        uint256 roleId_ = roleCount;
+        if (roleId_ > type(uint8).max) {
             revert RoleLimitReached();
         }
         unchecked {
-            roleCount = roleCount_ + 1;
+            roleId = uint8(roleId_);
+            roleCount++;
         }
 
-        roleId = uint8(roleCount_);
         getRoleAdmin[roleId] = _adminRoles;
 
         emit RoleCreated(roleId, _adminRoles, _name, msg.sender);
+    }
+
+    function changeRoleName(uint8 roleId, string memory name) external {
+        if (!hasRole(msg.sender, ROLE_MANAGER_ROLE)) {
+            revert UnauthorizedNoRole(ROLE_MANAGER_ROLE);
+        }
+
+        emit RoleNameChanged(roleId, name);
     }
 
     function setRoleAdmin(uint8 _roleId, bytes32 _adminRoles) public {
