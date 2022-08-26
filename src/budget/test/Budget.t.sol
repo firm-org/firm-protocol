@@ -156,7 +156,7 @@ contract BudgetTest is FirmTest {
 
         vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, NO_PARENT_ID));
         budget.setAllowanceSpender(topLevelAllowanceId, RECEIVER);
-        
+
         vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, NO_PARENT_ID));
         budget.setAllowanceAmount(topLevelAllowanceId, 1);
 
@@ -169,7 +169,7 @@ contract BudgetTest is FirmTest {
 
         vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, topLevelAllowanceId));
         budget.setAllowanceSpender(subAllowanceId, RECEIVER);
-        
+
         vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, topLevelAllowanceId));
         budget.setAllowanceAmount(subAllowanceId, 1);
 
@@ -270,13 +270,13 @@ contract BudgetTest is FirmTest {
         createDailyAllowance(SPENDER, allowanceId);
 
         vm.prank(RECEIVER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedExecution.selector, allowanceId, RECEIVER));
+        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedPaymentExecution.selector, allowanceId, RECEIVER));
         budget.executePayment(allowanceId, RECEIVER, 7, "");
     }
 
     function testCantExecuteInexistentAllowance() public {
         vm.prank(SPENDER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedExecution.selector, 0, SPENDER));
+        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedPaymentExecution.selector, 0, SPENDER));
         budget.executePayment(0, RECEIVER, 7, "");
     }
 
@@ -287,7 +287,7 @@ contract BudgetTest is FirmTest {
         createDailyAllowance(roleFlag(roleId), allowanceId);
 
         vm.startPrank(SPENDER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedExecution.selector, allowanceId, SPENDER));
+        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedPaymentExecution.selector, allowanceId, SPENDER));
         budget.executePayment(allowanceId, RECEIVER, 7, ""); // execution fails since SPENDER doesn't have the required role yet
 
         roles.setRole(SPENDER, roleId, true);
