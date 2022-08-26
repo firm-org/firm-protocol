@@ -69,6 +69,9 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
         string description
     );
     event AllowanceStateChanged(uint256 indexed allowanceId, bool isEnabled);
+    event AllowanceAmountChanged(uint256 allowanceId, uint256 amount);
+    event AllowanceSpenderChanged(uint256 allowanceId, address spender);
+    event AllowanceNameChanged(uint256 allowanceId, string name);
 
     error UnexistentAllowance(uint256 allowanceId);
     error DisabledAllowance(uint256 allowanceId);
@@ -155,16 +158,36 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
         emit AllowanceStateChanged(_allowanceId, _isEnabled);
     }
 
-    function _isAdminOnAllowance(Allowance storage allowance, address actor) internal view returns (bool) {
-        // Changes to the allowance state can be done by the same entity that could
-        // create that allowance in the first place
-        // In the case of top-level allowances, only the safe can enable/disable them
-        // For child allowances, spenders of the parent can change the state of the child
-        uint256 parentId = allowance.parentId;
-        return
-            parentId == NO_PARENT_ID
-            ? actor == address(safe())
-            : _isAuthorized(actor, allowances[parentId].spender);
+    function setAllowanceAmount(uint256 _allowanceId, uint256 _amount) external {
+        Allowance storage allowance = _getAllowance(_allowanceId);
+
+        if (!_isAdminOnAllowance(allowance, msg.sender)) {
+            revert UnauthorizedNotAllowanceAdmin(allowance.parentId);
+        }
+        allowance.amount = _amount;
+
+        emit AllowanceAmountChanged(_allowanceId, _amount);
+    }
+
+    function setAllowanceSpender(uint256 _allowanceId, address _spender) external {
+        Allowance storage allowance = _getAllowance(_allowanceId);
+
+        if (!_isAdminOnAllowance(allowance, msg.sender)) {
+            revert UnauthorizedNotAllowanceAdmin(allowance.parentId);
+        }
+        allowance.spender = _spender;
+
+        emit AllowanceSpenderChanged(_allowanceId, _spender);
+    }
+
+    function setAllowanceName(uint256 _allowanceId, string memory _name) external {
+        Allowance storage allowance = _getAllowance(_allowanceId);
+
+        if (!_isAdminOnAllowance(allowance, msg.sender)) {
+            revert UnauthorizedNotAllowanceAdmin(allowance.parentId);
+        }
+
+        emit AllowanceNameChanged(_allowanceId, _name);
     }
 
     function executePayment(uint256 _allowanceId, address _to, uint256 _amount, string memory _description) external {
@@ -200,6 +223,18 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
         }
 
         return allowances[allowanceId];
+    }
+
+    function _isAdminOnAllowance(Allowance storage allowance, address actor) internal view returns (bool) {
+        // Changes to the allowance state can be done by the same entity that could
+        // create that allowance in the first place
+        // In the case of top-level allowances, only the safe can enable/disable them
+        // For child allowances, spenders of the parent can change the state of the child
+        uint256 parentId = allowance.parentId;
+        return
+            parentId == NO_PARENT_ID
+            ? actor == address(safe())
+            : _isAuthorized(actor, allowances[parentId].spender);
     }
 
     function _checkAndUpdateAllowanceChain(uint256 _allowanceId, address _token, address _to, uint256 _amount)
