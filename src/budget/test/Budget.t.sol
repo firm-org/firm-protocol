@@ -37,11 +37,10 @@ contract BudgetTest is FirmTest {
         budget.initialize(avatar, roles);
     }
 
-    function testCreateAllowance() public {
-        uint256 allowanceId = 1;
+    function testCreateAllowance() public returns (uint256 allowanceId) {
         vm.prank(address(avatar));
         vm.warp(0);
-        createDailyAllowance(SPENDER, allowanceId);
+        allowanceId = createDailyAllowance(SPENDER, 1);
         (
             uint256 parentId,
             uint256 amount,
@@ -64,6 +63,21 @@ contract BudgetTest is FirmTest {
             bytes32(EncodedTimeShift.unwrap(TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode()))
         );
         assertFalse(isDisabled);
+    }
+
+    function testUpdateAllowanceParams() public {
+        uint256 allowanceId = testCreateAllowance();
+
+        vm.startPrank(address(avatar));
+        budget.setAllowanceSpender(allowanceId, RECEIVER);
+        budget.setAllowanceAmount(allowanceId, 1);
+        budget.setAllowanceName(allowanceId, "new name");
+
+        (, uint256 amount,,, uint64 nextResetTime, address spender,,) = budget.allowances(allowanceId);
+
+        assertEq(amount, 1);
+        assertEq(nextResetTime, 1 days);
+        assertEq(spender, RECEIVER);
     }
 
     function testNotOwnerCannotCreateTopLevelAllowance() public {
@@ -119,20 +133,50 @@ contract BudgetTest is FirmTest {
         assertExecutePayment(SPENDER, secondAllowanceId, RECEIVER, 7, initialTime + 2 days);
     }
 
-    function testCreateSuballowance() public {
+    function testCreateSuballowance() public returns (uint256 topLevelAllowance, uint256 subAllowance) {
         uint64 initialTime = uint64(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
         vm.warp(initialTime);
 
         vm.prank(address(avatar));
-        uint256 topLevelAllowance = budget.createAllowance(
+        topLevelAllowance = budget.createAllowance(
             NO_PARENT_ID, SPENDER, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Monthly, 0).encode(), ""
         );
         vm.prank(SPENDER);
-        uint256 subAllowance = budget.createAllowance(
+        subAllowance = budget.createAllowance(
             topLevelAllowance, SOMEONE_ELSE, address(0), 5, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
         );
 
         assertExecutePayment(SOMEONE_ELSE, subAllowance, RECEIVER, 5, initialTime + 1 days);
+    }
+
+    function testNonAdminCannotUpdateAllowanceParams() public {
+        (uint256 topLevelAllowanceId, uint256 subAllowanceId) = testCreateSuballowance();
+
+        vm.startPrank(SPENDER);
+
+        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, NO_PARENT_ID));
+        budget.setAllowanceSpender(topLevelAllowanceId, RECEIVER);
+        
+        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, NO_PARENT_ID));
+        budget.setAllowanceAmount(topLevelAllowanceId, 1);
+
+        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, NO_PARENT_ID));
+        budget.setAllowanceName(topLevelAllowanceId, "new name");
+
+        vm.stopPrank();
+
+        vm.startPrank(address(avatar));
+
+        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, topLevelAllowanceId));
+        budget.setAllowanceSpender(subAllowanceId, RECEIVER);
+        
+        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, topLevelAllowanceId));
+        budget.setAllowanceAmount(subAllowanceId, 1);
+
+        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, topLevelAllowanceId));
+        budget.setAllowanceName(subAllowanceId, "new name");
+
+        vm.stopPrank();
     }
 
     function testCreateSuballowanceWithInheritedRecurrency() public {
@@ -216,9 +260,7 @@ contract BudgetTest is FirmTest {
         budget.setAllowanceState(topLevelAllowanceId, false);
 
         vm.prank(address(avatar));
-        vm.expectRevert(
-            abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, childAllowanceId - 1)
-        );
+        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, childAllowanceId - 1));
         budget.setAllowanceState(childAllowanceId, false);
     }
 
@@ -252,8 +294,8 @@ contract BudgetTest is FirmTest {
         budget.executePayment(allowanceId, RECEIVER, 7, ""); // as soon as it gets the role, the payment executes
     }
 
-    function createDailyAllowance(address spender, uint256 expectedId) public {
-        uint256 allowanceId = budget.createAllowance(
+    function createDailyAllowance(address spender, uint256 expectedId) public returns (uint256 allowanceId) {
+        allowanceId = budget.createAllowance(
             NO_PARENT_ID, spender, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
         );
         assertEq(allowanceId, expectedId);

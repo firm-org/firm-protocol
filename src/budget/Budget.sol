@@ -231,10 +231,7 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
         // In the case of top-level allowances, only the safe can enable/disable them
         // For child allowances, spenders of the parent can change the state of the child
         uint256 parentId = allowance.parentId;
-        return
-            parentId == NO_PARENT_ID
-            ? actor == address(safe())
-            : _isAuthorized(actor, allowances[parentId].spender);
+        return parentId == NO_PARENT_ID ? actor == address(safe()) : _isAuthorized(actor, allowances[parentId].spender);
     }
 
     function _checkAndUpdateAllowanceChain(uint256 _allowanceId, address _token, address _to, uint256 _amount)
