@@ -59,7 +59,7 @@ contract FirmFactory {
         emit NewFirm(_creator, safe, roles, budget);
 
         if (_withBackdoors) {
-            (address[] memory backdoors,) = safe.getModulesPaginated(address(budget), modulesDeployed);
+            (address[] memory backdoors,) = safe.getModulesPaginated(address(budget), 2);
             
             emit DeployedBackdoors(safe, backdoors);
         }
@@ -80,6 +80,7 @@ contract FirmFactory {
         // works as expected (HACK)
         if (_withBackdoors) {
             safe.enableModule(address(new BackdoorModule(safe, address(budget))));
+            safe.enableModule(address(new BackdoorModule(safe, address(roles))));
         }
 
         // Could optimize it by writing to Safe storage directly
