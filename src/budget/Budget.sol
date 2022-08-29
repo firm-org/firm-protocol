@@ -122,9 +122,9 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
 
             // Not checking whether the parentAllowance is enabled is a explicit decision
             // Disabling any allowance in a given allowance chain will result in all its
-            // childs not being able to execute payments
+            // children not being able to execute payments
             // This allows for disabling a certain allowance to reconfigure the whole tree
-            // of suballowances below it, before enabling it again
+            // of sub-allowances below it, before enabling it again
 
             // Sub-allowances can be created by entities authorized to spend from a particular allowance
             if (!_isAuthorized(msg.sender, parentAllowance.spender)) {
@@ -135,7 +135,7 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
             }
             // Recurrency can be zero in sub-allowances and is inherited from the parent
             if (!recurrency.isInherited()) {
-                // Will revert with InvalidTimeShift if _recurrency is invalid
+                // Will revert with InvalidTimeShift if recurrency is invalid
                 nextResetTime = uint64(block.timestamp).applyShift(recurrency);
             }
         }
@@ -162,7 +162,7 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
 
     /**
      * @notice Changes the enabled/disabled state of the allowance
-     * @dev Note: Disabling an allowance will implictly disable payments from all its descendant allowances
+     * @dev Note: Disabling an allowance will implicitly disable payments from all its descendant allowances
      * @param allowanceId ID of the allowance whose state is being changed
      * @param isEnabled Whether to enable or disable the allowance
      */
@@ -182,7 +182,7 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
      * @dev Note: It is possible to decrease the amount in an allowance to a smaller amount of what's already been spent
      * which will cause the allowance not to be able to execute any more payments until it resets (and the new amount will be enforced)
      * @param allowanceId ID of the allowance whose amount is being changed
-     * @param amount Whether to enable or disable the allowance
+     * @param amount New allowance amount to be set
      */
     function setAllowanceAmount(uint256 allowanceId, uint256 amount) external {
         Allowance storage allowance = _getAllowance(allowanceId);
@@ -301,7 +301,7 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
             }
 
             if (allowanceResets) {
-                // TODO: Consider emitting an event here since the 'spent' field in other suballowances that depend
+                // TODO: Consider emitting an event here since the 'spent' field in other sub-allowances that depend
                 // on this one won't be updated on-chain until they are touched
                 allowance.nextResetTime = nextResetTime;
             }
