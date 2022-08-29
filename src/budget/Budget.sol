@@ -167,13 +167,8 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
      * @param isEnabled Whether to enable or disable the allowance
      */
     function setAllowanceState(uint256 allowanceId, bool isEnabled) external {
-        Allowance storage allowance = _getAllowance(allowanceId);
-
-        if (!_isAdminOnAllowance(allowance, msg.sender)) {
-            revert UnauthorizedNotAllowanceAdmin(allowance.parentId);
-        }
+        Allowance storage allowance = _getAllowanceAndValidateAdmin(allowanceId);
         allowance.isDisabled = !isEnabled;
-
         emit AllowanceStateChanged(allowanceId, isEnabled);
     }
 
@@ -185,13 +180,8 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
      * @param amount Whether to enable or disable the allowance
      */
     function setAllowanceAmount(uint256 allowanceId, uint256 amount) external {
-        Allowance storage allowance = _getAllowance(allowanceId);
-
-        if (!_isAdminOnAllowance(allowance, msg.sender)) {
-            revert UnauthorizedNotAllowanceAdmin(allowance.parentId);
-        }
+        Allowance storage allowance = _getAllowanceAndValidateAdmin(allowanceId);
         allowance.amount = amount;
-
         emit AllowanceAmountChanged(allowanceId, amount);
     }
 
@@ -202,13 +192,8 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
      * @param spender New spender account for the allowance
      */
     function setAllowanceSpender(uint256 allowanceId, address spender) external {
-        Allowance storage allowance = _getAllowance(allowanceId);
-
-        if (!_isAdminOnAllowance(allowance, msg.sender)) {
-            revert UnauthorizedNotAllowanceAdmin(allowance.parentId);
-        }
+        Allowance storage allowance = _getAllowanceAndValidateAdmin(allowanceId);
         allowance.spender = spender;
-
         emit AllowanceSpenderChanged(allowanceId, spender);
     }
 
@@ -219,12 +204,7 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
      * @param name New name for the allowance
      */
     function setAllowanceName(uint256 allowanceId, string memory name) external {
-        Allowance storage allowance = _getAllowance(allowanceId);
-
-        if (!_isAdminOnAllowance(allowance, msg.sender)) {
-            revert UnauthorizedNotAllowanceAdmin(allowance.parentId);
-        }
-
+        Allowance storage allowance = _getAllowanceAndValidateAdmin(allowanceId);
         emit AllowanceNameChanged(allowanceId, name);
     }
 
@@ -260,6 +240,13 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
         }
 
         emit PaymentExecuted(allowanceId, msg.sender, allowance.token, to, amount, nextResetTime, description);
+    }
+
+    function _getAllowanceAndValidateAdmin(uint256 allowanceId) internal view returns (Allowance storage allowance) {
+        allowance = _getAllowance(allowanceId);
+        if (!_isAdminOnAllowance(allowance, msg.sender)) {
+            revert UnauthorizedNotAllowanceAdmin(allowance.parentId);
+        }
     }
 
     function _getAllowance(uint256 allowanceId) internal view returns (Allowance storage) {
