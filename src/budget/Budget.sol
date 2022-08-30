@@ -204,7 +204,7 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
      * @param name New name for the allowance
      */
     function setAllowanceName(uint256 allowanceId, string memory name) external {
-        Allowance storage allowance = _getAllowanceAndValidateAdmin(allowanceId);
+        _getAllowanceAndValidateAdmin(allowanceId);
         emit AllowanceNameChanged(allowanceId, name);
     }
 
@@ -250,7 +250,7 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
     }
 
     function _getAllowance(uint256 allowanceId) internal view returns (Allowance storage) {
-        if (allowanceId > allowancesCount) {
+        if (allowanceId == NO_PARENT_ID || allowanceId > allowancesCount) {
             revert UnexistentAllowance(allowanceId);
         }
 
