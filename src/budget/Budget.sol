@@ -13,6 +13,12 @@ address constant ETH = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 uint256 constant NO_PARENT_ID = 0;
 uint64 constant INHERITED_RESET_TIME = 0;
 
+/**
+ * @title Budget
+ * @author Firm (engineering@firm.org)
+ * @notice Budgeting module for efficient spending from a Safe using allowance chains
+ * to delegate spending authority
+ */
 contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
     string public constant moduleId = "org.firm.budget";
     uint256 public constant moduleVersion = 0;
