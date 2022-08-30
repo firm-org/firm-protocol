@@ -91,7 +91,7 @@ contract Roles is UpgradeableModule, IRoles {
      * @dev For the Root role, the sender must be an admin of Root
      * For all other roles, the sender should hold the Role Manager role
      * @param roleId ID of the role
-     * @param adminRoles New roles that can perform admin actions on this role
+     * @param adminRoles Bitmap of roles that can perform admin actions on this role
      */
     function setRoleAdmin(uint8 roleId, bytes32 adminRoles) external {
         if (roleId == ROOT_ROLE_ID) {
