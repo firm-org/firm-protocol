@@ -13,6 +13,12 @@ address constant ETH = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 uint256 constant NO_PARENT_ID = 0;
 uint64 constant INHERITED_RESET_TIME = 0;
 
+/**
+ * @title Budget
+ * @author Firm (engineering@firm.org)
+ * @notice Budgeting module for efficient spending from a Safe using allowance chains
+ * to delegate spending authority
+ */
 contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
     string public constant moduleId = "org.firm.budget";
     uint256 public constant moduleVersion = 0;
@@ -276,8 +282,9 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
             revert DisabledAllowance(allowanceId);
         }
 
-        if (allowance.nextResetTime == 0) {
-            // Sub-budget's recurrency is inherited from parent
+        if (allowance.nextResetTime == INHERITED_RESET_TIME) {
+            // Note that since top-level allowances are not allowed to have an inherited reset time,
+            // this branch is only ever executed for sub-allowances (which always have a parentId)
             (nextResetTime, allowanceResets) = _checkAndUpdateAllowanceChain(allowance.parentId, token, to, amount);
         } else {
             nextResetTime = allowance.nextResetTime;
@@ -288,8 +295,6 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
             }
 
             if (allowanceResets) {
-                // TODO: Consider emitting an event here since the 'spent' field in other sub-allowances that depend
-                // on this one won't be updated on-chain until they are touched
                 allowance.nextResetTime = nextResetTime;
             }
 
@@ -298,7 +303,7 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
             }
         }
 
-        uint256 spentAfterPayment = (allowanceResets ? 0 : allowance.spent) + amount;
+        uint256 spentAfterPayment = amount + (allowanceResets ? 0 : allowance.spent);
         if (spentAfterPayment > allowance.amount) {
             revert Overbudget(allowanceId, token, to, amount, allowance.amount - allowance.spent);
         }
