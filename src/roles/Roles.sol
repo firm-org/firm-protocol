@@ -89,7 +89,7 @@ contract Roles is UpgradeableModule, IRoles {
     /**
      * @notice Changes the roles that can perform admin actions on a role
      * @dev For the Root role, the sender must be an admin of Root
-     * For all other roles, the sender to hold the Role Manager role
+     * For all other roles, the sender should hold the Role Manager role
      * @param roleId ID of the role
      * @param adminRoles New roles that can perform admin actions on this role
      */
