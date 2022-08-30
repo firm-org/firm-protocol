@@ -220,17 +220,22 @@ contract Roles is UpgradeableModule, IRoles {
         return _isRoleAdmin(getUserRoles[user], roleId);
     }
 
+    /**
+     * @notice Checks whether a role exists
+     * @param roleId ID of the role being checked
+     * @return True if the role has been created
+     */
+    function roleExists(uint8 roleId) public view returns (bool) {
+        return roleId < roleCount;
+    }
+
     function _isRoleAdmin(bytes32 _userRoles, uint8 roleId) internal view returns (bool) {
         return (_userRoles & getRoleAdmin[roleId]) != 0
-            || (_hasRootRole(_userRoles) && _roleExists(roleId) && roleId != ROOT_ROLE_ID);
+            || (_hasRootRole(_userRoles) && roleExists(roleId) && roleId != ROOT_ROLE_ID);
     }
 
     function _hasRootRole(bytes32 _userRoles) internal pure returns (bool) {
         // Since root role is always at ID 0, we don't need to shift
         return uint256(_userRoles) & 1 != 0;
-    }
-
-    function _roleExists(uint8 _roleId) internal view returns (bool) {
-        return _roleId < roleCount;
     }
 }

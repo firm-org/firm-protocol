@@ -86,11 +86,19 @@ contract BudgetTest is FirmTest {
     }
 
     function testBadTimeshiftsRevert() public {
-        vm.startPrank(address(avatar));
-
+        vm.prank(address(avatar));
         vm.expectRevert(abi.encodeWithSelector(TimeShiftLib.InvalidTimeShift.selector));
         budget.createAllowance(
             NO_PARENT_ID, SPENDER, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode(), ""
+        );
+    }
+
+    function testInvalidSpenderReverts() public {
+        uint8 badRoleId = 101; // RolesStub returns false to roleExists when id > 100
+        vm.prank(address(avatar));
+        vm.expectRevert(abi.encodeWithSelector(RolesAuth.UnexistentRole.selector, badRoleId));
+        budget.createAllowance(
+            NO_PARENT_ID, roleFlag(badRoleId), address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
         );
     }
 
