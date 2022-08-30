@@ -212,7 +212,7 @@ contract Roles is UpgradeableModule, IRoles {
 
     /**
      * @notice Checks whether a user has a role that can admin a particular role
-     * @param user Address being granted or revoked the roles
+     * @param user Address being checked for admin rights over the role
      * @param roleId ID of the role being checked
      * @return True if the user has admin rights over the role
      */
