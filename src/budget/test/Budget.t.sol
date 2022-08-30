@@ -276,7 +276,7 @@ contract BudgetTest is FirmTest {
 
     function testCantExecuteInexistentAllowance() public {
         vm.prank(SPENDER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedPaymentExecution.selector, 0, SPENDER));
+        vm.expectRevert(abi.encodeWithSelector(Budget.UnexistentAllowance.selector, 0));
         budget.executePayment(0, RECEIVER, 7, "");
     }
 
