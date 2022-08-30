@@ -12,7 +12,7 @@ import "./lib/ERC20Token.sol";
 import {FirmFactory, UpgradeableModuleProxyFactory} from "../FirmFactory.sol";
 import {Budget, TimeShiftLib, NO_PARENT_ID} from "../../budget/Budget.sol";
 import {TimeShift} from "../../budget/TimeShiftLib.sol";
-import {Roles, IRoles, IAvatar, ONLY_ROOT_ROLE} from "../../roles/Roles.sol";
+import {Roles, IRoles, IAvatar, ONLY_ROOT_ROLE, ROOT_ROLE_ID} from "../../roles/Roles.sol";
 import {SafeEnums} from "../../bases/IZodiacModule.sol";
 
 import {FirmDeploy} from "../../../scripts/Deploy.sol";
@@ -45,7 +45,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
         (GnosisSafe safe, Budget budget, Roles roles) = createFirm(address(this));
 
         assertTrue(safe.isModuleEnabled(address(budget)));
-        assertTrue(roles.hasRootRole(address(safe)));
+        assertTrue(roles.hasRole(address(safe), ROOT_ROLE_ID));
     }
 
     function testExecutingPaymentsFromBudget() public {
