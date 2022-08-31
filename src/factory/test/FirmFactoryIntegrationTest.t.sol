@@ -15,7 +15,7 @@ import {TimeShift} from "../../budget/TimeShiftLib.sol";
 import {Roles, IRoles, IAvatar, ONLY_ROOT_ROLE, ROOT_ROLE_ID} from "../../roles/Roles.sol";
 import {SafeEnums} from "../../bases/IZodiacModule.sol";
 
-import {FirmDeploy} from "../../../scripts/Deploy.sol";
+import {LocalDeploy} from "../../../scripts/LocalDeploy.sol";
 
 contract FirmFactoryIntegrationTest is FirmTest {
     using TimeShiftLib for *;
@@ -26,7 +26,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
     function setUp() public {
         token = new ERC20Token();
 
-        FirmDeploy deployer = new FirmDeploy();
+        LocalDeploy deployer = new LocalDeploy();
 
         factory = deployer.run();
     }

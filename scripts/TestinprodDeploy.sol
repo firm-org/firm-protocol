@@ -10,7 +10,7 @@ import {FirmFactory, UpgradeableModuleProxyFactory} from "../src/factory/FirmFac
 import {Roles, IRoles, IAvatar, ONLY_ROOT_ROLE} from "../src/roles/Roles.sol";
 import {Budget, TimeShiftLib, NO_PARENT_ID} from "../src/budget/Budget.sol";
 
-contract FirmDeploy is Test {
+contract LocalDeploy is Test {
 
     FirmFactory factory;
 
