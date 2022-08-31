@@ -146,6 +146,8 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
             }
         }
 
+        _validateAuthorizedAddress(spender);
+
         unchecked {
             // The index of the first allowance is 1, so NO_PARENT_ID can be 0 (gas op)
             allowanceId = ++allowancesCount;
@@ -198,6 +200,8 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
      * @param spender New spender account for the allowance
      */
     function setAllowanceSpender(uint256 allowanceId, address spender) external {
+        _validateAuthorizedAddress(spender);
+
         Allowance storage allowance = _getAllowanceAndValidateAdmin(allowanceId);
         allowance.spender = spender;
         emit AllowanceSpenderChanged(allowanceId, spender);

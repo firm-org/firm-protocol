@@ -6,5 +6,6 @@ uint8 constant ROLE_MANAGER_ROLE = 1;
 bytes32 constant ONLY_ROOT_ROLE = bytes32(uint256(1));
 
 interface IRoles {
-    function hasRole(address _user, uint8 _roleId) external view returns (bool);
+    function roleExists(uint8 roleId) external view returns (bool);
+    function hasRole(address user, uint8 roleId) external view returns (bool);
 }
