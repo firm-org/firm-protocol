@@ -30,6 +30,8 @@ contract TestinprodDeploy is Test {
             revert UnsupportedChain(block.chainid);
         }
 
+        vm.startBroadcast();
+        
         factory = new TestinprodFactory(
             GnosisSafeProxyFactory(safeProxyFactory),
             new UpgradeableModuleProxyFactory(),
