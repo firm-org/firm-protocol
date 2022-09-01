@@ -39,13 +39,17 @@ contract FirmFactory {
         budgetImpl = _budgetImpl;
     }
 
-    function createFirm(address _creator, bool _withBackdoors) public returns (GnosisSafe safe) {
+    function createFirm(address creator, bool withBackdoors) public returns (GnosisSafe safe) {
         address[] memory owners = new address[](1);
-        owners[0] = _creator;
+        owners[0] = creator;
 
-        bytes memory installModulesData = abi.encodeCall(this.installModules, (_withBackdoors));
+        return createFirm(owners, 1, withBackdoors);
+    }
+
+    function createFirm(address[] memory owners, uint256 requiredSignatures, bool withBackdoors) public returns (GnosisSafe safe) {
+        bytes memory installModulesData = abi.encodeCall(this.installModules, (withBackdoors));
         bytes memory safeInitData = abi.encodeCall(
-            GnosisSafe.setup, (owners, 1, address(this), installModulesData, address(0), address(0), 0, payable(0))
+            GnosisSafe.setup, (owners, requiredSignatures, address(this), installModulesData, address(0), address(0), 0, payable(0))
         );
         safe = GnosisSafe(payable(safeFactory.createProxyWithNonce(safeImpl, safeInitData, 1)));
 
@@ -56,9 +60,9 @@ contract FirmFactory {
         Budget budget = Budget(modules[0]);
         Roles roles = Roles(address(budget.roles()));
 
-        emit NewFirm(_creator, safe, roles, budget);
+        emit NewFirm(msg.sender, safe, roles, budget);
 
-        if (_withBackdoors) {
+        if (withBackdoors) {
             (address[] memory backdoors,) = safe.getModulesPaginated(address(budget), 2);
 
             emit DeployedBackdoors(safe, backdoors);

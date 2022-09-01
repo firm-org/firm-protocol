@@ -10,11 +10,8 @@ import {FirmFactory, UpgradeableModuleProxyFactory} from "../src/factory/FirmFac
 import {Roles, IRoles, IAvatar, ONLY_ROOT_ROLE} from "../src/roles/Roles.sol";
 import {Budget, TimeShiftLib, NO_PARENT_ID} from "../src/budget/Budget.sol";
 
-contract FirmDeploy is Test {
-
-    FirmFactory factory;
-
-    function run() public returns (FirmFactory) {
+contract LocalDeploy is Test {
+    function run() public returns (FirmFactory factory) {
         vm.startBroadcast();
 
         factory = new FirmFactory(
@@ -26,7 +23,5 @@ contract FirmDeploy is Test {
         );
 
         vm.stopBroadcast();
-
-        return factory;
     }
 }
