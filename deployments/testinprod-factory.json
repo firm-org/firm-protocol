@@ -1,4 +1,10 @@
 {
-    "1": "0x7784b0c1c3b7523a9b2243ffbff452d234cb0e11",
-    "5": "0x69a952b2d9404f7b162d0db3df0d1f6e462d448a"
+    "1": {
+        "address": "0x7784b0c1c3b7523a9b2243ffbff452d234cb0e11",
+        "blockNumber": 15483275
+    },
+    "5": {
+        "address": "0x69a952b2d9404f7b162d0db3df0d1f6e462d448a",
+        "blockNumber": 7508428
+    }
 }
