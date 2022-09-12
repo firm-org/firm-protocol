@@ -25,7 +25,7 @@ contract Roles is UpgradeableModule, IRoles {
     event RoleCreated(uint8 indexed roleId, bytes32 roleAdmin, string name, address indexed actor);
     event RoleNameChanged(uint8 indexed roleId, string name);
     event RoleAdminSet(uint8 indexed roleId, bytes32 roleAdmin, address indexed actor);
-    event RolesSet(address indexed user, bytes32 userRoles, address indexed actor);
+    event UserRolesChanged(address indexed user, bytes32 oldUserRoles, bytes32 newUserRoles, address indexed actor);
 
     error UnauthorizedNoRole(uint8 requiredRole);
     error UnauthorizedNotAdmin(uint8 role);
@@ -137,7 +137,8 @@ contract Roles is UpgradeableModule, IRoles {
      * @param isGrant Whether the role is being granted or revoked
      */
     function setRole(address user, uint8 roleId, bool isGrant) external {
-        bytes32 userRoles = getUserRoles[user];
+        bytes32 oldUserRoles = getUserRoles[user];
+        bytes32 newUserRoles = oldUserRoles;
 
         // Implicitly checks that roleId had been created
         if (!_isRoleAdmin(getUserRoles[msg.sender], roleId)) {
@@ -145,14 +146,14 @@ contract Roles is UpgradeableModule, IRoles {
         }
 
         if (isGrant) {
-            userRoles |= bytes32(1 << roleId);
+            newUserRoles |= bytes32(1 << roleId);
         } else {
-            userRoles &= ~bytes32(1 << roleId);
+            newUserRoles &= ~bytes32(1 << roleId);
         }
 
-        getUserRoles[user] = userRoles;
+        getUserRoles[user] = newUserRoles;
 
-        emit RolesSet(user, userRoles, msg.sender);
+        emit UserRolesChanged(user, oldUserRoles, newUserRoles, msg.sender);
     }
 
     /**
@@ -164,7 +165,8 @@ contract Roles is UpgradeableModule, IRoles {
      */
     function setRoles(address user, uint8[] memory grantingRoles, uint8[] memory revokingRoles) external {
         bytes32 senderRoles = getUserRoles[msg.sender];
-        bytes32 userRoles = getUserRoles[user];
+        bytes32 oldUserRoles = getUserRoles[user];
+        bytes32 newUserRoles = oldUserRoles;
 
         uint256 grantsLength = grantingRoles.length;
         for (uint256 i = 0; i < grantsLength;) {
@@ -173,7 +175,7 @@ contract Roles is UpgradeableModule, IRoles {
                 revert UnauthorizedNotAdmin(roleId);
             }
 
-            userRoles |= bytes32(1 << roleId);
+            newUserRoles |= bytes32(1 << roleId);
             unchecked {
                 i++;
             }
@@ -186,15 +188,15 @@ contract Roles is UpgradeableModule, IRoles {
                 revert UnauthorizedNotAdmin(roleId);
             }
 
-            userRoles &= ~(bytes32(1 << roleId));
+            newUserRoles &= ~(bytes32(1 << roleId));
             unchecked {
                 i++;
             }
         }
 
-        getUserRoles[user] = userRoles;
+        getUserRoles[user] = newUserRoles;
 
-        emit RolesSet(user, userRoles, msg.sender);
+        emit UserRolesChanged(user, oldUserRoles, newUserRoles, msg.sender);
     }
 
     /**
