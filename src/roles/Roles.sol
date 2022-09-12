@@ -19,7 +19,7 @@ contract Roles is UpgradeableModule, IRoles {
     uint256 public constant moduleVersion = 0;
 
     mapping(address => bytes32) public getUserRoles;
-    mapping(uint8 => bytes32) public getRoleAdmin;
+    mapping(uint8 => bytes32) public getRoleAdmins;
     uint256 public roleCount;
 
     event RoleCreated(uint8 indexed roleId, bytes32 roleAdmin, string name, address indexed actor);
@@ -81,7 +81,7 @@ contract Roles is UpgradeableModule, IRoles {
             roleCount++;
         }
 
-        getRoleAdmin[roleId] = adminRoles;
+        getRoleAdmins[roleId] = adminRoles;
 
         emit RoleCreated(roleId, adminRoles, name, msg.sender);
     }
@@ -106,7 +106,7 @@ contract Roles is UpgradeableModule, IRoles {
             }
         }
 
-        getRoleAdmin[roleId] = adminRoles;
+        getRoleAdmins[roleId] = adminRoles;
 
         emit RoleAdminSet(roleId, adminRoles, msg.sender);
     }
@@ -232,7 +232,7 @@ contract Roles is UpgradeableModule, IRoles {
     }
 
     function _isRoleAdmin(bytes32 _userRoles, uint8 roleId) internal view returns (bool) {
-        return (_userRoles & getRoleAdmin[roleId]) != 0
+        return (_userRoles & getRoleAdmins[roleId]) != 0
             || (_hasRootRole(_userRoles) && roleExists(roleId) && roleId != ROOT_ROLE_ID);
     }
 
