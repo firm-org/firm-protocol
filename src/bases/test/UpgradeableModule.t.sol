@@ -27,12 +27,12 @@ contract UpgradeableModuleTest is BasesTest {
         assertEq(vm.load(address(module), implSlot).fromLast20Bytes(), _impl);
     }
 
-    event Upgraded(address indexed implementation);
+    event Upgraded(address indexed implementation, string moduleId, uint256 version);
 
     function testAvatarCanUpgradeModule() public {
         vm.prank(address(avatar));
-        vm.expectEmit(true, true, false, false);
-        emit Upgraded(address(moduleTwoImpl));
+        vm.expectEmit(true, true, false, true);
+        emit Upgraded(address(moduleTwoImpl), "org.firm.modulemock", 0);
         module.upgrade(address(moduleTwoImpl));
 
         assertImplAtEIP1967Slot(address(moduleTwoImpl));
