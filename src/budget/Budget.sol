@@ -95,6 +95,7 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
     error TokenMismatch(address patentToken, address childToken);
     error ZeroAmountPayment();
     error BadInput();
+    error BadExecutionContext();
     error UnauthorizedPaymentExecution(uint256 allowanceId, address actor);
     error Overbudget(uint256 allowanceId, uint256 amount, uint256 remainingBudget);
     error PaymentExecutionFailed(uint256 allowanceId, address token, address to, uint256 amount);
@@ -315,6 +316,14 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
     }
 
     function __safeContext_performMultiTransfer(address token, address[] calldata tos, uint256[] calldata amounts) external {
+        // This function has to be external, but we need to ensure that it cannot be ran
+        // if we are on the proxy or impl context
+        // There's pressumably nothing malicious that could be done in this contract,
+        // but it's a good extra safety check
+        if (!_isForeignContext()) {
+            revert BadExecutionContext();
+        }
+
         uint256 length = tos.length;
 
         if (token == NATIVE_ASSET) {
