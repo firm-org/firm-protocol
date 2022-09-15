@@ -65,13 +65,18 @@ contract FirmFactoryIntegrationTest is FirmTest {
         vm.stopPrank();
 
         vm.startPrank(spender);
-        budget.executePayment(allowanceId, receiver, 4, "");
-        budget.executePayment(allowanceId, receiver, 1, "");
+        address[] memory tos = new address[](2);
+        tos[0] = receiver;
+        tos[1] = receiver;
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = 4;
+        amounts[1] = 1;
+        budget.executeMultiPayment(allowanceId, tos, amounts, "");
 
         vm.warp(block.timestamp + 1 days);
         budget.executePayment(allowanceId, receiver, 9, "");
 
-        vm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, allowanceId, address(token), receiver, 2, 1));
+        vm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, allowanceId, 2, 1));
         budget.executePayment(allowanceId, receiver, 2, "");
 
         assertEq(token.balanceOf(receiver), 14);

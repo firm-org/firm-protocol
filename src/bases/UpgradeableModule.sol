@@ -28,4 +28,10 @@ abstract contract UpgradeableModule is SafeAware {
 
         emit Upgraded(_newImplementation);
     }
+
+    function _implementation() internal view returns (address impl) {
+        assembly {
+            impl := sload(EIP1967_IMPL_SLOT)
+        }
+    }
 }

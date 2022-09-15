@@ -117,7 +117,7 @@ contract BudgetTest is FirmTest {
         assertExecutePayment(SPENDER, allowanceId, RECEIVER, 2, initialTime + 2 days);
 
         vm.prank(SPENDER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, allowanceId, address(0), RECEIVER, 7, 1));
+        vm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, allowanceId, 7, 1));
         budget.executePayment(allowanceId, RECEIVER, 7, "");
     }
 
@@ -238,7 +238,7 @@ contract BudgetTest is FirmTest {
         assertEq(spent3, 2);
         assertEq(spent4, 1); // It's one because the state doesn't get reset until a payment involving this allowance
 
-        vm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, allowance3, address(0), SPENDER, 1, 0));
+        vm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, allowance3, 1, 0));
         vm.prank(SPENDER);
         budget.executePayment(allowance4, SPENDER, 1, "");
     }
