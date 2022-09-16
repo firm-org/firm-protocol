@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.16;
 
+import {Context} from "openzeppelin/utils/Context.sol";
 import {IAvatar} from "zodiac/interfaces/IAvatar.sol";
 
 import {IModuleMetadata} from "./IModuleMetadata.sol";
@@ -28,7 +29,7 @@ abstract contract SafeAware is IModuleMetadata {
 
     /**
      * @dev Contracts that inherit from SafeAware, including derived contracts as
-     * UpgradeableModule or Zodiac, should call this function on initialization
+     * EIP1967Upgradeable or Zodiac, should call this function on initialization
      * Will revert if called twice
      * @param _safe The address of the GnosisSafe to use, won't be modifiable unless
      * implicitly implemented by the derived contract, which is not recommended
@@ -52,6 +53,7 @@ abstract contract SafeAware is IModuleMetadata {
      */
 
     modifier onlySafe() {
+        // 'safe' is intended to always be a safe and never use metatxs, so we use msg.sender directly as an optimization
         if (msg.sender != address(safe())) {
             revert UnauthorizedNotSafe();
         }

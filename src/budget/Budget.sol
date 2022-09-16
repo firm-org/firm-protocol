@@ -3,7 +3,7 @@ pragma solidity 0.8.16;
 
 import {IERC20} from "openzeppelin/interfaces/IERC20.sol";
 
-import {UpgradeableModule} from "../bases/UpgradeableModule.sol";
+import {FirmBase} from "../bases/FirmBase.sol";
 import {ZodiacModule, IAvatar, SafeEnums} from "../bases/ZodiacModule.sol";
 import {IRoles, RolesAuth} from "../common/RolesAuth.sol";
 
@@ -19,7 +19,7 @@ uint64 constant INHERITED_RESET_TIME = 0;
  * @notice Budgeting module for efficient spending from a Safe using allowance chains
  * to delegate spending authority
  */
-contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
+contract Budget is FirmBase, ZodiacModule, RolesAuth {
     string public constant moduleId = "org.firm.budget";
     uint256 public constant moduleVersion = 0;
 
@@ -29,12 +29,12 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
     // INITIALIZATION
     ////////////////////////////////////////////////////////////////////////////////
 
-    constructor(IAvatar _safe, IRoles _roles) {
-        initialize(_safe, _roles);
+    constructor(IAvatar safe_, IRoles roles_, address trustedForwarder_) {
+        initialize(safe_, roles_, trustedForwarder_);
     }
 
-    function initialize(IAvatar _safe, IRoles _roles) public {
-        __init_setSafe(_safe); // SafeAware.__init_setSafe reverts on reinitialization
+    function initialize(IAvatar _safe, IRoles _roles, address trustedForwarder_) public {
+        __init_firmBase(_safe, trustedForwarder_); // calls SafeAware.__init_setSafe which reverts on reinitialization
         roles = _roles;
     }
 
@@ -115,7 +115,7 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
 
         if (parentAllowanceId == NO_PARENT_ID) {
             // Top-level allowances can only be created by the Safe
-            if (msg.sender != address(safe())) {
+            if (_msgSender() != address(safe())) {
                 revert UnauthorizedNotAllowanceAdmin(NO_PARENT_ID);
             }
 
@@ -133,7 +133,7 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
             // of sub-allowances below it, before enabling it again
 
             // Sub-allowances can be created by entities authorized to spend from a particular allowance
-            if (!_isAuthorized(msg.sender, parentAllowance.spender)) {
+            if (!_isAuthorized(_msgSender(), parentAllowance.spender)) {
                 revert UnauthorizedNotAllowanceAdmin(parentAllowanceId);
             }
             if (token != parentAllowance.token) {
@@ -228,8 +228,8 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
     function executePayment(uint256 allowanceId, address to, uint256 amount, string memory description) external {
         Allowance storage allowance = _getAllowance(allowanceId);
 
-        if (!_isAuthorized(msg.sender, allowance.spender)) {
-            revert UnauthorizedPaymentExecution(allowanceId, msg.sender);
+        if (!_isAuthorized(_msgSender(), allowance.spender)) {
+            revert UnauthorizedPaymentExecution(allowanceId, _msgSender());
         }
 
         address token = allowance.token;
@@ -249,12 +249,12 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
             revert PaymentExecutionFailed(allowanceId, token, to, amount);
         }
 
-        emit PaymentExecuted(allowanceId, msg.sender, allowance.token, to, amount, nextResetTime, description);
+        emit PaymentExecuted(allowanceId, _msgSender(), allowance.token, to, amount, nextResetTime, description);
     }
 
     function _getAllowanceAndValidateAdmin(uint256 allowanceId) internal view returns (Allowance storage allowance) {
         allowance = _getAllowance(allowanceId);
-        if (!_isAdminOnAllowance(allowance, msg.sender)) {
+        if (!_isAdminOnAllowance(allowance, _msgSender())) {
             revert UnauthorizedNotAllowanceAdmin(allowance.parentId);
         }
     }

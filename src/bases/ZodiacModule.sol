@@ -4,7 +4,7 @@ pragma solidity ^0.8.16;
 import {IERC165} from "openzeppelin/interfaces/IERC165.sol";
 
 import {IZodiacModule, IAvatar, IGuard, SafeEnums} from "./IZodiacModule.sol";
-import {SafeAware} from "./SafeAware.sol";
+import {FirmBase} from "./FirmBase.sol";
 
 /**
  * @title ZodiacModule
@@ -13,7 +13,7 @@ import {SafeAware} from "./SafeAware.sol";
  * @dev Note that this contract doesn't have an initializer and ZodiacState
  * must be set explicly if desired, but defaults to being unset
  */
-abstract contract ZodiacModule is IZodiacModule, SafeAware {
+abstract contract ZodiacModule is FirmBase, IZodiacModule {
     struct ZodiacState {
         IAvatar target;
         IGuard guard;
@@ -64,7 +64,7 @@ abstract contract ZodiacModule is IZodiacModule, SafeAware {
         if (address(guard_) != address(0)) {
             // We zero out data specific to multisig transactions irrelevant in module calls
             guard_.checkTransaction(
-                to, value, data, operation, 0, 0, 0, address(0), payable(0), bytes("0x"), msg.sender
+                to, value, data, operation, 0, 0, 0, address(0), payable(0), bytes("0x"), _msgSender()
             );
         }
 
@@ -94,7 +94,7 @@ abstract contract ZodiacModule is IZodiacModule, SafeAware {
         if (address(guard_) != address(0)) {
             // We zero out data specific to multisig transactions irrelevant in module calls
             guard_.checkTransaction(
-                to, value, data, operation, 0, 0, 0, address(0), payable(0), bytes("0x"), msg.sender
+                to, value, data, operation, 0, 0, 0, address(0), payable(0), bytes("0x"), _msgSender()
             );
         }
 

@@ -23,7 +23,7 @@ contract BudgetTest is FirmTest {
     function setUp() public virtual {
         avatar = new AvatarStub();
         roles = new RolesStub();
-        budget = new Budget(avatar, roles);
+        budget = new Budget(avatar, roles, address(0));
     }
 
     function testInitialState() public {
@@ -34,7 +34,7 @@ contract BudgetTest is FirmTest {
 
     function testCannotReinit() public {
         vm.expectRevert(abi.encodeWithSelector(SafeAware.AlreadyInitialized.selector));
-        budget.initialize(avatar, roles);
+        budget.initialize(avatar, roles, address(0));
     }
 
     function testCreateAllowance() public returns (uint256 allowanceId) {
@@ -349,13 +349,13 @@ contract BudgetTest is FirmTest {
 
 contract BudgetWithProxyTest is BudgetTest {
     UpgradeableModuleProxyFactory immutable factory = new UpgradeableModuleProxyFactory();
-    address immutable budgetImpl = address(new Budget(IAvatar(address(10)), IRoles(address(10))));
+    address immutable budgetImpl = address(new Budget(IAvatar(address(10)), IRoles(address(10)), address(0)));
 
     function setUp() public override {
         avatar = new AvatarStub();
         roles = new RolesStub();
         budget =
-            Budget(factory.deployUpgradeableModule(budgetImpl, abi.encodeCall(Budget.initialize, (avatar, roles)), 0));
+            Budget(factory.deployUpgradeableModule(budgetImpl, abi.encodeCall(Budget.initialize, (avatar, roles, address(0))), 0));
         vm.label(address(roles), "BudgetProxy");
     }
 }

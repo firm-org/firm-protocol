@@ -15,7 +15,7 @@ contract RolesTest is FirmTest {
     address SOMEONE_ELSE = account("someone else");
 
     function setUp() public virtual {
-        roles = new Roles(IAvatar(ADMIN));
+        roles = new Roles(IAvatar(ADMIN), address(0));
     }
 
     function testInitialRoot() public {
@@ -32,7 +32,7 @@ contract RolesTest is FirmTest {
 
     function testCannotReinit() public {
         vm.expectRevert(abi.encodeWithSelector(SafeAware.AlreadyInitialized.selector));
-        roles.initialize(IAvatar(address(2)));
+        roles.initialize(IAvatar(address(2)), address(0));
     }
 
     function testAdminCanCreateRoles() public {
@@ -179,10 +179,10 @@ contract RolesTest is FirmTest {
 
 contract RolesWithProxyTest is RolesTest {
     UpgradeableModuleProxyFactory immutable factory = new UpgradeableModuleProxyFactory();
-    address immutable rolesImpl = address(new Roles(IAvatar(address(1))));
+    address immutable rolesImpl = address(new Roles(IAvatar(address(1)), address(0)));
 
     function setUp() public override {
-        roles = Roles(factory.deployUpgradeableModule(rolesImpl, abi.encodeCall(Roles.initialize, (IAvatar(ADMIN))), 0));
+        roles = Roles(factory.deployUpgradeableModule(rolesImpl, abi.encodeCall(Roles.initialize, (IAvatar(ADMIN), address(0))), 0));
         vm.label(address(roles), "RolesProxy");
     }
 }

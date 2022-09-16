@@ -4,6 +4,8 @@ pragma solidity 0.8.16;
 import {GnosisSafe} from "gnosis-safe/GnosisSafe.sol";
 import {GnosisSafeProxyFactory} from "gnosis-safe/proxies/GnosisSafeProxyFactory.sol";
 
+import {FirmRelayer} from "../metatx/FirmRelayer.sol";
+
 import {IAvatar} from "../bases/IZodiacModule.sol";
 import {Roles} from "../roles/Roles.sol";
 import {Budget} from "../budget/Budget.sol";
@@ -15,6 +17,8 @@ import {BackdoorModule} from "./local-utils/BackdoorModule.sol";
 contract FirmFactory {
     GnosisSafeProxyFactory public immutable safeFactory;
     UpgradeableModuleProxyFactory public immutable moduleFactory;
+
+    FirmRelayer public immutable relayer;
 
     address public immutable safeImpl;
     address public immutable rolesImpl;
@@ -28,12 +32,14 @@ contract FirmFactory {
     constructor(
         GnosisSafeProxyFactory _safeFactory,
         UpgradeableModuleProxyFactory _moduleFactory,
+        FirmRelayer _relayer,
         address _safeImpl,
         address _rolesImpl,
         address _budgetImpl
     ) {
         safeFactory = _safeFactory;
         moduleFactory = _moduleFactory;
+        relayer = _relayer;
         safeImpl = _safeImpl;
         rolesImpl = _rolesImpl;
         budgetImpl = _budgetImpl;
@@ -76,9 +82,9 @@ contract FirmFactory {
 
         IAvatar safe = IAvatar(address(this));
         Roles roles =
-            Roles(moduleFactory.deployUpgradeableModule(rolesImpl, abi.encodeCall(Roles.initialize, (safe)), 1));
+            Roles(moduleFactory.deployUpgradeableModule(rolesImpl, abi.encodeCall(Roles.initialize, (safe, address(relayer))), 1));
         Budget budget =
-            Budget(moduleFactory.deployUpgradeableModule(budgetImpl, abi.encodeCall(Budget.initialize, (safe, roles)), 1));
+            Budget(moduleFactory.deployUpgradeableModule(budgetImpl, abi.encodeCall(Budget.initialize, (safe, roles, address(relayer))), 1));
 
         // NOTE: important to enable all backdoors before the real modules so the getter
         // works as expected (HACK)
