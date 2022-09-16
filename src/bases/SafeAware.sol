@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.16;
 
-import {Context} from "openzeppelin/utils/Context.sol";
 import {IAvatar} from "zodiac/interfaces/IAvatar.sol";
 
 import {IModuleMetadata} from "./IModuleMetadata.sol";
