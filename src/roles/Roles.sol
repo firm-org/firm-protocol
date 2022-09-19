@@ -108,7 +108,7 @@ contract Roles is UpgradeableModule, IRoles {
 
         getRoleAdmins[roleId] = roleAdmins;
 
-        emit RoleAdminSet(roleId, roleAdmins, msg.sender);
+        emit RoleAdminsSet(roleId, roleAdmins, msg.sender);
     }
 
     /**
