@@ -19,12 +19,12 @@ contract Roles is UpgradeableModule, IRoles {
     uint256 public constant moduleVersion = 0;
 
     mapping(address => bytes32) public getUserRoles;
-    mapping(uint8 => bytes32) public getRoleAdmin;
+    mapping(uint8 => bytes32) public getRoleAdmins;
     uint256 public roleCount;
 
-    event RoleCreated(uint8 indexed roleId, bytes32 roleAdmin, string name, address indexed actor);
+    event RoleCreated(uint8 indexed roleId, bytes32 roleAdmins, string name, address indexed actor);
     event RoleNameChanged(uint8 indexed roleId, string name);
-    event RoleAdminSet(uint8 indexed roleId, bytes32 roleAdmin, address indexed actor);
+    event RoleAdminsSet(uint8 indexed roleId, bytes32 roleAdmins, address indexed actor);
     event UserRolesChanged(address indexed user, bytes32 oldUserRoles, bytes32 newUserRoles, address indexed actor);
 
     error UnauthorizedNoRole(uint8 requiredRole);
@@ -59,19 +59,19 @@ contract Roles is UpgradeableModule, IRoles {
     /**
      * @notice Creates a new role
      * @dev Requires the sender to hold the Role Manager role
-     * @param adminRoles Bitmap of roles that can perform admin actions on the new role
+     * @param roleAdmins Bitmap of roles that can perform admin actions on the new role
      * @param name Name of the role
      * @return roleId ID of the new role
      */
-    function createRole(bytes32 adminRoles, string memory name) public returns (uint8 roleId) {
+    function createRole(bytes32 roleAdmins, string memory name) public returns (uint8 roleId) {
         if (!hasRole(msg.sender, ROLE_MANAGER_ROLE)) {
             revert UnauthorizedNoRole(ROLE_MANAGER_ROLE);
         }
 
-        return _createRole(adminRoles, name);
+        return _createRole(roleAdmins, name);
     }
 
-    function _createRole(bytes32 adminRoles, string memory name) internal returns (uint8 roleId) {
+    function _createRole(bytes32 roleAdmins, string memory name) internal returns (uint8 roleId) {
         uint256 roleId_ = roleCount;
         if (roleId_ > type(uint8).max) {
             revert RoleLimitReached();
@@ -81,9 +81,9 @@ contract Roles is UpgradeableModule, IRoles {
             roleCount++;
         }
 
-        getRoleAdmin[roleId] = adminRoles;
+        getRoleAdmins[roleId] = roleAdmins;
 
-        emit RoleCreated(roleId, adminRoles, name, msg.sender);
+        emit RoleCreated(roleId, roleAdmins, name, msg.sender);
     }
 
     /**
@@ -91,9 +91,9 @@ contract Roles is UpgradeableModule, IRoles {
      * @dev For the Root role, the sender must be an admin of Root
      * For all other roles, the sender should hold the Role Manager role
      * @param roleId ID of the role
-     * @param adminRoles Bitmap of roles that can perform admin actions on this role
+     * @param roleAdmins Bitmap of roles that can perform admin actions on this role
      */
-    function setRoleAdmin(uint8 roleId, bytes32 adminRoles) external {
+    function setRoleAdmin(uint8 roleId, bytes32 roleAdmins) external {
         if (roleId == ROOT_ROLE_ID) {
             // Root role is treated as a special case. Only root role admins can change it
             if (!isRoleAdmin(msg.sender, ROOT_ROLE_ID)) {
@@ -106,9 +106,9 @@ contract Roles is UpgradeableModule, IRoles {
             }
         }
 
-        getRoleAdmin[roleId] = adminRoles;
+        getRoleAdmins[roleId] = roleAdmins;
 
-        emit RoleAdminSet(roleId, adminRoles, msg.sender);
+        emit RoleAdminsSet(roleId, roleAdmins, msg.sender);
     }
 
     /**
@@ -232,7 +232,7 @@ contract Roles is UpgradeableModule, IRoles {
     }
 
     function _isRoleAdmin(bytes32 _userRoles, uint8 roleId) internal view returns (bool) {
-        return (_userRoles & getRoleAdmin[roleId]) != 0
+        return (_userRoles & getRoleAdmins[roleId]) != 0
             || (_hasRootRole(_userRoles) && roleExists(roleId) && roleId != ROOT_ROLE_ID);
     }
 
