@@ -24,7 +24,7 @@ contract Roles is UpgradeableModule, IRoles {
 
     event RoleCreated(uint8 indexed roleId, bytes32 roleAdmins, string name, address indexed actor);
     event RoleNameChanged(uint8 indexed roleId, string name);
-    event RoleAdminSet(uint8 indexed roleId, bytes32 roleAdmins, address indexed actor);
+    event RoleAdminsSet(uint8 indexed roleId, bytes32 roleAdmins, address indexed actor);
     event UserRolesChanged(address indexed user, bytes32 oldUserRoles, bytes32 newUserRoles, address indexed actor);
 
     error UnauthorizedNoRole(uint8 requiredRole);
