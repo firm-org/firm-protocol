@@ -9,7 +9,7 @@ import {IRoles, RolesAuth} from "../common/RolesAuth.sol";
 
 import {TimeShiftLib, EncodedTimeShift} from "./TimeShiftLib.sol";
 
-address constant ETH = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
+address constant NATIVE_ASSET = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 uint256 constant NO_PARENT_ID = 0;
 uint64 constant INHERITED_RESET_TIME = 0;
 
@@ -237,7 +237,7 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
         (uint64 nextResetTime,) = _checkAndUpdateAllowanceChain(allowanceId, token, to, amount);
 
         bool success;
-        if (token == ETH) {
+        if (token == NATIVE_ASSET) {
             success = exec(to, amount, hex"", SafeEnums.Operation.Call);
         } else {
             (bool callSuccess, bytes memory retData) =
