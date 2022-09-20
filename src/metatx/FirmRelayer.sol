@@ -11,13 +11,16 @@ import {EIP712} from "openzeppelin/utils/cryptography/draft-EIP712.sol";
 contract FirmRelayer is EIP712 {
     using ECDSA for bytes32;
 
+    // NOTE: Assertions are its own separate array since it results in smaller calldata
+    // than if the Call struct had an assertions array member for common cases
+    // in which there will be one assertion per call and many calls will not
+    // have assertions, resulting in more expensive encoding (1 more word for each empty array)
     struct RelayRequest {
         address from;
         uint256 nonce;
         Call[] calls;
         Assertion[] assertions;
     }
-
     struct Call {
         address to;
         uint256 value;
@@ -25,7 +28,6 @@ contract FirmRelayer is EIP712 {
         bytes data;
         uint256 assertionIndex; // one-indexed, 0 signals no assertions
     }
-
     struct Assertion {
         uint256 position;
         bytes32 expectedValue;
