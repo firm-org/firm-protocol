@@ -74,7 +74,7 @@ contract FirmRelayer is EIP712 {
         getNonce[signer] = request.nonce + 1;
 
         for (uint256 i = 0; i < request.calls.length;) {
-            Call memory call = request.calls[i];
+            Call calldata call = request.calls[i];
 
             bytes memory payload = abi.encodePacked(call.data, signer);
             (bool success, bytes memory returnData) = call.to.call{ value: call.value, gas: call.gas }(payload);
