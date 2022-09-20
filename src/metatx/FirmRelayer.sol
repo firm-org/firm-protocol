@@ -22,7 +22,6 @@ contract FirmRelayer is EIP712 {
         address to;
         uint256 value;
         uint256 gas;
-        uint256 nonce;
         bytes data;
         uint256 assertionIndex; // one-indexed, 0 signals no assertions
     }
@@ -34,7 +33,7 @@ contract FirmRelayer is EIP712 {
 
     // See https://eips.ethereum.org/EIPS/eip-712#definition-of-typed-structured-data-%F0%9D%95%8A
     string internal constant ASSERTION_TYPE = "Assertion(uint256 position,bytes32 expectedValue)";
-    string internal constant CALL_TYPE = "Call(address to,uint256 value,uint256 gas,uint256 nonce,bytes data,uint256 assertionIndex)";
+    string internal constant CALL_TYPE = "Call(address to,uint256 value,uint256 gas,bytes data,uint256 assertionIndex)";
 
     bytes32 internal constant REQUEST_TYPEHASH =
         keccak256(abi.encodePacked("RelayRequest(address from,uint256 nonce,Call[] calls,Assertion[] assertions)", ASSERTION_TYPE, CALL_TYPE));
@@ -52,7 +51,7 @@ contract FirmRelayer is EIP712 {
     error AssertionPositionOutOfBounds(uint256 callIndex, uint256 returnDataLenght);
     error AssertionFailed(uint256 callIndex, bytes32 actualValue, bytes32 expectedValue);
 
-    constructor() EIP712("FirmRelayer", "0.0.1") {}
+    constructor() EIP712("Firm Relayer", "0.0.1") {}
 
     function verify(RelayRequest calldata request, bytes calldata signature) public view returns (bool) {
         return requestTypedDataHash(request).recover(signature) == request.from;
@@ -119,7 +118,7 @@ contract FirmRelayer is EIP712 {
         bytes32[] memory hashes = new bytes32[](calls.length);
         for (uint256 i = 0; i < calls.length;) {
             Call calldata call = calls[i];
-            hashes[i] = keccak256(abi.encode(CALL_TYPEHASH, call.to, call.value, call.nonce, keccak256(call.data), call.assertionIndex));
+            hashes[i] = keccak256(abi.encode(CALL_TYPEHASH, call.to, call.value, call.gas, keccak256(call.data), call.assertionIndex));
             unchecked {
                 i++;
             }
