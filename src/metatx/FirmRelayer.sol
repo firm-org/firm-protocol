@@ -39,6 +39,7 @@ contract FirmRelayer is EIP712 {
         keccak256(abi.encodePacked("RelayRequest(address from,uint256 nonce,Call[] calls,Assertion[] assertions)", ASSERTION_TYPE, CALL_TYPE));
     bytes32 internal constant ASSERTION_TYPEHASH = keccak256(abi.encodePacked(ASSERTION_TYPE));
     bytes32 internal constant CALL_TYPEHASH = keccak256(abi.encodePacked(CALL_TYPE));
+    bytes32 internal constant ZERO_HASH = keccak256("");
 
     uint256 internal constant ASSERTION_WORD_SIZE = 32;
 
@@ -119,8 +120,12 @@ contract FirmRelayer is EIP712 {
     }
 
     function hash(Call[] calldata calls) internal pure returns (bytes32) {
-        bytes32[] memory hashes = new bytes32[](calls.length);
-        for (uint256 i = 0; i < calls.length;) {
+        uint256 length = calls.length;
+        if (length == 0) {
+            return ZERO_HASH;
+        }
+        bytes32[] memory hashes = new bytes32[](length);
+        for (uint256 i = 0; i < length;) {
             Call calldata call = calls[i];
             hashes[i] = keccak256(abi.encode(CALL_TYPEHASH, call.to, call.value, call.gas, keccak256(call.data), call.assertionIndex));
             unchecked {
@@ -131,8 +136,12 @@ contract FirmRelayer is EIP712 {
     }
 
     function hash(Assertion[] calldata assertions) internal pure returns (bytes32) {
-        bytes32[] memory hashes = new bytes32[](assertions.length);
-        for (uint256 i = 0; i < assertions.length;) {
+        uint256 length = assertions.length;
+        if (length == 0) {
+            return ZERO_HASH;
+        }
+        bytes32[] memory hashes = new bytes32[](length);
+        for (uint256 i = 0; i < length;) {
             Assertion calldata assertion = assertions[i];
             hashes[i] = keccak256(abi.encode(ASSERTION_TYPEHASH, assertion.position, assertion.expectedValue));
             unchecked {
