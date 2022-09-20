@@ -51,6 +51,8 @@ contract FirmRelayer is EIP712 {
     error AssertionPositionOutOfBounds(uint256 callIndex, uint256 returnDataLenght);
     error AssertionFailed(uint256 callIndex, bytes32 actualValue, bytes32 expectedValue);
 
+    event Relayed(address indexed relayer, address indexed signer, uint256 nonce, uint256 numCalls);
+
     constructor() EIP712("Firm Relayer", "0.0.1") {}
 
     function verify(RelayRequest calldata request, bytes calldata signature) public view returns (bool) {
@@ -106,6 +108,8 @@ contract FirmRelayer is EIP712 {
                 i++;
             }
         }
+
+        emit Relayed(msg.sender, signer, request.nonce, request.calls.length);
     }
 
     function requestTypedDataHash(RelayRequest calldata request) public view returns (bytes32) {
