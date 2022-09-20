@@ -5,11 +5,192 @@ import {FirmTest} from "../../common/test/lib/FirmTest.sol";
 
 import "../FirmRelayer.sol";
 
+import {ERC2771Context} from "../../bases/ERC2771Context.sol";
+contract RelayTarget is ERC2771Context {
+    error BadSender(address expected, address actual);
+
+    address public lastSender;
+
+    constructor(address trustedForwarder) {
+        _setTrustedForwarder(trustedForwarder, true);
+    }
+
+    function onlySender(address expectedSender) public returns (address sender) {
+        sender = _msgSender();
+
+        if (sender != expectedSender) {
+            revert BadSender(expectedSender, _msgSender());
+        }
+
+        lastSender = sender;
+    }
+}
+
 contract FirmRelayerTest is FirmTest {
     FirmRelayer relayer;
+    RelayTarget target;
+
+    address immutable USER;
+    uint256 immutable USER_PK;
+
+    constructor() {
+        (USER, USER_PK) = accountAndKey("user");
+    }
 
     function setUp() public {
         relayer = new FirmRelayer();
+        target = new RelayTarget(address(relayer));
+    }
+
+    function testBasicRelay() public {
+        FirmRelayer.Call memory call = _defaultCallWithData(address(target), abi.encodeCall(target.onlySender, (USER)));
+        FirmRelayer.RelayRequest memory request = _defaultRequestWithCall(call);
+
+        relayer.relay(request, _signPacked(relayer.requestTypedDataHash(request), USER_PK));
+
+        assertEq(target.lastSender(), USER);
+        assertEq(relayer.getNonce(USER), 1);
+    }
+
+    function testRelayWithAssertion() public {
+        FirmRelayer.Call memory call = _defaultCallWithData(address(target), abi.encodeCall(target.onlySender, (USER)));
+        FirmRelayer.Assertion memory assertion = FirmRelayer.Assertion(0, bytes32(abi.encode(USER)));
+        FirmRelayer.RelayRequest memory request = _defaultRequestWithCallAndAssertion(call, assertion);
+
+        relayer.relay(request, _signPacked(relayer.requestTypedDataHash(request), USER_PK));
+
+        assertEq(target.lastSender(), USER);
+        assertEq(relayer.getNonce(USER), 1);
+    }
+
+    function testRelayNonceIncreases() public {
+        testBasicRelay();
+
+        FirmRelayer.Call memory call = _defaultCallWithData(address(target), abi.encodeCall(target.onlySender, (USER)));
+        FirmRelayer.RelayRequest memory request = _defaultRequestWithCall(call);
+        assertEq(request.nonce, 1);
+
+        relayer.relay(request, _signPacked(relayer.requestTypedDataHash(request), USER_PK));
+
+        assertEq(target.lastSender(), USER);
+        assertEq(relayer.getNonce(USER), 2);
+    }
+
+    function testRevertOnForgedSignature() public {
+        (, uint256 otherUserPk) = accountAndKey("other user");
+
+        FirmRelayer.Call memory call = _defaultCallWithData(address(target), abi.encodeCall(target.onlySender, (USER)));
+        FirmRelayer.RelayRequest memory request = _defaultRequestWithCall(call);
+        bytes32 hash = relayer.requestTypedDataHash(request);
+        
+        vm.expectRevert(abi.encodeWithSelector(FirmRelayer.BadSignature.selector));
+        relayer.relay(request, _signPacked(hash, otherUserPk));
+    }
+
+    function testRevertOnRepeatedNonce() public {
+        testBasicRelay();
+
+        FirmRelayer.Call memory call = _defaultCallWithData(address(target), abi.encodeCall(target.onlySender, (USER)));
+        FirmRelayer.RelayRequest memory request = _defaultRequestWithCall(call);
+        request.nonce = 0;
+
+        bytes32 hash = relayer.requestTypedDataHash(request);
+        vm.expectRevert(abi.encodeWithSelector(FirmRelayer.BadNonce.selector, 1));
+        relayer.relay(request, _signPacked(hash, USER_PK));
+    }
+
+    function testRevertOnInvalidSignature() public {
+        FirmRelayer.Call memory call = _defaultCallWithData(address(target), abi.encodeCall(target.onlySender, (USER)));
+        FirmRelayer.RelayRequest memory request = _defaultRequestWithCall(call);
+
+        bytes memory signature = _signPacked(relayer.requestTypedDataHash(request), USER_PK);
+        assembly {
+            // randomly change one byte from the signature
+            let p := add(signature, 33)
+            mstore8(p, add(1, byte(0, mload(p))))
+        }
+        vm.expectRevert(abi.encodeWithSelector(FirmRelayer.BadSignature.selector));
+        relayer.relay(request, signature);
+    }
+
+    function testRevertOnTargetBadSender() public {
+        (address otherUser, uint256 otherUserPk) = accountAndKey("other user");
+
+        FirmRelayer.Call memory call = _defaultCallWithData(address(target), abi.encodeCall(target.onlySender, (USER)));
+        FirmRelayer.RelayRequest memory request = _defaultRequestWithCall(call);
+        request.from = otherUser;
+        bytes32 hash = relayer.requestTypedDataHash(request);
+        
+        bytes memory targetError = abi.encodeWithSelector(RelayTarget.BadSender.selector, USER, otherUser);
+        vm.expectRevert(abi.encodeWithSelector(FirmRelayer.CallExecutionFailed.selector, 0, address(target), targetError));
+        relayer.relay(request, _signPacked(hash, otherUserPk));
+    }
+
+    function testRevertOnAssertionFailure() public {
+        bytes32 actualReturnValue = bytes32(abi.encode(USER));
+        bytes32 badExpectedValue = bytes32(uint256(0));
+
+        FirmRelayer.Call memory call = _defaultCallWithData(address(target), abi.encodeCall(target.onlySender, (USER)));
+        FirmRelayer.Assertion memory assertion = FirmRelayer.Assertion(0, badExpectedValue);
+        FirmRelayer.RelayRequest memory request = _defaultRequestWithCallAndAssertion(call, assertion);
+
+        bytes32 hash = relayer.requestTypedDataHash(request);
+        vm.expectRevert(abi.encodeWithSelector(FirmRelayer.AssertionFailed.selector, 0, actualReturnValue, badExpectedValue));
+        relayer.relay(request, _signPacked(hash, USER_PK));
+    }
+
+    function testRevertOnAssertionOutOfBounds() public {
+        FirmRelayer.Call memory call = _defaultCallWithData(address(target), abi.encodeCall(target.onlySender, (USER)));
+        FirmRelayer.Assertion memory assertion = FirmRelayer.Assertion(1, bytes32(abi.encode(USER)));
+        FirmRelayer.RelayRequest memory request = _defaultRequestWithCallAndAssertion(call, assertion);
+
+        bytes32 hash = relayer.requestTypedDataHash(request);
+        vm.expectRevert(abi.encodeWithSelector(FirmRelayer.AssertionPositionOutOfBounds.selector, 0, 32));
+        relayer.relay(request, _signPacked(hash, USER_PK));
+    }
+
+    function testRevertOnBadAssertionIndex() public {
+        FirmRelayer.Call memory call = _defaultCallWithData(address(target), abi.encodeCall(target.onlySender, (USER)));
+        FirmRelayer.Assertion memory assertion = FirmRelayer.Assertion(0, bytes32(abi.encode(USER)));
+        FirmRelayer.RelayRequest memory request = _defaultRequestWithCallAndAssertion(call, assertion);
+        request.calls[0].assertionIndex = 2;
+
+        bytes32 hash = relayer.requestTypedDataHash(request);
+        vm.expectRevert(abi.encodeWithSelector(FirmRelayer.BadAssertionIndex.selector, 0));
+        relayer.relay(request, _signPacked(hash, USER_PK));
+    } 
+
+    function _signPacked(bytes32 hash, uint256 pk) internal returns (bytes memory sig) {
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, hash);
+
+        sig = new bytes(65);
+        assembly {
+            mstore(add(sig, 0x20), r)
+            mstore(add(sig, 0x40), s)
+            mstore8(add(sig, 0x60), v)
+        }
+    }
+
+    function _defaultCallWithData(address to, bytes memory data) internal pure returns (FirmRelayer.Call memory call) {
+        call.to = to;
+        call.data = data;
+        call.value = 0;
+        call.gas = 10_000_000; // random big value for testing
+        call.assertionIndex = 0;
+    }
+
+    function _defaultRequestWithCall(FirmRelayer.Call memory call) internal view returns (FirmRelayer.RelayRequest memory request) {
+        request.from = USER;
+        request.nonce = relayer.getNonce(USER);
+        request.calls = new FirmRelayer.Call[](1);
+        request.calls[0] = call;
+    }
+
+    function _defaultRequestWithCallAndAssertion(FirmRelayer.Call memory call, FirmRelayer.Assertion memory assertion) internal view returns (FirmRelayer.RelayRequest memory request) {
+        request = _defaultRequestWithCall(call);
+        request.assertions = new FirmRelayer.Assertion[](1);
+        request.assertions[0] = assertion;
+        request.calls[0].assertionIndex = 1;
     }
 
     // For this test we need to fix both the address of FirmRelayer and chainId so that the hash

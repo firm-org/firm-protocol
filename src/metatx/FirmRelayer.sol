@@ -46,7 +46,7 @@ contract FirmRelayer is EIP712 {
 
     error BadSignature();
     error BadNonce(uint256 expectedNonce);
-    error CallExecutionFailed(uint256 callIndex, bytes revertData);
+    error CallExecutionFailed(uint256 callIndex, address to, bytes revertData);
     error BadAssertionIndex(uint256 callIndex);
     error AssertionPositionOutOfBounds(uint256 callIndex, uint256 returnDataLenght);
     error AssertionFailed(uint256 callIndex, bytes32 actualValue, bytes32 expectedValue);
@@ -77,7 +77,7 @@ contract FirmRelayer is EIP712 {
             (bool success, bytes memory returnData) = call.to.call{ value: call.value, gas: call.gas }(payload);
 
             if (!success) {
-                revert CallExecutionFailed(i, returnData);
+                revert CallExecutionFailed(i, call.to, returnData);
             }
 
             uint256 assertionIndex = call.assertionIndex;

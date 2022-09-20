@@ -3,14 +3,12 @@ pragma solidity ^0.8.16;
 
 import {IAvatar} from "zodiac/interfaces/IAvatar.sol";
 
-import {IModuleMetadata} from "./IModuleMetadata.sol";
-
 /**
  * @title SafeAware
  * @dev Base contract for Firm components that need to be aware of a Safe
  * as their admin
  */
-abstract contract SafeAware is IModuleMetadata {
+abstract contract SafeAware {
     // SAFE_SLOT = keccak256("firm.safeaware.safe") - 1
     bytes32 internal constant SAFE_SLOT = 0xb2c095c1a3cccf4bf97d6c0d6a44ba97fddb514f560087d9bf71be2c324b6c44;
 
