@@ -28,7 +28,7 @@ contract BasesTest is FirmTest {
         avatar = new AvatarStub();
         module = ModuleMock(
             factory.deployUpgradeableModule(
-                address(moduleOneImpl), abi.encodeCall(moduleOneImpl.initialize, (avatar, INITIAL_BAR)), 0
+                moduleOneImpl, abi.encodeCall(moduleOneImpl.initialize, (avatar, INITIAL_BAR)), 0
             )
         );
         vm.label(address(module), "Proxy");

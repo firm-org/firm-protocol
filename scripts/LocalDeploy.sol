@@ -18,8 +18,8 @@ contract LocalDeploy is Test {
             new GnosisSafeProxyFactory(),
             new UpgradeableModuleProxyFactory(),
             address(new GnosisSafe()),
-            address(new Roles(IAvatar(address(10)))),
-            address(new Budget(IAvatar(address(10)), IRoles(address(10))))
+            new Roles(),
+            new Budget()
         );
 
         vm.stopBroadcast();

@@ -12,6 +12,7 @@ import {TimeShiftLib, EncodedTimeShift} from "./TimeShiftLib.sol";
 address constant NATIVE_ASSET = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 uint256 constant NO_PARENT_ID = 0;
 uint64 constant INHERITED_RESET_TIME = 0;
+address constant IMPL_INIT_ADDRESS = address(1);
 
 /**
  * @title Budget
@@ -29,8 +30,9 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
     // INITIALIZATION
     ////////////////////////////////////////////////////////////////////////////////
 
-    constructor(IAvatar _safe, IRoles _roles) {
-        initialize(_safe, _roles);
+    constructor() {
+        // Initialize with impossible values in constructor so impl base cannot be used
+        initialize(IAvatar(IMPL_INIT_ADDRESS), IRoles(IMPL_INIT_ADDRESS));
     }
 
     function initialize(IAvatar _safe, IRoles _roles) public {

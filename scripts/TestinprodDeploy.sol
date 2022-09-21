@@ -36,8 +36,8 @@ contract TestinprodDeploy is Test {
             GnosisSafeProxyFactory(safeProxyFactory),
             new UpgradeableModuleProxyFactory(),
             safeImpl,
-            address(new Roles(IAvatar(address(10)))),
-            address(new Budget(IAvatar(address(10)), IRoles(address(10))))
+            new Roles(),
+            new Budget()
         );
 
         vm.stopBroadcast();

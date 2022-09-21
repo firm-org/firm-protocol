@@ -2,7 +2,7 @@
 pragma solidity 0.8.16;
 
 import {FirmTest} from "../../common/test/lib/FirmTest.sol";
-import "../../factory/UpgradeableModuleProxyFactory.sol";
+
 
 import {SafeAware} from "../../bases/SafeAware.sol";
 import "../Roles.sol";
@@ -14,8 +14,8 @@ contract RolesTest is FirmTest {
     address SOMEONE = account("someone");
     address SOMEONE_ELSE = account("someone else");
 
-    function setUp() public virtual {
-        roles = new Roles(IAvatar(ADMIN));
+    function setUp() public {
+        roles = Roles(createProxy(new Roles(), abi.encodeCall(Roles.initialize, (IAvatar(ADMIN)))));
     }
 
     function testInitialRoot() public {
@@ -174,15 +174,5 @@ contract RolesTest is FirmTest {
         // However, when attempting to change the admin role, it will fail
         vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, ROOT_ROLE_ID));
         roles.setRoleAdmin(ROOT_ROLE_ID, newRoleAdmin);
-    }
-}
-
-contract RolesWithProxyTest is RolesTest {
-    UpgradeableModuleProxyFactory immutable factory = new UpgradeableModuleProxyFactory();
-    address immutable rolesImpl = address(new Roles(IAvatar(address(1))));
-
-    function setUp() public override {
-        roles = Roles(factory.deployUpgradeableModule(rolesImpl, abi.encodeCall(Roles.initialize, (IAvatar(ADMIN))), 0));
-        vm.label(address(roles), "RolesProxy");
     }
 }
