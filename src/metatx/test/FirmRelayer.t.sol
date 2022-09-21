@@ -67,18 +67,6 @@ contract FirmRelayerTest is FirmTest {
         relayer.relay(request, _signPacked(hash, otherUserPk));
     }
 
-    function testRevertOnRepeatedNonce() public {
-        testBasicRelay();
-
-        FirmRelayer.Call memory call = _defaultCallWithData(address(target), abi.encodeCall(target.onlySender, (USER)));
-        FirmRelayer.RelayRequest memory request = _defaultRequestWithCall(call);
-        request.nonce = 0;
-
-        bytes32 hash = relayer.requestTypedDataHash(request);
-        vm.expectRevert(abi.encodeWithSelector(FirmRelayer.BadNonce.selector, 1));
-        relayer.relay(request, _signPacked(hash, USER_PK));
-    }
-
     function testRevertOnInvalidSignature() public {
         FirmRelayer.Call memory call = _defaultCallWithData(address(target), abi.encodeCall(target.onlySender, (USER)));
         FirmRelayer.RelayRequest memory request = _defaultRequestWithCall(call);
@@ -91,6 +79,18 @@ contract FirmRelayerTest is FirmTest {
         }
         vm.expectRevert(abi.encodeWithSelector(FirmRelayer.BadSignature.selector));
         relayer.relay(request, signature);
+    }
+    
+    function testRevertOnRepeatedNonce() public {
+        testBasicRelay();
+
+        FirmRelayer.Call memory call = _defaultCallWithData(address(target), abi.encodeCall(target.onlySender, (USER)));
+        FirmRelayer.RelayRequest memory request = _defaultRequestWithCall(call);
+        request.nonce = 0;
+
+        bytes32 hash = relayer.requestTypedDataHash(request);
+        vm.expectRevert(abi.encodeWithSelector(FirmRelayer.BadNonce.selector, 1));
+        relayer.relay(request, _signPacked(hash, USER_PK));
     }
 
     function testRevertOnTargetBadSender() public {
@@ -138,7 +138,18 @@ contract FirmRelayerTest is FirmTest {
         bytes32 hash = relayer.requestTypedDataHash(request);
         vm.expectRevert(abi.encodeWithSelector(FirmRelayer.BadAssertionIndex.selector, 0));
         relayer.relay(request, _signPacked(hash, USER_PK));
-    } 
+    }
+
+    function testSelfRelay() public {
+        FirmRelayer.Call memory call = _defaultCallWithData(address(target), abi.encodeCall(target.onlySender, (USER)));
+        FirmRelayer.RelayRequest memory request = _defaultRequestWithCall(call);
+
+        vm.prank(USER);
+        relayer.selfRelay(request.calls, request.assertions);
+
+        assertEq(target.lastSender(), USER);
+        assertEq(relayer.getNonce(USER), 0);
+    }
 
     function _signPacked(bytes32 hash, uint256 pk) internal returns (bytes memory sig) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, hash);

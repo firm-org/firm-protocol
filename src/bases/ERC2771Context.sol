@@ -7,8 +7,8 @@ import {SafeAware} from "./SafeAware.sol";
  * Copied and modified from https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.7.3/contracts/metatx/ERC2771Context.sol (MIT licensed)
  */
 abstract contract ERC2771Context is SafeAware {
-    // SAFE_SLOT = keccak256("firm.erc2271context.forwarder") - 1
-    bytes32 internal constant ERC2271_TRUSTED_FORWARDER_BASE_SLOT = 0xc27172d3630c4ee87376c26d4c7c8196926bdd5ea9ce60f772559241ebca94a8;
+    // SAFE_SLOT = keccak256("firm.erc2271context.forwarders") - 1
+    bytes32 internal constant ERC2271_TRUSTED_FORWARDERS_BASE_SLOT = 0xde1482070091aef895249374204bcae0fa9723215fa9357228aa489f9d1bd669;
 
     event TrustedForwarderSet(address indexed forwarder, bool enabled);
 
@@ -48,7 +48,7 @@ abstract contract ERC2771Context is SafeAware {
 
     function _trustedForwarders() internal pure returns (mapping (address => bool) storage trustedForwarders) {
         assembly {
-            trustedForwarders.slot := ERC2271_TRUSTED_FORWARDER_BASE_SLOT
+            trustedForwarders.slot := ERC2271_TRUSTED_FORWARDERS_BASE_SLOT
         }
     }
 }
