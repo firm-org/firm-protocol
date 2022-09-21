@@ -9,8 +9,8 @@ contract TestinprodFactory is FirmFactory {
         UpgradeableModuleProxyFactory _moduleFactory,
         FirmRelayer _relayer,
         address _safeImpl,
-        address _rolesImpl,
-        address _budgetImpl
+        Roles _rolesImpl,
+        Budget _budgetImpl
     ) FirmFactory(_safeFactory, _moduleFactory, _relayer, _safeImpl, _rolesImpl, _budgetImpl) {}
 
     function createFirmCopyingSafe(GnosisSafe baseSafe) external returns (GnosisSafe safe) {

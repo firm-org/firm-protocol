@@ -21,8 +21,8 @@ contract FirmFactory {
     FirmRelayer public immutable relayer;
 
     address public immutable safeImpl;
-    address public immutable rolesImpl;
-    address public immutable budgetImpl;
+    Roles public immutable rolesImpl;
+    Budget public immutable budgetImpl;
 
     error EnableModuleFailed();
 
@@ -34,8 +34,8 @@ contract FirmFactory {
         UpgradeableModuleProxyFactory _moduleFactory,
         FirmRelayer _relayer,
         address _safeImpl,
-        address _rolesImpl,
-        address _budgetImpl
+        Roles _rolesImpl,
+        Budget _budgetImpl
     ) {
         safeFactory = _safeFactory;
         moduleFactory = _moduleFactory;

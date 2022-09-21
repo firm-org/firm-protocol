@@ -2,7 +2,7 @@
 pragma solidity 0.8.16;
 
 import {FirmTest} from "../../common/test/lib/FirmTest.sol";
-import "../../factory/UpgradeableModuleProxyFactory.sol";
+
 
 import {SafeAware} from "../../bases/SafeAware.sol";
 import "../Roles.sol";
@@ -14,8 +14,8 @@ contract RolesTest is FirmTest {
     address SOMEONE = account("someone");
     address SOMEONE_ELSE = account("someone else");
 
-    function setUp() public virtual {
-        roles = new Roles(IAvatar(ADMIN), address(0));
+    function setUp() public {
+        roles = Roles(createProxy(new Roles(), abi.encodeCall(Roles.initialize, (IAvatar(ADMIN), address(0)))));
     }
 
     function testInitialRoot() public {
@@ -135,7 +135,7 @@ contract RolesTest is FirmTest {
         vm.prank(ADMIN);
         bytes32 newRoleAdmin = ONLY_ROOT_ROLE | bytes32(1 << uint256(newRoleId));
         roles.setRoleAdmin(newRoleId, newRoleAdmin); // those with newRoleId are admins
-        assertEq(roles.getRoleAdmin(newRoleId), newRoleAdmin);
+        assertEq(roles.getRoleAdmins(newRoleId), newRoleAdmin);
 
         vm.prank(SOMEONE);
         roles.setRole(SOMEONE_ELSE, newRoleId, true); // action that was previously reverting, now succeeds
@@ -158,7 +158,7 @@ contract RolesTest is FirmTest {
         bytes32 newRoleAdmin = ONLY_ROOT_ROLE | bytes32(1 << uint256(ROLE_MANAGER_ROLE));
         vm.prank(ADMIN);
         roles.setRoleAdmin(ROOT_ROLE_ID, newRoleAdmin);
-        assertEq(roles.getRoleAdmin(ROOT_ROLE_ID), newRoleAdmin);
+        assertEq(roles.getRoleAdmins(ROOT_ROLE_ID), newRoleAdmin);
     }
 
     function testNonAdminCantChangeAdminForAdminRole() public {
@@ -169,20 +169,10 @@ contract RolesTest is FirmTest {
         vm.startPrank(SOMEONE);
         bytes32 newRoleAdmin = ONLY_ROOT_ROLE | bytes32(1 << uint256(ROLE_MANAGER_ROLE));
         roles.setRoleAdmin(ROLE_MANAGER_ROLE, newRoleAdmin);
-        assertEq(roles.getRoleAdmin(ROLE_MANAGER_ROLE), newRoleAdmin);
+        assertEq(roles.getRoleAdmins(ROLE_MANAGER_ROLE), newRoleAdmin);
 
         // However, when attempting to change the admin role, it will fail
         vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, ROOT_ROLE_ID));
         roles.setRoleAdmin(ROOT_ROLE_ID, newRoleAdmin);
-    }
-}
-
-contract RolesWithProxyTest is RolesTest {
-    UpgradeableModuleProxyFactory immutable factory = new UpgradeableModuleProxyFactory();
-    address immutable rolesImpl = address(new Roles(IAvatar(address(1)), address(0)));
-
-    function setUp() public override {
-        roles = Roles(factory.deployUpgradeableModule(rolesImpl, abi.encodeCall(Roles.initialize, (IAvatar(ADMIN), address(0))), 0));
-        vm.label(address(roles), "RolesProxy");
     }
 }

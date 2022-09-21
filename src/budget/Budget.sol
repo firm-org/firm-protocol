@@ -12,6 +12,7 @@ import {TimeShiftLib, EncodedTimeShift} from "./TimeShiftLib.sol";
 address constant NATIVE_ASSET = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 uint256 constant NO_PARENT_ID = 0;
 uint64 constant INHERITED_RESET_TIME = 0;
+address constant IMPL_INIT_ADDRESS = address(1);
 
 /**
  * @title Budget
@@ -21,7 +22,7 @@ uint64 constant INHERITED_RESET_TIME = 0;
  */
 contract Budget is FirmBase, ZodiacModule, RolesAuth {
     string public constant moduleId = "org.firm.budget";
-    uint256 public constant moduleVersion = 0;
+    uint256 public constant moduleVersion = 1;
 
     using TimeShiftLib for uint64;
 
@@ -29,8 +30,9 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
     // INITIALIZATION
     ////////////////////////////////////////////////////////////////////////////////
 
-    constructor(IAvatar safe_, IRoles roles_, address trustedForwarder_) {
-        initialize(safe_, roles_, trustedForwarder_);
+    constructor() {
+        // Initialize with impossible values in constructor so impl base cannot be used
+        initialize(IAvatar(IMPL_INIT_ADDRESS), IRoles(IMPL_INIT_ADDRESS), IMPL_INIT_ADDRESS);
     }
 
     function initialize(IAvatar _safe, IRoles _roles, address trustedForwarder_) public {
@@ -79,13 +81,25 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         uint64 nextResetTime,
         string description
     );
+    event MultiPaymentExecuted(
+        uint256 indexed allowanceId,
+        address indexed actor,
+        address token,
+        address[] tos,
+        uint256[] amounts,
+        uint64 nextResetTime,
+        string description
+    );
 
     error UnexistentAllowance(uint256 allowanceId);
     error DisabledAllowance(uint256 allowanceId);
     error UnauthorizedNotAllowanceAdmin(uint256 allowanceId);
     error TokenMismatch(address patentToken, address childToken);
+    error ZeroAmountPayment();
+    error BadInput();
+    error BadExecutionContext();
     error UnauthorizedPaymentExecution(uint256 allowanceId, address actor);
-    error Overbudget(uint256 allowanceId, address token, address to, uint256 amount, uint256 remainingBudget);
+    error Overbudget(uint256 allowanceId, uint256 amount, uint256 remainingBudget);
     error PaymentExecutionFailed(uint256 allowanceId, address token, address to, uint256 amount);
 
     /**
@@ -232,24 +246,105 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
             revert UnauthorizedPaymentExecution(allowanceId, _msgSender());
         }
 
-        address token = allowance.token;
-        // Make sure the payment is within budget all the way up to its top-level budget
-        (uint64 nextResetTime,) = _checkAndUpdateAllowanceChain(allowanceId, token, to, amount);
+        if (amount == 0) {
+            revert ZeroAmountPayment();
+        }
 
-        bool success;
+        address token = allowance.token;
+
+        // Make sure the payment is within budget all the way up to its top-level budget
+        (uint64 nextResetTime,) = _checkAndUpdateAllowanceChain(allowanceId, amount);
+
+        if (!_performTransfer(token, to, amount)) {
+            revert PaymentExecutionFailed(allowanceId, token, to, amount);
+        }
+
+        emit PaymentExecuted(allowanceId, _msgSender(), token, to, amount, nextResetTime, description);
+    }
+
+    /**
+     * @notice Executes multiple payments from an allowance
+     * @param allowanceId ID of the allowance from which payments are made
+     * @param tos Addresses that will receive the payment
+     * @param amounts Amounts of the allowance's token being sent
+     * @param description Description of the payments
+     */
+    function executeMultiPayment(uint256 allowanceId, address[] calldata tos, uint256[] calldata amounts, string memory description) external {
+        Allowance storage allowance = _getAllowance(allowanceId);
+
+        if (!_isAuthorized(_msgSender(), allowance.spender)) {
+            revert UnauthorizedPaymentExecution(allowanceId, _msgSender());
+        }
+
+        uint256 count = tos.length;
+        if (count != amounts.length || count == 0) {
+            revert BadInput();
+        }
+
+        uint256 totalAmount = 0;
+        for (uint256 i = 0; i < count; ) {
+            totalAmount += amounts[i];
+
+            unchecked {
+                i++;
+            }
+        }
+
+        (uint64 nextResetTime,) = _checkAndUpdateAllowanceChain(allowanceId, totalAmount);
+
+        address token = allowance.token;
+        if (!_performMultiTransfer(token, tos, amounts)) {
+            revert PaymentExecutionFailed(allowanceId, token, address(0), totalAmount);
+        }
+
+        emit MultiPaymentExecuted(allowanceId, _msgSender(), token, tos, amounts, nextResetTime, description);
+    }
+
+    function _performTransfer(address token, address to, uint256 amount) internal returns (bool) {
         if (token == NATIVE_ASSET) {
-            success = exec(to, amount, hex"", SafeEnums.Operation.Call);
+            return exec(to, amount, hex"", SafeEnums.Operation.Call);
         } else {
             (bool callSuccess, bytes memory retData) =
                 execAndReturnData(token, 0, abi.encodeCall(IERC20.transfer, (to, amount)), SafeEnums.Operation.Call);
 
-            success = callSuccess && (((retData.length == 32 && abi.decode(retData, (bool))) || retData.length == 0));
+            return callSuccess && (((retData.length == 32 && abi.decode(retData, (bool))) || retData.length == 0));
         }
-        if (!success) {
-            revert PaymentExecutionFailed(allowanceId, token, to, amount);
+    }
+
+    function _performMultiTransfer(address token, address[] calldata tos, uint256[] calldata amounts) internal returns (bool) {
+        bytes memory data = abi.encodeCall(this.__safeContext_performMultiTransfer, (token, tos, amounts));
+
+        return exec(_implementation(), 0, data, SafeEnums.Operation.DelegateCall);
+    }
+
+    function __safeContext_performMultiTransfer(address token, address[] calldata tos, uint256[] calldata amounts) external {
+        // This function has to be external, but we need to ensure that it cannot be ran
+        // if we are on the proxy or impl context
+        // There's pressumably nothing malicious that could be done in this contract,
+        // but it's a good extra safety check
+        if (!_isForeignContext()) {
+            revert BadExecutionContext();
         }
 
-        emit PaymentExecuted(allowanceId, _msgSender(), allowance.token, to, amount, nextResetTime, description);
+        uint256 length = tos.length;
+
+        if (token == NATIVE_ASSET) {
+            for (uint256 i = 0; i < length; ) {
+                (bool callSuccess,) = tos[i].call{ value: amounts[i] }(hex"");
+                require(callSuccess);
+                unchecked {
+                    i++;
+                }
+            }
+        } else {
+            for (uint256 i = 0; i < length; ) {
+                (bool callSuccess, bytes memory retData) = token.call(abi.encodeCall(IERC20.transfer, (tos[i], amounts[i])));
+                require(callSuccess && (((retData.length == 32 && abi.decode(retData, (bool))) || retData.length == 0)));
+                unchecked {
+                    i++;
+                }
+            }
+        }
     }
 
     function _getAllowanceAndValidateAdmin(uint256 allowanceId) internal view returns (Allowance storage allowance) {
@@ -276,7 +371,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         return parentId == NO_PARENT_ID ? actor == address(safe()) : _isAuthorized(actor, allowances[parentId].spender);
     }
 
-    function _checkAndUpdateAllowanceChain(uint256 allowanceId, address token, address to, uint256 amount)
+    function _checkAndUpdateAllowanceChain(uint256 allowanceId, uint256 amount)
         internal
         returns (uint64 nextResetTime, bool allowanceResets)
     {
@@ -289,7 +384,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         if (allowance.nextResetTime == INHERITED_RESET_TIME) {
             // Note that since top-level allowances are not allowed to have an inherited reset time,
             // this branch is only ever executed for sub-allowances (which always have a parentId)
-            (nextResetTime, allowanceResets) = _checkAndUpdateAllowanceChain(allowance.parentId, token, to, amount);
+            (nextResetTime, allowanceResets) = _checkAndUpdateAllowanceChain(allowance.parentId, amount);
         } else {
             nextResetTime = allowance.nextResetTime;
 
@@ -303,13 +398,13 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
             }
 
             if (allowance.parentId != NO_PARENT_ID) {
-                _checkAndUpdateAllowanceChain(allowance.parentId, token, to, amount);
+                _checkAndUpdateAllowanceChain(allowance.parentId, amount);
             }
         }
 
         uint256 spentAfterPayment = amount + (allowanceResets ? 0 : allowance.spent);
         if (spentAfterPayment > allowance.amount) {
-            revert Overbudget(allowanceId, token, to, amount, allowance.amount - allowance.spent);
+            revert Overbudget(allowanceId, amount, allowance.amount - allowance.spent);
         }
 
         allowance.spent = spentAfterPayment;

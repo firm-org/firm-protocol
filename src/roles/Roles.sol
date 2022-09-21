@@ -6,6 +6,8 @@ import {IAvatar} from "../bases/SafeAware.sol";
 
 import {IRoles, ROOT_ROLE_ID, ROLE_MANAGER_ROLE, ONLY_ROOT_ROLE} from "./IRoles.sol";
 
+address constant IMPL_INIT_ADDRESS = address(1);
+
 /**
  * @title Roles
  * @author Firm (engineering@firm.org)
@@ -19,13 +21,13 @@ contract Roles is FirmBase, IRoles {
     uint256 public constant moduleVersion = 0;
 
     mapping(address => bytes32) public getUserRoles;
-    mapping(uint8 => bytes32) public getRoleAdmin;
+    mapping(uint8 => bytes32) public getRoleAdmins;
     uint256 public roleCount;
 
-    event RoleCreated(uint8 indexed roleId, bytes32 roleAdmin, string name, address indexed actor);
+    event RoleCreated(uint8 indexed roleId, bytes32 roleAdmins, string name, address indexed actor);
     event RoleNameChanged(uint8 indexed roleId, string name);
-    event RoleAdminSet(uint8 indexed roleId, bytes32 roleAdmin, address indexed actor);
-    event RolesSet(address indexed user, bytes32 userRoles, address indexed actor);
+    event RoleAdminsSet(uint8 indexed roleId, bytes32 roleAdmins, address indexed actor);
+    event UserRolesChanged(address indexed user, bytes32 oldUserRoles, bytes32 newUserRoles, address indexed actor);
 
     error UnauthorizedNoRole(uint8 requiredRole);
     error UnauthorizedNotAdmin(uint8 role);
@@ -35,8 +37,8 @@ contract Roles is FirmBase, IRoles {
     // INITIALIZATION
     ////////////////////////////////////////////////////////////////////////////////
 
-    constructor(IAvatar safe_, address trustedForwarder_) {
-        initialize(safe_, trustedForwarder_);
+    constructor() {
+        initialize(IAvatar(IMPL_INIT_ADDRESS), IMPL_INIT_ADDRESS);
     }
 
     function initialize(IAvatar safe_, address trustedForwarder_) public {
@@ -59,19 +61,19 @@ contract Roles is FirmBase, IRoles {
     /**
      * @notice Creates a new role
      * @dev Requires the sender to hold the Role Manager role
-     * @param adminRoles Bitmap of roles that can perform admin actions on the new role
+     * @param roleAdmins Bitmap of roles that can perform admin actions on the new role
      * @param name Name of the role
      * @return roleId ID of the new role
      */
-    function createRole(bytes32 adminRoles, string memory name) public returns (uint8 roleId) {
+    function createRole(bytes32 roleAdmins, string memory name) public returns (uint8 roleId) {
         if (!hasRole(_msgSender(), ROLE_MANAGER_ROLE)) {
             revert UnauthorizedNoRole(ROLE_MANAGER_ROLE);
         }
 
-        return _createRole(adminRoles, name);
+        return _createRole(roleAdmins, name);
     }
 
-    function _createRole(bytes32 adminRoles, string memory name) internal returns (uint8 roleId) {
+    function _createRole(bytes32 roleAdmins, string memory name) internal returns (uint8 roleId) {
         uint256 roleId_ = roleCount;
         if (roleId_ > type(uint8).max) {
             revert RoleLimitReached();
@@ -81,9 +83,9 @@ contract Roles is FirmBase, IRoles {
             roleCount++;
         }
 
-        getRoleAdmin[roleId] = adminRoles;
+        getRoleAdmins[roleId] = roleAdmins;
 
-        emit RoleCreated(roleId, adminRoles, name, _msgSender());
+        emit RoleCreated(roleId, roleAdmins, name, _msgSender());
     }
 
     /**
@@ -91,9 +93,9 @@ contract Roles is FirmBase, IRoles {
      * @dev For the Root role, the sender must be an admin of Root
      * For all other roles, the sender should hold the Role Manager role
      * @param roleId ID of the role
-     * @param adminRoles Bitmap of roles that can perform admin actions on this role
+     * @param roleAdmins Bitmap of roles that can perform admin actions on this role
      */
-    function setRoleAdmin(uint8 roleId, bytes32 adminRoles) external {
+    function setRoleAdmin(uint8 roleId, bytes32 roleAdmins) external {
         if (roleId == ROOT_ROLE_ID) {
             // Root role is treated as a special case. Only root role admins can change it
             if (!isRoleAdmin(_msgSender(), ROOT_ROLE_ID)) {
@@ -106,9 +108,9 @@ contract Roles is FirmBase, IRoles {
             }
         }
 
-        getRoleAdmin[roleId] = adminRoles;
+        getRoleAdmins[roleId] = roleAdmins;
 
-        emit RoleAdminSet(roleId, adminRoles, _msgSender());
+        emit RoleAdminsSet(roleId, roleAdmins, _msgSender());
     }
 
     /**
@@ -137,7 +139,8 @@ contract Roles is FirmBase, IRoles {
      * @param isGrant Whether the role is being granted or revoked
      */
     function setRole(address user, uint8 roleId, bool isGrant) external {
-        bytes32 userRoles = getUserRoles[user];
+        bytes32 oldUserRoles = getUserRoles[user];
+        bytes32 newUserRoles = oldUserRoles;
 
         // Implicitly checks that roleId had been created
         if (!_isRoleAdmin(getUserRoles[_msgSender()], roleId)) {
@@ -145,14 +148,14 @@ contract Roles is FirmBase, IRoles {
         }
 
         if (isGrant) {
-            userRoles |= bytes32(1 << roleId);
+            newUserRoles |= bytes32(1 << roleId);
         } else {
-            userRoles &= ~bytes32(1 << roleId);
+            newUserRoles &= ~bytes32(1 << roleId);
         }
 
-        getUserRoles[user] = userRoles;
+        getUserRoles[user] = newUserRoles;
 
-        emit RolesSet(user, userRoles, _msgSender());
+        emit UserRolesChanged(user, oldUserRoles, newUserRoles, _msgSender());
     }
 
     /**
@@ -164,7 +167,8 @@ contract Roles is FirmBase, IRoles {
      */
     function setRoles(address user, uint8[] memory grantingRoles, uint8[] memory revokingRoles) external {
         bytes32 senderRoles = getUserRoles[_msgSender()];
-        bytes32 userRoles = getUserRoles[user];
+        bytes32 oldUserRoles = getUserRoles[user];
+        bytes32 newUserRoles = oldUserRoles;
 
         uint256 grantsLength = grantingRoles.length;
         for (uint256 i = 0; i < grantsLength;) {
@@ -173,7 +177,7 @@ contract Roles is FirmBase, IRoles {
                 revert UnauthorizedNotAdmin(roleId);
             }
 
-            userRoles |= bytes32(1 << roleId);
+            newUserRoles |= bytes32(1 << roleId);
             unchecked {
                 i++;
             }
@@ -186,15 +190,15 @@ contract Roles is FirmBase, IRoles {
                 revert UnauthorizedNotAdmin(roleId);
             }
 
-            userRoles &= ~(bytes32(1 << roleId));
+            newUserRoles &= ~(bytes32(1 << roleId));
             unchecked {
                 i++;
             }
         }
 
-        getUserRoles[user] = userRoles;
+        getUserRoles[user] = newUserRoles;
 
-        emit RolesSet(user, userRoles, _msgSender());
+        emit UserRolesChanged(user, oldUserRoles, newUserRoles, _msgSender());
     }
 
     /**
@@ -230,7 +234,7 @@ contract Roles is FirmBase, IRoles {
     }
 
     function _isRoleAdmin(bytes32 _userRoles, uint8 roleId) internal view returns (bool) {
-        return (_userRoles & getRoleAdmin[roleId]) != 0
+        return (_userRoles & getRoleAdmins[roleId]) != 0
             || (_hasRootRole(_userRoles) && roleExists(roleId) && roleId != ROOT_ROLE_ID);
     }
 

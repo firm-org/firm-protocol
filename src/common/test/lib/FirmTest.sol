@@ -3,7 +3,12 @@ pragma solidity 0.8.16;
 
 import "forge-std/Test.sol";
 
+import "../../../factory/UpgradeableModuleProxyFactory.sol";
+import {EIP1967Upgradeable} from "../../../bases/EIP1967Upgradeable.sol";
+
 contract FirmTest is Test {
+    UpgradeableModuleProxyFactory immutable proxyFactory = new UpgradeableModuleProxyFactory();
+    
     function account(string memory label) internal returns (address addr) {
         (addr,) = accountAndKey(label);
     }
@@ -12,5 +17,10 @@ contract FirmTest is Test {
         pk = uint256(keccak256(abi.encodePacked(label)));
         addr = vm.addr(pk);
         vm.label(addr, label);
+    }
+
+    function createProxy(EIP1967Upgradeable impl, bytes memory initdata) internal returns (address proxy) {
+        proxy = proxyFactory.deployUpgradeableModule(impl, initdata, 0);
+        vm.label(proxy, "Proxy");
     }
 }
