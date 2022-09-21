@@ -102,7 +102,7 @@ contract BudgetTest is FirmTest {
         );
     }
 
-    function testAllowanceIsKeptTrackOf() public {
+    function testAllowanceIsKeptTrackOfOnSingle() public {
         uint64 initialTime = uint64(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
         uint256 allowanceId = 1;
 
@@ -119,6 +119,36 @@ contract BudgetTest is FirmTest {
         vm.prank(SPENDER);
         vm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, allowanceId, 7, 1));
         budget.executePayment(allowanceId, RECEIVER, 7, "");
+    }
+
+    function testAllowanceIsKeptTrackOfOnMulti() public {
+        uint64 initialTime = uint64(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
+        uint256 allowanceId = 1;
+
+        vm.prank(address(avatar));
+        vm.warp(initialTime);
+        createDailyAllowance(SPENDER, allowanceId);
+
+        // max out allowance doing 5 payments of 2
+        (address[] memory tos, uint256[] memory amounts) = _generateMultiPaymentArrays(5, RECEIVER, 2);
+        vm.prank(SPENDER);
+        budget.executeMultiPayment(allowanceId, tos, amounts, "");
+        
+        vm.prank(SPENDER);
+        vm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, allowanceId, 1, 0));
+        budget.executePayment(allowanceId, RECEIVER, 1, "");
+
+        vm.warp(initialTime + 1 days);
+        // almost max out allowance doing 4 payments of 2
+        (tos, amounts) = _generateMultiPaymentArrays(4, RECEIVER, 2);
+        vm.prank(SPENDER);
+        budget.executeMultiPayment(allowanceId, tos, amounts, "");
+
+        // max out on second payment
+        (tos, amounts) = _generateMultiPaymentArrays(2, RECEIVER, 2);
+        vm.prank(SPENDER);
+        vm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, allowanceId, 4, 2));
+        budget.executeMultiPayment(allowanceId, tos, amounts, "");
     }
 
     function testMultipleAllowances() public {
@@ -282,12 +312,6 @@ contract BudgetTest is FirmTest {
         budget.executePayment(allowanceId, RECEIVER, 7, "");
     }
 
-    function testCantExecuteInexistentAllowance() public {
-        vm.prank(SPENDER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.UnexistentAllowance.selector, 0));
-        budget.executePayment(0, RECEIVER, 7, "");
-    }
-
     function testAllowanceSpenderWithRoleFlags() public {
         uint256 allowanceId = 1;
         uint8 roleId = 1;
@@ -302,11 +326,49 @@ contract BudgetTest is FirmTest {
         budget.executePayment(allowanceId, RECEIVER, 7, ""); // as soon as it gets the role, the payment executes
     }
 
+    function testCantExecuteInexistentAllowance() public {
+        vm.prank(SPENDER);
+        vm.expectRevert(abi.encodeWithSelector(Budget.UnexistentAllowance.selector, 0));
+        budget.executePayment(0, RECEIVER, 7, "");
+    }
+
+    function testCantExecuteMultiIfNotAuthorized() public {
+        vm.prank(address(avatar));
+        uint256 allowanceId = 1;
+        createDailyAllowance(SPENDER, allowanceId);
+
+        vm.prank(RECEIVER);
+        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedPaymentExecution.selector, allowanceId, RECEIVER));
+        (address[] memory tos, uint256[] memory amounts) = _generateMultiPaymentArrays(2, RECEIVER, 7);
+        budget.executeMultiPayment(allowanceId, tos, amounts, "");
+    }
+
+    function testRevertOnBadInputToMultiPayment() public {
+         vm.prank(address(avatar));
+        uint256 allowanceId = 1;
+        createDailyAllowance(SPENDER, allowanceId);
+
+        vm.prank(SPENDER);
+        vm.expectRevert(abi.encodeWithSelector(Budget.BadInput.selector));
+        (address[] memory tos, uint256[] memory amounts) = _generateMultiPaymentArrays(2, RECEIVER, 7);
+        tos = new address[](1);
+        budget.executeMultiPayment(allowanceId, tos, amounts, "");
+    }
+
     function createDailyAllowance(address spender, uint256 expectedId) public returns (uint256 allowanceId) {
         allowanceId = budget.createAllowance(
             NO_PARENT_ID, spender, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
         );
         assertEq(allowanceId, expectedId);
+    }
+
+    function _generateMultiPaymentArrays(uint256 num, address to, uint256 amount) internal pure returns (address[] memory tos, uint256[] memory amounts) {
+        tos = new address[](num);
+        amounts = new uint256[](num);
+        for (uint i = 0; i < num; i++) {
+            tos[i] = to;
+            amounts[i] = amount;
+        }
     }
 
     event PaymentExecuted(
