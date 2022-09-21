@@ -86,12 +86,7 @@ contract FirmRelayer is EIP712 {
         }
         getNonce[signer] = request.nonce + 1;
 
-<<<<<<< Updated upstream
-        for (uint256 i = 0; i < request.calls.length;) {
-            Call calldata call = request.calls[i];
-=======
         _execute(signer, request.calls, request.assertions);
->>>>>>> Stashed changes
 
         emit Relayed(msg.sender, signer, request.nonce, request.calls.length);
     }
