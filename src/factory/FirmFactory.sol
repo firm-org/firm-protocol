@@ -17,8 +17,8 @@ contract FirmFactory {
     UpgradeableModuleProxyFactory public immutable moduleFactory;
 
     address public immutable safeImpl;
-    address public immutable rolesImpl;
-    address public immutable budgetImpl;
+    Roles public immutable rolesImpl;
+    Budget public immutable budgetImpl;
 
     error EnableModuleFailed();
 
@@ -29,8 +29,8 @@ contract FirmFactory {
         GnosisSafeProxyFactory _safeFactory,
         UpgradeableModuleProxyFactory _moduleFactory,
         address _safeImpl,
-        address _rolesImpl,
-        address _budgetImpl
+        Roles _rolesImpl,
+        Budget _budgetImpl
     ) {
         safeFactory = _safeFactory;
         moduleFactory = _moduleFactory;

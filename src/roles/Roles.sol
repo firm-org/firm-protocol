@@ -6,6 +6,8 @@ import {UpgradeableModule} from "../bases/UpgradeableModule.sol";
 
 import {IRoles, ROOT_ROLE_ID, ROLE_MANAGER_ROLE, ONLY_ROOT_ROLE} from "./IRoles.sol";
 
+address constant IMPL_INIT_ADDRESS = address(1);
+
 /**
  * @title Roles
  * @author Firm (engineering@firm.org)
@@ -35,8 +37,8 @@ contract Roles is UpgradeableModule, IRoles {
     // INITIALIZATION
     ////////////////////////////////////////////////////////////////////////////////
 
-    constructor(IAvatar safe_) {
-        initialize(safe_);
+    constructor() {
+        initialize(IAvatar(IMPL_INIT_ADDRESS));
     }
 
     function initialize(IAvatar safe_) public {

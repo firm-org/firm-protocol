@@ -20,10 +20,10 @@ contract BudgetTest is FirmTest {
     address RECEIVER = account("receiver");
     address SOMEONE_ELSE = account("someone else");
 
-    function setUp() public virtual {
+    function setUp() public {
         avatar = new AvatarStub();
         roles = new RolesStub();
-        budget = new Budget(avatar, roles);
+        budget = Budget(createProxy(new Budget(), abi.encodeCall(Budget.initialize, (avatar, roles))));
     }
 
     function testInitialState() public {
@@ -406,18 +406,5 @@ contract BudgetTest is FirmTest {
 
         assertEq(spent, initialSpent + amount);
         assertEq(nextResetTime, shift.isInherited() ? 0 : expectedNextResetTime);
-    }
-}
-
-contract BudgetWithProxyTest is BudgetTest {
-    UpgradeableModuleProxyFactory immutable factory = new UpgradeableModuleProxyFactory();
-    address immutable budgetImpl = address(new Budget(IAvatar(address(10)), IRoles(address(10))));
-
-    function setUp() public override {
-        avatar = new AvatarStub();
-        roles = new RolesStub();
-        budget =
-            Budget(factory.deployUpgradeableModule(budgetImpl, abi.encodeCall(Budget.initialize, (avatar, roles)), 0));
-        vm.label(address(roles), "BudgetProxy");
     }
 }
