@@ -18,7 +18,7 @@ contract LocalDeploy is Test {
         factory = new FirmFactory(
             new GnosisSafeProxyFactory(),
             new UpgradeableModuleProxyFactory(),
-            FirmRelayer(address(0)),
+            new FirmRelayer(),
             address(new GnosisSafe()),
             address(new Roles(IAvatar(address(10)), address(0))),
             address(new Budget(IAvatar(address(10)), IRoles(address(10)), address(0)))

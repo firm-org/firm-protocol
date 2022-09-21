@@ -36,7 +36,7 @@ contract TestinprodDeploy is Test {
         factory = new TestinprodFactory(
             GnosisSafeProxyFactory(safeProxyFactory),
             new UpgradeableModuleProxyFactory(),
-            FirmRelayer(address(0)),
+            new FirmRelayer(),
             safeImpl,
             address(new Roles(IAvatar(address(10)), address(0))),
             address(new Budget(IAvatar(address(10)), IRoles(address(10)), address(0)))

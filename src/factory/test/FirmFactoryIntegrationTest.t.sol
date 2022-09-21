@@ -13,6 +13,7 @@ import {FirmFactory, UpgradeableModuleProxyFactory} from "../FirmFactory.sol";
 import {Budget, TimeShiftLib, NO_PARENT_ID} from "../../budget/Budget.sol";
 import {TimeShift} from "../../budget/TimeShiftLib.sol";
 import {Roles, IRoles, IAvatar, ONLY_ROOT_ROLE, ROOT_ROLE_ID} from "../../roles/Roles.sol";
+import {FirmRelayer} from "../../metatx/FirmRelayer.sol";
 import {SafeEnums} from "../../bases/IZodiacModule.sol";
 
 import {LocalDeploy} from "../../../scripts/LocalDeploy.sol";
@@ -21,6 +22,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
     using TimeShiftLib for *;
 
     FirmFactory factory;
+    FirmRelayer relayer;
     ERC20Token token;
 
     function setUp() public {
@@ -29,6 +31,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
         LocalDeploy deployer = new LocalDeploy();
 
         factory = deployer.run();
+        relayer = factory.relayer();
     }
 
     function testFactoryGas() public {
@@ -46,13 +49,15 @@ contract FirmFactoryIntegrationTest is FirmTest {
 
         assertTrue(safe.isModuleEnabled(address(budget)));
         assertTrue(roles.hasRole(address(safe), ROOT_ROLE_ID));
+        assertTrue(roles.isTrustedForwarder(address(relayer)));
+        assertTrue(budget.isTrustedForwarder(address(relayer)));
     }
 
     function testExecutingPaymentsFromBudget() public {
         (GnosisSafe safe, Budget budget, Roles roles) = createFirm(address(this));
         token.mint(address(safe), 100);
 
-        address spender = account("spender");
+        (address spender, uint256 spenderPk) = accountAndKey("spender");
         address receiver = account("receiver");
 
         vm.startPrank(address(safe));
@@ -73,8 +78,40 @@ contract FirmFactoryIntegrationTest is FirmTest {
 
         vm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, allowanceId, address(token), receiver, 2, 1));
         budget.executePayment(allowanceId, receiver, 2, "");
+        
+        vm.warp(block.timestamp + 1 days);
 
-        assertEq(token.balanceOf(receiver), 14);
+        // create a suballowance and execute payment from it in a metatx
+        uint256 newAllowanceId = allowanceId + 1;
+        FirmRelayer.Call[] memory calls = new FirmRelayer.Call[](2);
+        calls[0] = FirmRelayer.Call({
+            to: address(budget),
+            data: abi.encodeCall(Budget.createAllowance, (allowanceId, spender, address(token), 1, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), "")),
+            assertionIndex: 1,
+            value: 0,
+            gas: 1_000_000
+        });
+        calls[1] = FirmRelayer.Call({
+            to: address(budget),
+            data: abi.encodeCall(Budget.executePayment, (newAllowanceId, receiver, 1, "")),
+            assertionIndex: 0,
+            value: 0,
+            gas: 1_000_000
+        });
+
+        FirmRelayer.Assertion[] memory assertions = new FirmRelayer.Assertion[](1);
+        assertions[0] = FirmRelayer.Assertion({ position: 0, expectedValue: bytes32(newAllowanceId) });
+
+        FirmRelayer.RelayRequest memory request = FirmRelayer.RelayRequest({
+            from: spender,
+            nonce: 0,
+            calls: calls,
+            assertions: assertions
+        });
+
+        relayer.relay(request, _signPacked(relayer.requestTypedDataHash(request), spenderPk));
+
+        assertEq(token.balanceOf(receiver), 15);
     }
 
     function testModuleUpgrades() public {
@@ -99,5 +136,16 @@ contract FirmFactoryIntegrationTest is FirmTest {
 
         vm.label(address(budget), "BudgetProxy");
         vm.label(address(roles), "RolesProxy");
+    }
+
+    function _signPacked(bytes32 hash, uint256 pk) internal returns (bytes memory sig) {
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, hash);
+
+        sig = new bytes(65);
+        assembly {
+            mstore(add(sig, 0x20), r)
+            mstore(add(sig, 0x40), s)
+            mstore8(add(sig, 0x60), v)
+        }
     }
 }
