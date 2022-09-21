@@ -67,7 +67,9 @@ contract FirmRelayer is EIP712 {
      * @return true if the signature is a valid signature for the request
      */
     function verify(RelayRequest calldata request, bytes calldata signature) public view returns (bool) {
-        return requestTypedDataHash(request).recover(signature) == request.from;
+        (address signer, ECDSA.RecoverError error) = requestTypedDataHash(request).tryRecover(signature);
+
+        return error == ECDSA.RecoverError.NoError && signer == request.from;
     }
 
     /**
