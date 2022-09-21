@@ -314,10 +314,11 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
     function _performMultiTransfer(address token, address[] calldata tos, uint256[] calldata amounts) internal returns (bool) {
         bytes memory data = abi.encodeCall(this.__safeContext_performMultiTransfer, (token, tos, amounts));
 
-        return exec(_implementation(), 0, data, SafeEnums.Operation.DelegateCall);
+        (bool callSuccess, bytes memory retData) = execAndReturnData(_implementation(), 0, data, SafeEnums.Operation.DelegateCall);
+        return callSuccess && retData.length == 32 && abi.decode(retData, (bool));
     }
 
-    function __safeContext_performMultiTransfer(address token, address[] calldata tos, uint256[] calldata amounts) external {
+    function __safeContext_performMultiTransfer(address token, address[] calldata tos, uint256[] calldata amounts) external returns (bool) {
         // This function has to be external, but we need to ensure that it cannot be ran
         // if we are on the proxy or impl context
         // There's pressumably nothing malicious that could be done in this contract,
@@ -345,6 +346,8 @@ contract Budget is UpgradeableModule, ZodiacModule, RolesAuth {
                 }
             }
         }
+
+        return true;
     }
 
     function _getAllowanceAndValidateAdmin(uint256 allowanceId) internal view returns (Allowance storage allowance) {
