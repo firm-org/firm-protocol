@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import {UpgradeableModule} from "../../../bases/UpgradeableModule.sol";
+import {FirmBase} from "../../../bases/FirmBase.sol";
 import {ZodiacModule, IAvatar, SafeEnums} from "../../../bases/ZodiacModule.sol";
 
-contract ModuleMock is UpgradeableModule, ZodiacModule {
+contract ModuleMock is FirmBase, ZodiacModule {
     string public constant moduleId = "org.firm.modulemock";
     uint256 public constant moduleVersion = 0;
 
@@ -16,7 +16,7 @@ contract ModuleMock is UpgradeableModule, ZodiacModule {
     }
 
     function initialize(IAvatar _safe, uint256 _bar) public {
-        __init_setSafe(_safe);
+        __init_firmBase(_safe, address(0));
         bar = _bar;
     }
 

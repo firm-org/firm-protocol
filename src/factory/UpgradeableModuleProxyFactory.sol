@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import {UpgradeableModule} from "../bases/UpgradeableModule.sol";
+import {EIP1967Upgradeable} from "../bases/EIP1967Upgradeable.sol";
 
 contract UpgradeableModuleProxyFactory {
     error TakenAddress(address proxy);
     error FailedInitialization();
 
-    event ModuleProxyCreation(address indexed proxy, UpgradeableModule indexed implementation);
+    event ModuleProxyCreation(address indexed proxy, EIP1967Upgradeable indexed implementation);
 
-    function createUpgradeableProxy(UpgradeableModule implementation, bytes32 salt) internal returns (address addr) {
+    function createUpgradeableProxy(EIP1967Upgradeable implementation, bytes32 salt) internal returns (address addr) {
         // if (address(target) == address(0)) revert ZeroAddress(target);
         // Removed as this is a responsibility of the caller and we shouldn't pay for the check on each proxy creation
         bytes memory initcode = abi.encodePacked(
@@ -27,7 +27,7 @@ contract UpgradeableModuleProxyFactory {
         }
     }
 
-    function deployUpgradeableModule(UpgradeableModule implementation, bytes memory initializer, uint256 salt)
+    function deployUpgradeableModule(EIP1967Upgradeable implementation, bytes memory initializer, uint256 salt)
         public
         returns (address proxy)
     {

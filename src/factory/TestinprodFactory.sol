@@ -7,10 +7,11 @@ contract TestinprodFactory is FirmFactory {
     constructor(
         GnosisSafeProxyFactory _safeFactory,
         UpgradeableModuleProxyFactory _moduleFactory,
+        FirmRelayer _relayer,
         address _safeImpl,
         Roles _rolesImpl,
         Budget _budgetImpl
-    ) FirmFactory(_safeFactory, _moduleFactory, _safeImpl, _rolesImpl, _budgetImpl) {}
+    ) FirmFactory(_safeFactory, _moduleFactory, _relayer, _safeImpl, _rolesImpl, _budgetImpl) {}
 
     function createFirmCopyingSafe(GnosisSafe baseSafe) external returns (GnosisSafe safe) {
         (address[] memory owners, uint256 requiredSignatures) = inspectSafe(baseSafe);

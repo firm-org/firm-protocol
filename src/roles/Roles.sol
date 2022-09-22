@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
+import {FirmBase} from "../bases/FirmBase.sol";
 import {IAvatar} from "../bases/SafeAware.sol";
-import {UpgradeableModule} from "../bases/UpgradeableModule.sol";
 
 import {IRoles, ROOT_ROLE_ID, ROLE_MANAGER_ROLE, ONLY_ROOT_ROLE} from "./IRoles.sol";
 
@@ -16,7 +16,7 @@ address constant IMPL_INIT_ADDRESS = address(1);
  * https://github.com/Rari-Capital/solmate/blob/main/src/auth/authorities/RolesAuthority.sol)
  * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/AccessControl.sol
  */
-contract Roles is UpgradeableModule, IRoles {
+contract Roles is FirmBase, IRoles {
     string public constant moduleId = "org.firm.roles";
     uint256 public constant moduleVersion = 0;
 
@@ -38,12 +38,12 @@ contract Roles is UpgradeableModule, IRoles {
     ////////////////////////////////////////////////////////////////////////////////
 
     constructor() {
-        initialize(IAvatar(IMPL_INIT_ADDRESS));
+        initialize(IAvatar(IMPL_INIT_ADDRESS), IMPL_INIT_ADDRESS);
     }
 
-    function initialize(IAvatar safe_) public {
-        // SafeAware.__init_setSafe will revert if already initialized
-        __init_setSafe(safe_);
+    function initialize(IAvatar safe_, address trustedForwarder_) public {
+        // calls SafeAware.__init_setSafe which reverts if already initialized
+        __init_firmBase(safe_, trustedForwarder_);
 
         assert(_createRole(ONLY_ROOT_ROLE, "Root") == ROOT_ROLE_ID);
         assert(_createRole(ONLY_ROOT_ROLE, "Role Manager") == ROLE_MANAGER_ROLE);
@@ -66,7 +66,7 @@ contract Roles is UpgradeableModule, IRoles {
      * @return roleId ID of the new role
      */
     function createRole(bytes32 roleAdmins, string memory name) public returns (uint8 roleId) {
-        if (!hasRole(msg.sender, ROLE_MANAGER_ROLE)) {
+        if (!hasRole(_msgSender(), ROLE_MANAGER_ROLE)) {
             revert UnauthorizedNoRole(ROLE_MANAGER_ROLE);
         }
 
@@ -85,7 +85,7 @@ contract Roles is UpgradeableModule, IRoles {
 
         getRoleAdmins[roleId] = roleAdmins;
 
-        emit RoleCreated(roleId, roleAdmins, name, msg.sender);
+        emit RoleCreated(roleId, roleAdmins, name, _msgSender());
     }
 
     /**
@@ -98,19 +98,19 @@ contract Roles is UpgradeableModule, IRoles {
     function setRoleAdmin(uint8 roleId, bytes32 roleAdmins) external {
         if (roleId == ROOT_ROLE_ID) {
             // Root role is treated as a special case. Only root role admins can change it
-            if (!isRoleAdmin(msg.sender, ROOT_ROLE_ID)) {
+            if (!isRoleAdmin(_msgSender(), ROOT_ROLE_ID)) {
                 revert UnauthorizedNotAdmin(ROOT_ROLE_ID);
             }
         } else {
             // For all other roles, the general role manager role can change any roles admins
-            if (!hasRole(msg.sender, ROLE_MANAGER_ROLE)) {
+            if (!hasRole(_msgSender(), ROLE_MANAGER_ROLE)) {
                 revert UnauthorizedNoRole(ROLE_MANAGER_ROLE);
             }
         }
 
         getRoleAdmins[roleId] = roleAdmins;
 
-        emit RoleAdminsSet(roleId, roleAdmins, msg.sender);
+        emit RoleAdminsSet(roleId, roleAdmins, _msgSender());
     }
 
     /**
@@ -120,7 +120,7 @@ contract Roles is UpgradeableModule, IRoles {
      * @param name New name for the role
      */
     function changeRoleName(uint8 roleId, string memory name) external {
-        if (!hasRole(msg.sender, ROLE_MANAGER_ROLE)) {
+        if (!hasRole(_msgSender(), ROLE_MANAGER_ROLE)) {
             revert UnauthorizedNoRole(ROLE_MANAGER_ROLE);
         }
 
@@ -143,7 +143,7 @@ contract Roles is UpgradeableModule, IRoles {
         bytes32 newUserRoles = oldUserRoles;
 
         // Implicitly checks that roleId had been created
-        if (!_isRoleAdmin(getUserRoles[msg.sender], roleId)) {
+        if (!_isRoleAdmin(getUserRoles[_msgSender()], roleId)) {
             revert UnauthorizedNotAdmin(roleId);
         }
 
@@ -155,7 +155,7 @@ contract Roles is UpgradeableModule, IRoles {
 
         getUserRoles[user] = newUserRoles;
 
-        emit UserRolesChanged(user, oldUserRoles, newUserRoles, msg.sender);
+        emit UserRolesChanged(user, oldUserRoles, newUserRoles, _msgSender());
     }
 
     /**
@@ -166,7 +166,7 @@ contract Roles is UpgradeableModule, IRoles {
      * @param revokingRoles ID of all roles being revoked
      */
     function setRoles(address user, uint8[] memory grantingRoles, uint8[] memory revokingRoles) external {
-        bytes32 senderRoles = getUserRoles[msg.sender];
+        bytes32 senderRoles = getUserRoles[_msgSender()];
         bytes32 oldUserRoles = getUserRoles[user];
         bytes32 newUserRoles = oldUserRoles;
 
@@ -198,7 +198,7 @@ contract Roles is UpgradeableModule, IRoles {
 
         getUserRoles[user] = newUserRoles;
 
-        emit UserRolesChanged(user, oldUserRoles, newUserRoles, msg.sender);
+        emit UserRolesChanged(user, oldUserRoles, newUserRoles, _msgSender());
     }
 
     /**

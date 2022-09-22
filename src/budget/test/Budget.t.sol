@@ -23,7 +23,7 @@ contract BudgetTest is FirmTest {
     function setUp() public {
         avatar = new AvatarStub();
         roles = new RolesStub();
-        budget = Budget(createProxy(new Budget(), abi.encodeCall(Budget.initialize, (avatar, roles))));
+        budget = Budget(createProxy(new Budget(), abi.encodeCall(Budget.initialize, (avatar, roles, address(0)))));
     }
 
     function testInitialState() public {
@@ -34,7 +34,7 @@ contract BudgetTest is FirmTest {
 
     function testCannotReinit() public {
         vm.expectRevert(abi.encodeWithSelector(SafeAware.AlreadyInitialized.selector));
-        budget.initialize(avatar, roles);
+        budget.initialize(avatar, roles, address(0));
     }
 
     function testCreateAllowance() public returns (uint256 allowanceId) {

@@ -15,7 +15,7 @@ contract RolesTest is FirmTest {
     address SOMEONE_ELSE = account("someone else");
 
     function setUp() public {
-        roles = Roles(createProxy(new Roles(), abi.encodeCall(Roles.initialize, (IAvatar(ADMIN)))));
+        roles = Roles(createProxy(new Roles(), abi.encodeCall(Roles.initialize, (IAvatar(ADMIN), address(0)))));
     }
 
     function testInitialRoot() public {
@@ -32,7 +32,7 @@ contract RolesTest is FirmTest {
 
     function testCannotReinit() public {
         vm.expectRevert(abi.encodeWithSelector(SafeAware.AlreadyInitialized.selector));
-        roles.initialize(IAvatar(address(2)));
+        roles.initialize(IAvatar(address(2)), address(0));
     }
 
     function testAdminCanCreateRoles() public {

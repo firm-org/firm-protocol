@@ -4,18 +4,22 @@ pragma solidity 0.8.16;
 import "forge-std/Test.sol";
 
 import "../../../factory/UpgradeableModuleProxyFactory.sol";
-import {UpgradeableModule} from "../../../bases/UpgradeableModule.sol";
+import {EIP1967Upgradeable} from "../../../bases/EIP1967Upgradeable.sol";
 
 contract FirmTest is Test {
     UpgradeableModuleProxyFactory immutable proxyFactory = new UpgradeableModuleProxyFactory();
-
-    function account(string memory _label) internal returns (address addr) {
-        addr = vm.addr(uint256(keccak256(abi.encodePacked(_label))));
-        vm.label(addr, _label);
+    
+    function account(string memory label) internal returns (address addr) {
+        (addr,) = accountAndKey(label);
     }
 
-    // TODO: move to firm base or erc upgradeable
-    function createProxy(UpgradeableModule impl, bytes memory initdata) internal returns (address proxy) {
+    function accountAndKey(string memory label) internal returns (address addr, uint256 pk) {
+        pk = uint256(keccak256(abi.encodePacked(label)));
+        addr = vm.addr(pk);
+        vm.label(addr, label);
+    }
+
+    function createProxy(EIP1967Upgradeable impl, bytes memory initdata) internal returns (address proxy) {
         proxy = proxyFactory.deployUpgradeableModule(impl, initdata, 0);
         vm.label(proxy, "Proxy");
     }

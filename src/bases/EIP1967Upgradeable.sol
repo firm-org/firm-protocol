@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.16;
 
-import {SafeAware, IModuleMetadata} from "./SafeAware.sol";
+import {SafeAware} from "./SafeAware.sol";
+import {IModuleMetadata} from "./IModuleMetadata.sol";
 
 /**
- * @title UpgradeableModule
+ * @title EIP1967Upgradeable
  * @dev Minimal implementation of EIP-1967 allowing upgrades of itself by a Safe transaction
  * @dev Note that this contract doesn't have have an initializer as the implementation
  * address must already be set in the correct slot (in our case, the proxy does on creation)
  */
-abstract contract UpgradeableModule is SafeAware {
+abstract contract EIP1967Upgradeable is SafeAware {
     event Upgraded(address indexed implementation, string moduleId, uint256 version);
 
     // EIP1967_IMPL_SLOT = keccak256('eip1967.proxy.implementation') - 1
