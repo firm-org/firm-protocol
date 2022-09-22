@@ -130,7 +130,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
     }
 
     function createFirm(address owner) internal returns (GnosisSafe safe, Budget budget, Roles roles) {
-        safe = factory.createFirm(owner, false);
+        safe = factory.createFirm(owner, false, 1);
         (address[] memory modules,) = safe.getModulesPaginated(address(0x1), 1);
         budget = Budget(modules[0]);
         roles = Roles(address(budget.roles()));

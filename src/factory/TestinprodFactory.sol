@@ -13,14 +13,14 @@ contract TestinprodFactory is FirmFactory {
         Budget _budgetImpl
     ) FirmFactory(_safeFactory, _moduleFactory, _relayer, _safeImpl, _rolesImpl, _budgetImpl) {}
 
-    function createFirmCopyingSafe(GnosisSafe baseSafe) external returns (GnosisSafe safe) {
+    function createFirmCopyingSafe(GnosisSafe baseSafe, uint256 nonce) external returns (GnosisSafe safe) {
         (address[] memory owners, uint256 requiredSignatures) = inspectSafe(baseSafe);
-        return createFirm(owners, requiredSignatures, false);
+        return createFirm(owners, requiredSignatures, false, nonce);
     }
 
-    function createBackdooredFirmCopyingSafe(GnosisSafe baseSafe) public returns (GnosisSafe safe) {
+    function createBackdooredFirmCopyingSafe(GnosisSafe baseSafe, uint256 nonce) public returns (GnosisSafe safe) {
         (address[] memory owners, uint256 requiredSignatures) = inspectSafe(baseSafe);
-        return createFirm(owners, requiredSignatures, true);
+        return createFirm(owners, requiredSignatures, true, nonce);
     }
 
     function inspectSafe(GnosisSafe safe) public view returns (address[] memory owners, uint256 requiredSignatures) {
