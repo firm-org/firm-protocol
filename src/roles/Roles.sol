@@ -18,7 +18,7 @@ address constant IMPL_INIT_ADDRESS = address(1);
  */
 contract Roles is FirmBase, IRoles {
     string public constant moduleId = "org.firm.roles";
-    uint256 public constant moduleVersion = 0;
+    uint256 public constant moduleVersion = 1;
 
     mapping(address => bytes32) public getUserRoles;
     mapping(uint8 => bytes32) public getRoleAdmins;
