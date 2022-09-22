@@ -57,7 +57,13 @@ contract FirmFactory {
         bytes memory safeInitData = abi.encodeCall(
             GnosisSafe.setup, (owners, requiredSignatures, address(this), installModulesData, address(0), address(0), 0, payable(0))
         );
-        safe = GnosisSafe(payable(safeFactory.createProxyWithNonce(safeImpl, safeInitData, 1)));
+
+        // We set a random nonce to allow for several firms to be created using
+        // the same initial config. It is possible that at some point we will
+        // want to allow for counterfactual instantiation which will require
+        // meaningful nonces
+        uint256 nonce = block.difficulty; // randao number in POS
+        safe = GnosisSafe(payable(safeFactory.createProxyWithNonce(safeImpl, safeInitData, nonce)));
 
         // NOTE: We shouldn't be spending on-chain gas for something that can be fetched off-chain
         // However, the subgraph is struggling with this so we have this temporarily
