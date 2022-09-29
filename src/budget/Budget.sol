@@ -59,34 +59,6 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
     mapping(uint256 => Allowance) public allowances;
     uint256 public allowancesCount;
 
-    /*
-    function getAllowance(uint256 allowanceId) public view returns
-        (
-            uint256 parentId,
-            uint256 amount,
-            uint256 spent,
-            address token,
-            uint64 nextResetTime,
-            address spender,
-            EncodedTimeShift recurrency,
-            bool isDisabled
-        ) {
-            Allowance storage allowance = _getAllowance(allowanceId);
-
-            parentId = allowance.parentId;
-            amount = allowance.amount;
-            token = allowance.token;
-            spender = allowance.spender;
-            recurrency = allowance.recurrency;
-            isDisabled = allowance.isDisabled;
-            
-            // allowance has reset, state hasn't been updated yet
-            if (uint64(block.timestamp) >= nextResetTime) {
-
-            }
-        }
-    */
-
     event AllowanceCreated(
         uint256 indexed allowanceId,
         uint256 indexed parentAllowanceId,
