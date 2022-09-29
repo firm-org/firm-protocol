@@ -8,7 +8,7 @@ import {EIP1967Upgradeable} from "../../../bases/EIP1967Upgradeable.sol";
 
 contract FirmTest is Test {
     UpgradeableModuleProxyFactory immutable proxyFactory = new UpgradeableModuleProxyFactory();
-    
+
     function account(string memory label) internal returns (address addr) {
         (addr,) = accountAndKey(label);
     }

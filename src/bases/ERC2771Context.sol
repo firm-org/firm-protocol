@@ -8,7 +8,8 @@ import {SafeAware} from "./SafeAware.sol";
  */
 abstract contract ERC2771Context is SafeAware {
     // SAFE_SLOT = keccak256("firm.erc2271context.forwarders") - 1
-    bytes32 internal constant ERC2271_TRUSTED_FORWARDERS_BASE_SLOT = 0xde1482070091aef895249374204bcae0fa9723215fa9357228aa489f9d1bd669;
+    bytes32 internal constant ERC2271_TRUSTED_FORWARDERS_BASE_SLOT =
+        0xde1482070091aef895249374204bcae0fa9723215fa9357228aa489f9d1bd669;
 
     event TrustedForwarderSet(address indexed forwarder, bool enabled);
 
@@ -21,7 +22,7 @@ abstract contract ERC2771Context is SafeAware {
 
         emit TrustedForwarderSet(forwarder, enabled);
     }
-    
+
     function isTrustedForwarder(address forwarder) public view virtual returns (bool) {
         return _trustedForwarders()[forwarder];
     }
@@ -46,7 +47,7 @@ abstract contract ERC2771Context is SafeAware {
         }
     }
 
-    function _trustedForwarders() internal pure returns (mapping (address => bool) storage trustedForwarders) {
+    function _trustedForwarders() internal pure returns (mapping(address => bool) storage trustedForwarders) {
         assembly {
             trustedForwarders.slot := ERC2271_TRUSTED_FORWARDERS_BASE_SLOT
         }

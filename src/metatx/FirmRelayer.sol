@@ -21,6 +21,7 @@ contract FirmRelayer is EIP712 {
         Call[] calls;
         Assertion[] assertions;
     }
+
     struct Call {
         address to;
         uint256 value;
@@ -28,6 +29,7 @@ contract FirmRelayer is EIP712 {
         bytes data;
         uint256 assertionIndex; // one-indexed, 0 signals no assertions
     }
+
     struct Assertion {
         uint256 position;
         bytes32 expectedValue;
@@ -37,8 +39,11 @@ contract FirmRelayer is EIP712 {
     string internal constant ASSERTION_TYPE = "Assertion(uint256 position,bytes32 expectedValue)";
     string internal constant CALL_TYPE = "Call(address to,uint256 value,uint256 gas,bytes data,uint256 assertionIndex)";
 
-    bytes32 internal constant REQUEST_TYPEHASH =
-        keccak256(abi.encodePacked("RelayRequest(address from,uint256 nonce,Call[] calls,Assertion[] assertions)", ASSERTION_TYPE, CALL_TYPE));
+    bytes32 internal constant REQUEST_TYPEHASH = keccak256(
+        abi.encodePacked(
+            "RelayRequest(address from,uint256 nonce,Call[] calls,Assertion[] assertions)", ASSERTION_TYPE, CALL_TYPE
+        )
+    );
     bytes32 internal constant ASSERTION_TYPEHASH = keccak256(abi.encodePacked(ASSERTION_TYPE));
     bytes32 internal constant CALL_TYPEHASH = keccak256(abi.encodePacked(CALL_TYPE));
     bytes32 internal constant ZERO_HASH = keccak256("");
@@ -113,7 +118,7 @@ contract FirmRelayer is EIP712 {
             Call calldata call = calls[i];
 
             bytes memory payload = abi.encodePacked(call.data, asSender);
-            (bool success, bytes memory returnData) = call.to.call{ value: call.value, gas: call.gas }(payload);
+            (bool success, bytes memory returnData) = call.to.call{value: call.value, gas: call.gas}(payload);
             if (!success) {
                 revert CallExecutionFailed(i, call.to, returnData);
             }
@@ -149,7 +154,9 @@ contract FirmRelayer is EIP712 {
 
     function requestTypedDataHash(RelayRequest calldata request) public view returns (bytes32) {
         return _hashTypedDataV4(
-            keccak256(abi.encode(REQUEST_TYPEHASH, request.from, request.nonce, hash(request.calls), hash(request.assertions)))
+            keccak256(
+                abi.encode(REQUEST_TYPEHASH, request.from, request.nonce, hash(request.calls), hash(request.assertions))
+            )
         );
     }
 
@@ -161,7 +168,9 @@ contract FirmRelayer is EIP712 {
         bytes32[] memory hashes = new bytes32[](length);
         for (uint256 i = 0; i < length;) {
             Call calldata call = calls[i];
-            hashes[i] = keccak256(abi.encode(CALL_TYPEHASH, call.to, call.value, call.gas, keccak256(call.data), call.assertionIndex));
+            hashes[i] = keccak256(
+                abi.encode(CALL_TYPEHASH, call.to, call.value, call.gas, keccak256(call.data), call.assertionIndex)
+            );
             unchecked {
                 i++;
             }

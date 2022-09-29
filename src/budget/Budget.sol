@@ -121,10 +121,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         uint256 amount,
         EncodedTimeShift recurrency,
         string memory name
-    )
-        public
-        returns (uint256 allowanceId)
-    {
+    ) public returns (uint256 allowanceId) {
         uint64 nextResetTime;
 
         if (parentAllowanceId == NO_PARENT_ID) {
@@ -269,7 +266,12 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
      * @param amounts Amounts of the allowance's token being sent
      * @param description Description of the payments
      */
-    function executeMultiPayment(uint256 allowanceId, address[] calldata tos, uint256[] calldata amounts, string memory description) external {
+    function executeMultiPayment(
+        uint256 allowanceId,
+        address[] calldata tos,
+        uint256[] calldata amounts,
+        string memory description
+    ) external {
         Allowance storage allowance = _getAllowance(allowanceId);
 
         if (!_isAuthorized(_msgSender(), allowance.spender)) {
@@ -282,7 +284,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         }
 
         uint256 totalAmount = 0;
-        for (uint256 i = 0; i < count; ) {
+        for (uint256 i = 0; i < count;) {
             totalAmount += amounts[i];
 
             unchecked {
@@ -311,14 +313,21 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         }
     }
 
-    function _performMultiTransfer(address token, address[] calldata tos, uint256[] calldata amounts) internal returns (bool) {
+    function _performMultiTransfer(address token, address[] calldata tos, uint256[] calldata amounts)
+        internal
+        returns (bool)
+    {
         bytes memory data = abi.encodeCall(this.__safeContext_performMultiTransfer, (token, tos, amounts));
 
-        (bool callSuccess, bytes memory retData) = execAndReturnData(_implementation(), 0, data, SafeEnums.Operation.DelegateCall);
+        (bool callSuccess, bytes memory retData) =
+            execAndReturnData(_implementation(), 0, data, SafeEnums.Operation.DelegateCall);
         return callSuccess && retData.length == 32 && abi.decode(retData, (bool));
     }
 
-    function __safeContext_performMultiTransfer(address token, address[] calldata tos, uint256[] calldata amounts) external returns (bool) {
+    function __safeContext_performMultiTransfer(address token, address[] calldata tos, uint256[] calldata amounts)
+        external
+        returns (bool)
+    {
         // This function has to be external, but we need to ensure that it cannot be ran
         // if we are on the proxy or impl context
         // There's pressumably nothing malicious that could be done in this contract,
@@ -330,16 +339,17 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         uint256 length = tos.length;
 
         if (token == NATIVE_ASSET) {
-            for (uint256 i = 0; i < length; ) {
-                (bool callSuccess,) = tos[i].call{ value: amounts[i] }(hex"");
+            for (uint256 i = 0; i < length;) {
+                (bool callSuccess,) = tos[i].call{value: amounts[i]}(hex"");
                 require(callSuccess);
                 unchecked {
                     i++;
                 }
             }
         } else {
-            for (uint256 i = 0; i < length; ) {
-                (bool callSuccess, bytes memory retData) = token.call(abi.encodeCall(IERC20.transfer, (tos[i], amounts[i])));
+            for (uint256 i = 0; i < length;) {
+                (bool callSuccess, bytes memory retData) =
+                    token.call(abi.encodeCall(IERC20.transfer, (tos[i], amounts[i])));
                 require(callSuccess && (((retData.length == 32 && abi.decode(retData, (bool))) || retData.length == 0)));
                 unchecked {
                     i++;

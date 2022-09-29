@@ -62,7 +62,7 @@ contract FirmRelayerTest is FirmTest {
         FirmRelayer.Call memory call = _defaultCallWithData(address(target), abi.encodeCall(target.onlySender, (USER)));
         FirmRelayer.RelayRequest memory request = _defaultRequestWithCall(call);
         bytes32 hash = relayer.requestTypedDataHash(request);
-        
+
         vm.expectRevert(abi.encodeWithSelector(FirmRelayer.BadSignature.selector));
         relayer.relay(request, _signPacked(hash, otherUserPk));
     }
@@ -80,7 +80,7 @@ contract FirmRelayerTest is FirmTest {
         vm.expectRevert(abi.encodeWithSelector(FirmRelayer.BadSignature.selector));
         relayer.relay(request, signature);
     }
-    
+
     function testRevertOnRepeatedNonce() public {
         testBasicRelay();
 
@@ -100,9 +100,11 @@ contract FirmRelayerTest is FirmTest {
         FirmRelayer.RelayRequest memory request = _defaultRequestWithCall(call);
         request.from = otherUser;
         bytes32 hash = relayer.requestTypedDataHash(request);
-        
+
         bytes memory targetError = abi.encodeWithSelector(RelayTarget.BadSender.selector, USER, otherUser);
-        vm.expectRevert(abi.encodeWithSelector(FirmRelayer.CallExecutionFailed.selector, 0, address(target), targetError));
+        vm.expectRevert(
+            abi.encodeWithSelector(FirmRelayer.CallExecutionFailed.selector, 0, address(target), targetError)
+        );
         relayer.relay(request, _signPacked(hash, otherUserPk));
     }
 
@@ -115,7 +117,9 @@ contract FirmRelayerTest is FirmTest {
         FirmRelayer.RelayRequest memory request = _defaultRequestWithCallAndAssertion(call, assertion);
 
         bytes32 hash = relayer.requestTypedDataHash(request);
-        vm.expectRevert(abi.encodeWithSelector(FirmRelayer.AssertionFailed.selector, 0, actualReturnValue, badExpectedValue));
+        vm.expectRevert(
+            abi.encodeWithSelector(FirmRelayer.AssertionFailed.selector, 0, actualReturnValue, badExpectedValue)
+        );
         relayer.relay(request, _signPacked(hash, USER_PK));
     }
 
@@ -170,14 +174,22 @@ contract FirmRelayerTest is FirmTest {
         call.assertionIndex = 0;
     }
 
-    function _defaultRequestWithCall(FirmRelayer.Call memory call) internal view returns (FirmRelayer.RelayRequest memory request) {
+    function _defaultRequestWithCall(FirmRelayer.Call memory call)
+        internal
+        view
+        returns (FirmRelayer.RelayRequest memory request)
+    {
         request.from = USER;
         request.nonce = relayer.getNonce(USER);
         request.calls = new FirmRelayer.Call[](1);
         request.calls[0] = call;
     }
 
-    function _defaultRequestWithCallAndAssertion(FirmRelayer.Call memory call, FirmRelayer.Assertion memory assertion) internal view returns (FirmRelayer.RelayRequest memory request) {
+    function _defaultRequestWithCallAndAssertion(FirmRelayer.Call memory call, FirmRelayer.Assertion memory assertion)
+        internal
+        view
+        returns (FirmRelayer.RelayRequest memory request)
+    {
         request = _defaultRequestWithCall(call);
         request.assertions = new FirmRelayer.Assertion[](1);
         request.assertions[0] = assertion;
@@ -194,7 +206,7 @@ contract FirmRelayerTest is FirmTest {
         vm.chainId(1000);
         vm.prank(deployer);
         relayer = new FirmRelayer();
-        
+
         // Make sure FirmRelayer was deployed to the expected address
         assertEq(address(relayer), 0x1240FA2A84dd9157a0e76B5Cfe98B1d52268B264);
 

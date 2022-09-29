@@ -133,7 +133,7 @@ contract BudgetTest is FirmTest {
         (address[] memory tos, uint256[] memory amounts) = _generateMultiPaymentArrays(5, RECEIVER, 2);
         vm.prank(SPENDER);
         budget.executeMultiPayment(allowanceId, tos, amounts, "");
-        
+
         vm.prank(SPENDER);
         vm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, allowanceId, 1, 0));
         budget.executePayment(allowanceId, RECEIVER, 1, "");
@@ -344,7 +344,7 @@ contract BudgetTest is FirmTest {
     }
 
     function testRevertOnBadInputToMultiPayment() public {
-         vm.prank(address(avatar));
+        vm.prank(address(avatar));
         uint256 allowanceId = 1;
         createDailyAllowance(SPENDER, allowanceId);
 
@@ -362,10 +362,14 @@ contract BudgetTest is FirmTest {
         assertEq(allowanceId, expectedId);
     }
 
-    function _generateMultiPaymentArrays(uint256 num, address to, uint256 amount) internal pure returns (address[] memory tos, uint256[] memory amounts) {
+    function _generateMultiPaymentArrays(uint256 num, address to, uint256 amount)
+        internal
+        pure
+        returns (address[] memory tos, uint256[] memory amounts)
+    {
         tos = new address[](num);
         amounts = new uint256[](num);
-        for (uint i = 0; i < num; i++) {
+        for (uint256 i = 0; i < num; i++) {
             tos[i] = to;
             amounts[i] = amount;
         }
@@ -387,9 +391,7 @@ contract BudgetTest is FirmTest {
         address to,
         uint256 amount,
         uint64 expectedNextResetTime
-    )
-        public
-    {
+    ) public {
         (,, uint256 initialSpent, address token, uint64 initialNextReset,, EncodedTimeShift shift,) =
             budget.allowances(allowanceId);
 

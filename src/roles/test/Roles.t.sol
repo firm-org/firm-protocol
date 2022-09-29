@@ -3,7 +3,6 @@ pragma solidity 0.8.16;
 
 import {FirmTest} from "../../common/test/lib/FirmTest.sol";
 
-
 import {SafeAware} from "../../bases/SafeAware.sol";
 import "../Roles.sol";
 

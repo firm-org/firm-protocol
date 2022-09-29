@@ -52,10 +52,14 @@ contract FirmFactory {
         return createFirm(owners, 1, withBackdoors, nonce);
     }
 
-    function createFirm(address[] memory owners, uint256 requiredSignatures, bool withBackdoors, uint256 nonce) public returns (GnosisSafe safe) {
+    function createFirm(address[] memory owners, uint256 requiredSignatures, bool withBackdoors, uint256 nonce)
+        public
+        returns (GnosisSafe safe)
+    {
         bytes memory installModulesData = abi.encodeCall(this.installModules, (withBackdoors));
         bytes memory safeInitData = abi.encodeCall(
-            GnosisSafe.setup, (owners, requiredSignatures, address(this), installModulesData, address(0), address(0), 0, payable(0))
+            GnosisSafe.setup,
+            (owners, requiredSignatures, address(this), installModulesData, address(0), address(0), 0, payable(0))
         );
 
         safe = GnosisSafe(payable(safeFactory.createProxyWithNonce(safeImpl, safeInitData, nonce)));
@@ -82,10 +86,16 @@ contract FirmFactory {
         // since we both perform calls on 'this' with the ABI of a Safe (will fail on this contract)
 
         IAvatar safe = IAvatar(address(this));
-        Roles roles =
-            Roles(moduleFactory.deployUpgradeableModule(rolesImpl, abi.encodeCall(Roles.initialize, (safe, address(relayer))), 1));
-        Budget budget =
-            Budget(moduleFactory.deployUpgradeableModule(budgetImpl, abi.encodeCall(Budget.initialize, (safe, roles, address(relayer))), 1));
+        Roles roles = Roles(
+            moduleFactory.deployUpgradeableModule(
+                rolesImpl, abi.encodeCall(Roles.initialize, (safe, address(relayer))), 1
+            )
+        );
+        Budget budget = Budget(
+            moduleFactory.deployUpgradeableModule(
+                budgetImpl, abi.encodeCall(Budget.initialize, (safe, roles, address(relayer))), 1
+            )
+        );
 
         // NOTE: important to enable all backdoors before the real modules so the getter
         // works as expected (HACK)

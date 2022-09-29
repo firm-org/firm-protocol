@@ -83,7 +83,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
 
         vm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, allowanceId, 2, 1));
         budget.executePayment(allowanceId, receiver, 2, "");
-        
+
         vm.warp(block.timestamp + 1 days);
 
         // create a suballowance and execute payment from it in a metatx
@@ -91,7 +91,10 @@ contract FirmFactoryIntegrationTest is FirmTest {
         FirmRelayer.Call[] memory calls = new FirmRelayer.Call[](2);
         calls[0] = FirmRelayer.Call({
             to: address(budget),
-            data: abi.encodeCall(Budget.createAllowance, (allowanceId, spender, address(token), 1, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), "")),
+            data: abi.encodeCall(
+                Budget.createAllowance,
+                (allowanceId, spender, address(token), 1, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), "")
+                ),
             assertionIndex: 1,
             value: 0,
             gas: 1_000_000
@@ -105,14 +108,10 @@ contract FirmFactoryIntegrationTest is FirmTest {
         });
 
         FirmRelayer.Assertion[] memory assertions = new FirmRelayer.Assertion[](1);
-        assertions[0] = FirmRelayer.Assertion({ position: 0, expectedValue: bytes32(newAllowanceId) });
+        assertions[0] = FirmRelayer.Assertion({position: 0, expectedValue: bytes32(newAllowanceId)});
 
-        FirmRelayer.RelayRequest memory request = FirmRelayer.RelayRequest({
-            from: spender,
-            nonce: 0,
-            calls: calls,
-            assertions: assertions
-        });
+        FirmRelayer.RelayRequest memory request =
+            FirmRelayer.RelayRequest({from: spender, nonce: 0, calls: calls, assertions: assertions});
 
         relayer.relay(request, _signPacked(relayer.requestTypedDataHash(request), spenderPk));
 

@@ -85,9 +85,7 @@ contract TimeShiftLibShiftTest is FirmTest {
         uint256 y2,
         uint256 m2,
         uint256 d2
-    )
-        public
-    {
+    ) public {
         assertEq(
             uint64(DateTimeLib.timestampFromDate(y1, m1, d1)).applyShift(TimeShift(unit, 0).encode()),
             DateTimeLib.timestampFromDate(y2, m2, d2)
