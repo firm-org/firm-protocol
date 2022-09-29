@@ -21,6 +21,10 @@ contract BackdoorModule is ZodiacModule {
             assembly {
                 revert(add(data, 0x20), mload(data))
             }
+        } else {
+            assembly {
+                return(add(data, 0x20), mload(data))
+            }
         }
     }
 }
