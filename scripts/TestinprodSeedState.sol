@@ -13,7 +13,7 @@ import {roleFlag} from "../src/common/test/mocks/RolesAuthMock.sol";
 contract TestinProdSeedState is Test {
     // send some native asset to safe before running it
     function run(GnosisSafe safe) public {
-        // only works for backdoored firms which have 3 modules: [budget, budgetBackdoor, rolesBackdoor]
+        // only works for backdoored firms which have 3 modules: [budget, rolesBackdoor, budgetBackdoor]
         (address[] memory modules,) = safe.getModulesPaginated(address(0x1), 3);
 
         Budget budget = Budget(modules[0]);
