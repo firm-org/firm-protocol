@@ -1,53 +1,36 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import {Budget} from "../Budget.sol";
-import {FirmBase, IAvatar} from "../../bases/FirmBase.sol";
-
-abstract contract BudgetModule is FirmBase {
-    Budget public budget; // TODO: Unstructured storage
-
-    function initialize(Budget budget_, address trustedForwarder_) public {
-        __init_firmBase(budget_.safe(), trustedForwarder_);
-        budget = budget_;
-    }
-
-    error UnauthorizedNotAllowanceAdmin(uint256 allowanceId, address actor);
-
-    modifier onlyAllowanceAdmin(uint256 allowanceId) {
-        address actor = _msgSender();
-        if (!budget.isAdminOnAllowance(allowanceId, actor)) {
-            revert UnauthorizedNotAllowanceAdmin(allowanceId, actor);
-        }
-
-        _;
-    }
-}
+import {BudgetModule} from "./BudgetModule.sol";
 
 contract RecurringPayments is BudgetModule {
     string public constant moduleId = "org.firm.budget.recurring";
     uint256 public constant moduleVersion = 1;
 
     struct RecurringPayment {
-        bool enabled;
+        bool disabled;
         address to;
         uint256 amount;
     }
 
     struct AllowancePayments {
-        mapping (uint256 => RecurringPayment) paymentData;
-        mapping (uint256 => uint64[4]) nextExecutionTime; // tightly stored as an optimization
+        mapping(uint256 => RecurringPayment) paymentData;
+        mapping(uint256 => uint64[4]) nextExecutionTime; // tightly stored as an optimization
         uint256 paymentsCount;
     }
 
-    mapping (uint256 => AllowancePayments) payments;
+    mapping(uint256 => AllowancePayments) payments;
 
     // Protected so only spenders from the parent allowance to the one recurring payments can spend can add payments
-    function addPayment(uint256 allowanceId, address to, uint256 amount) external onlyAllowanceAdmin(allowanceId) returns (uint256 paymentId) {
+    function addPayment(uint256 allowanceId, address to, uint256 amount)
+        external
+        onlyAllowanceAdmin(allowanceId)
+        returns (uint256 paymentId)
+    {
         AllowancePayments storage allowancePayments = payments[allowanceId];
 
         unchecked {
-            paymentId = ++allowancePayments.paymentsCount;
+            paymentId = allowancePayments.paymentsCount++;
         }
         allowancePayments.paymentData[paymentId].to = to;
         allowancePayments.paymentData[paymentId].amount = amount;
@@ -59,7 +42,7 @@ contract RecurringPayments is BudgetModule {
 
         uint256 id1 = paymentId / 4;
         uint256 id2 = paymentId % 4;
-        require(payment.enabled);
+        require(!payment.disabled);
         require(uint64(block.timestamp) >= payments[allowanceId].nextExecutionTime[id1][id2]);
 
         // reentrancy lock
@@ -81,7 +64,7 @@ contract RecurringPayments is BudgetModule {
             uint256 id1 = paymentId / 4;
             uint256 id2 = paymentId % 4;
 
-            require(payment.enabled);
+            require(!payment.disabled);
             require(uint64(block.timestamp) >= payments[allowanceId].nextExecutionTime[id1][id2]);
 
             tos[i] = payment.to;

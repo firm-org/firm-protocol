@@ -206,6 +206,8 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
      */
     function setAllowanceAmount(uint256 allowanceId, uint256 amount) external {
         Allowance storage allowance = _getAllowanceAndValidateAdmin(allowanceId);
+
+        // TODO: Not let setting 0 if allowance is top level
         allowance.amount = amount;
         emit AllowanceAmountChanged(allowanceId, amount);
     }
