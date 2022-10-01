@@ -4,25 +4,25 @@ pragma solidity 0.8.16;
 // Formal verification for library and formula: https://twitter.com/Zellic_io/status/1510341868021854209
 import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsDateTimeLibrary.sol";
 
-type EncodedTimeShift is bytes9;
+type EncodedTimeShift is bytes6;
 
 struct TimeShift {
     TimeShiftLib.TimeUnit unit; // in the special case of seconds, offset doesn't apply
-    int64 offset;
+    int40 offset;
 }
 
 function encode(TimeShift memory shift) pure returns (EncodedTimeShift) {
-    return EncodedTimeShift.wrap(bytes9(abi.encodePacked(uint8(shift.unit), shift.offset)));
+    return EncodedTimeShift.wrap(bytes6(abi.encodePacked(uint8(shift.unit), shift.offset)));
 }
 
-function decode(EncodedTimeShift encoded) pure returns (TimeShiftLib.TimeUnit unit, int64 offset) {
-    uint72 encodedValue = uint72(EncodedTimeShift.unwrap(encoded));
-    unit = TimeShiftLib.TimeUnit(uint8(encodedValue >> 64));
-    offset = int64(uint64(uint72(encodedValue)));
+function decode(EncodedTimeShift encoded) pure returns (TimeShiftLib.TimeUnit unit, int40 offset) {
+    uint48 encodedValue = uint48(EncodedTimeShift.unwrap(encoded));
+    unit = TimeShiftLib.TimeUnit(uint8(encodedValue >> 40));
+    offset = int40(uint40(uint48(encodedValue)));
 }
 
 function isInherited(EncodedTimeShift encoded) pure returns (bool) {
-    return EncodedTimeShift.unwrap(encoded) == bytes9(0);
+    return EncodedTimeShift.unwrap(encoded) == bytes6(0);
 }
 
 using {decode, isInherited} for EncodedTimeShift global;
@@ -43,10 +43,10 @@ library TimeShiftLib {
 
     error InvalidTimeShift();
 
-    function applyShift(uint64 time, EncodedTimeShift shift) internal pure returns (uint64) {
-        (TimeUnit unit, int64 offset) = shift.decode();
+    function applyShift(uint40 time, EncodedTimeShift shift) internal pure returns (uint40) {
+        (TimeUnit unit, int40 offset) = shift.decode();
 
-        uint64 realTime = uint64(int64(time) + offset);
+        uint40 realTime = uint40(int40(time) + offset);
         (uint256 y, uint256 m, uint256 d) = realTime.toDate();
 
         if (unit == TimeUnit.Daily) {
@@ -66,7 +66,7 @@ library TimeShiftLib {
         }
 
         uint256 shiftedTs = DateTimeLib.timestampFromDateTime(y, m, d, 0, 0, 0);
-        return uint64(int64(uint64(shiftedTs)) - offset);
+        return uint40(int40(uint40(shiftedTs)) - offset);
     }
 
     /**
@@ -83,7 +83,7 @@ library TimeShiftLib {
         return d2 <= daysInMonth ? (y, m, d2) : m < 12 ? (y, m + 1, d2 - daysInMonth) : (y + 1, 1, d2 - daysInMonth);
     }
 
-    function toDate(uint64 timestamp) internal pure returns (uint256 y, uint256 m, uint256 d) {
+    function toDate(uint40 timestamp) internal pure returns (uint256 y, uint256 m, uint256 d) {
         return DateTimeLib._daysToDate(timestamp / 1 days);
     }
 }
