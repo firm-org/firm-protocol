@@ -244,7 +244,10 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
      * @param amount Amount of the allowance's token being sent
      * @param description Description of the payment
      */
-    function executePayment(uint256 allowanceId, address to, uint256 amount, string memory description) external returns (uint40 nextResetTime) {
+    function executePayment(uint256 allowanceId, address to, uint256 amount, string memory description)
+        external
+        returns (uint40 nextResetTime)
+    {
         Allowance storage allowance = _getAllowance(allowanceId);
 
         if (!_isAuthorized(_msgSender(), allowance.spender)) {

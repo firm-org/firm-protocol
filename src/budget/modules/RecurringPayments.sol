@@ -15,9 +15,13 @@ contract RecurringPayments is BudgetModule {
 
     struct AllowancePayments {
         mapping(uint256 => RecurringPayment) paymentData;
-        mapping(uint256 => uint64[4]) nextExecutionTime; // tightly stored as an optimization
-        uint256 paymentsCount;
+        // tighly packed fixed array as on execution, the next execution time
+        // is updated, resulting in less slots being touched
+        // index 0 acts as the length for how many payments there are
+        uint40[2 ** 40] nextExecutionTime;
     }
+
+    uint256 internal constant PAYMENTS_LENGTH_INDEX = 0;
 
     mapping(uint256 => AllowancePayments) payments;
 
@@ -25,63 +29,70 @@ contract RecurringPayments is BudgetModule {
     function addPayment(uint256 allowanceId, address to, uint256 amount)
         external
         onlyAllowanceAdmin(allowanceId)
-        returns (uint256 paymentId)
+        returns (uint40 paymentId)
     {
         AllowancePayments storage allowancePayments = payments[allowanceId];
 
         unchecked {
-            paymentId = allowancePayments.paymentsCount++;
+            paymentId = ++allowancePayments.nextExecutionTime[PAYMENTS_LENGTH_INDEX];
         }
-        allowancePayments.paymentData[paymentId].to = to;
-        allowancePayments.paymentData[paymentId].amount = amount;
+        allowancePayments.paymentData[paymentId] = RecurringPayment({disabled: false, to: to, amount: amount});
     }
+    
+    error UnexistentPayment(uint256 allowanceId, uint256 paymentId);
 
     // Unprotected
     function executePayment(uint256 allowanceId, uint256 paymentId) external {
         RecurringPayment storage payment = payments[allowanceId].paymentData[paymentId];
+        uint40[2 ** 40] storage nextExecutionTime = payments[allowanceId].nextExecutionTime;
 
-        uint256 id1 = paymentId / 4;
-        uint256 id2 = paymentId % 4;
+        bool badPaymentId = paymentId == PAYMENTS_LENGTH_INDEX || paymentId > nextExecutionTime[PAYMENTS_LENGTH_INDEX];
+        if (badPaymentId) {
+            revert UnexistentPayment(allowanceId, paymentId);
+        }
+
         require(!payment.disabled);
-        require(uint64(block.timestamp) >= payments[allowanceId].nextExecutionTime[id1][id2]);
+        require(uint40(block.timestamp) >= nextExecutionTime[paymentId]);
 
         // reentrancy lock
-        payments[allowanceId].nextExecutionTime[id1][id2] = type(uint64).max;
+        nextExecutionTime[paymentId] = type(uint40).max;
 
-        uint64 nextResetTime = budget.executePayment(allowanceId, payment.to, payment.amount, "");
+        uint40 nextResetTime = budget.executePayment(allowanceId, payment.to, payment.amount, "");
 
-        payments[allowanceId].nextExecutionTime[id1][id2] = nextResetTime;
+        nextExecutionTime[paymentId] = nextResetTime;
     }
 
-    function executeManyPayments(uint256 allowanceId, uint256[] calldata paymentIds) external {
+    // Unprotected
+    function executeManyPayments(uint256 allowanceId, uint40[] calldata paymentIds) external {
+        uint40[2 ** 40] storage nextExecutionTime = payments[allowanceId].nextExecutionTime;
+        
         uint256[] memory amounts = new uint256[](paymentIds.length);
         address[] memory tos = new address[](paymentIds.length);
 
+        uint40 paymentsLength = nextExecutionTime[PAYMENTS_LENGTH_INDEX];
         for (uint256 i = 0; i < paymentIds.length; i++) {
             uint256 paymentId = paymentIds[i];
             RecurringPayment storage payment = payments[allowanceId].paymentData[paymentId];
 
-            uint256 id1 = paymentId / 4;
-            uint256 id2 = paymentId % 4;
+            bool badPaymentId = paymentId == PAYMENTS_LENGTH_INDEX || paymentId > paymentsLength;
+            if (badPaymentId) {
+                revert UnexistentPayment(allowanceId, paymentId);
+            }   
 
             require(!payment.disabled);
-            require(uint64(block.timestamp) >= payments[allowanceId].nextExecutionTime[id1][id2]);
+            require(uint40(block.timestamp) >= nextExecutionTime[paymentId]);
 
             tos[i] = payment.to;
             amounts[i] = payment.amount;
 
             // set reentrancy lock for paymentId
-            payments[allowanceId].nextExecutionTime[id1][id2] = type(uint64).max;
+            nextExecutionTime[paymentId] = type(uint40).max;
         }
 
-        uint64 nextResetTime = budget.executeMultiPayment(allowanceId, tos, amounts, "");
+        uint40 nextResetTime = budget.executeMultiPayment(allowanceId, tos, amounts, "");
 
         for (uint256 i = 0; i < paymentIds.length; i++) {
-            uint256 paymentId = paymentIds[i];
-            uint256 id1 = paymentId / 4;
-            uint256 id2 = paymentId % 4;
-
-            payments[allowanceId].nextExecutionTime[id1][id2] = nextResetTime;
+            nextExecutionTime[paymentIds[i]] = nextResetTime;
         }
     }
 }

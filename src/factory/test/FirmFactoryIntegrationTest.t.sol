@@ -153,7 +153,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
             TimeShift(TimeShiftLib.TimeUnit.Monthly, 0).encode(),
             ""
         );
-        uint256[] memory paymentIds = new uint256[](2);
+        uint40[] memory paymentIds = new uint40[](2);
         paymentIds[0] = recurringPayments.addPayment(recurringAllowanceId, receiver, 1);
         paymentIds[1] = recurringPayments.addPayment(recurringAllowanceId, receiver, 2);
         vm.stopPrank();
