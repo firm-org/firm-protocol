@@ -132,6 +132,9 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
                 revert UnauthorizedNotAllowanceAdmin(NO_PARENT_ID);
             }
 
+            // We don't allow setting amount 0 on top-level allowances as clients
+            // could support setting 0 as the amount for the allowance and that
+            // will create an allowance that allows completely wiping the safe (for the token)
             if (amount == INHERITED_AMOUNT) {
                 revert ZeroAmountForTopLevelAllowance();
             }
@@ -207,7 +210,10 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
     function setAllowanceAmount(uint256 allowanceId, uint256 amount) external {
         Allowance storage allowance = _getAllowanceAndValidateAdmin(allowanceId);
 
-        // TODO: Not let setting 0 if allowance is top level
+        if (amount == INHERITED_AMOUNT && allowance.parentId == NO_PARENT_ID) {
+            revert ZeroAmountForTopLevelAllowance();
+        }
+
         allowance.amount = amount;
         emit AllowanceAmountChanged(allowanceId, amount);
     }
