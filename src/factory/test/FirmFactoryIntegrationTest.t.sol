@@ -158,11 +158,11 @@ contract FirmFactoryIntegrationTest is FirmTest {
         paymentIds[1] = recurringPayments.addPayment(recurringAllowanceId, receiver, 2);
         vm.stopPrank();
 
-        recurringPayments.executeManyPayments(recurringAllowanceId, paymentIds);
+        recurringPayments.executePayments(recurringAllowanceId, paymentIds);
 
         // almost next month, revert bc of recurring execution too early
         vm.warp(DateTimeLib.timestampFromDateTime(2022, 1, 31, 23, 59, 59));
-        vm.expectRevert(bytes(""));
+        vm.expectRevert(abi.encodeWithSelector(RecurringPayments.AlreadyExecutedForPeriod.selector, recurringAllowanceId, paymentIds[0], DateTimeLib.timestampFromDateTime(2022, 2, 1, 0, 0, 0)));
         recurringPayments.executePayment(recurringAllowanceId, paymentIds[0]);
 
         // next month
