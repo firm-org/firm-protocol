@@ -56,23 +56,23 @@ contract TimeShiftLibShiftTest is FirmTest {
         TimeShift memory shift = TimeShift(TimeShiftLib.TimeUnit.Monthly, 1 hours);
 
         assertEq(
-            uint64(DateTimeLib.timestampFromDateTime(2022, 1, 1, 23, 23, 0)).applyShift(shift.encode()),
+            uint40(DateTimeLib.timestampFromDateTime(2022, 1, 1, 23, 23, 0)).applyShift(shift.encode()),
             DateTimeLib.timestampFromDateTime(2022, 1, 31, 23, 0, 0)
         );
         assertEq(
-            uint64(DateTimeLib.timestampFromDateTime(2022, 1, 31, 23, 23, 0)).applyShift(shift.encode()),
+            uint40(DateTimeLib.timestampFromDateTime(2022, 1, 31, 23, 23, 0)).applyShift(shift.encode()),
             DateTimeLib.timestampFromDateTime(2022, 2, 28, 23, 0, 0)
         );
     }
 
-    uint64 immutable from_ = uint64(DateTimeLib.timestampFromDateTime(2022, 12, 28, 0, 0, 0));
-    uint64 immutable to_ = uint64(DateTimeLib.timestampFromDateTime(2023, 1, 2, 0, 0, 0));
+    uint40 immutable from_ = uint40(DateTimeLib.timestampFromDateTime(2022, 12, 28, 0, 0, 0));
+    uint40 immutable to_ = uint40(DateTimeLib.timestampFromDateTime(2023, 1, 2, 0, 0, 0));
 
     function testGasWorstCase() public {
         TimeShift memory shift = TimeShift(TimeShiftLib.TimeUnit.Weekly, 0);
 
         uint256 initialGas = gasleft();
-        assertEq(uint64(from_).applyShift(shift.encode()), to_);
+        assertEq(uint40(from_).applyShift(shift.encode()), to_);
 
         assertLt(initialGas - gasleft(), 12000);
     }
@@ -87,7 +87,7 @@ contract TimeShiftLibShiftTest is FirmTest {
         uint256 d2
     ) public {
         assertEq(
-            uint64(DateTimeLib.timestampFromDate(y1, m1, d1)).applyShift(TimeShift(unit, 0).encode()),
+            uint40(DateTimeLib.timestampFromDate(y1, m1, d1)).applyShift(TimeShift(unit, 0).encode()),
             DateTimeLib.timestampFromDate(y2, m2, d2)
         );
     }
@@ -105,22 +105,22 @@ contract TimeShiftLibEncodingTest is FirmTest {
 
     function testEncodingGas() public {
         TimeShift memory shift = TimeShift(TimeShiftLib.TimeUnit.Monthly, -1 hours);
-        assertEq(uint256(uint72(EncodedTimeShift.unwrap(shift.encode()))), 0x03fffffffffffff1f0);
+        assertEq(uint256(uint48(EncodedTimeShift.unwrap(shift.encode()))), 0x03fffffff1f0);
     }
 
     function testDecodingGas() public {
-        EncodedTimeShift encodedShift = EncodedTimeShift.wrap(0x03fffffffffffff1f0);
+        EncodedTimeShift encodedShift = EncodedTimeShift.wrap(0x03fffffff1f0);
 
-        (TimeShiftLib.TimeUnit unit, int64 offset) = encodedShift.decode();
+        (TimeShiftLib.TimeUnit unit, int40 offset) = encodedShift.decode();
 
         assertEq(uint8(unit), uint8(TimeShiftLib.TimeUnit.Monthly));
         assertEq(offset, -1 hours);
     }
 
-    function assertRoundtrip(TimeShiftLib.TimeUnit inputUnit, int64 inputOffset) public {
+    function assertRoundtrip(TimeShiftLib.TimeUnit inputUnit, int40 inputOffset) public {
         TimeShift memory shift = TimeShift(inputUnit, inputOffset);
         EncodedTimeShift encoded = shift.encode();
-        (TimeShiftLib.TimeUnit unit, int64 offset) = encoded.decode();
+        (TimeShiftLib.TimeUnit unit, int40 offset) = encoded.decode();
 
         assertEq(uint8(unit), uint8(inputUnit));
         assertEq(offset, inputOffset);

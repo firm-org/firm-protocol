@@ -11,7 +11,7 @@ import {TimeShiftLib, EncodedTimeShift} from "./TimeShiftLib.sol";
 
 address constant NATIVE_ASSET = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 uint256 constant NO_PARENT_ID = 0;
-uint64 constant INHERITED_RESET_TIME = 0;
+uint40 constant INHERITED_RESET_TIME = 0;
 address constant IMPL_INIT_ADDRESS = address(1);
 
 /**
@@ -24,7 +24,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
     string public constant moduleId = "org.firm.budget";
     uint256 public constant moduleVersion = 1;
 
-    using TimeShiftLib for uint64;
+    using TimeShiftLib for uint40;
 
     ////////////////////////////////////////////////////////////////////////////////
     // INITIALIZATION
@@ -49,7 +49,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         uint256 amount;
         uint256 spent;
         address token;
-        uint64 nextResetTime;
+        uint40 nextResetTime;
         address spender;
         EncodedTimeShift recurrency;
         bool isDisabled;
@@ -65,7 +65,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         address token,
         uint256 amount,
         EncodedTimeShift recurrency,
-        uint64 nextResetTime,
+        uint40 nextResetTime,
         string name
     );
     event AllowanceStateChanged(uint256 indexed allowanceId, bool isEnabled);
@@ -78,7 +78,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         address token,
         address indexed to,
         uint256 amount,
-        uint64 nextResetTime,
+        uint40 nextResetTime,
         string description
     );
     event MultiPaymentExecuted(
@@ -87,7 +87,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         address token,
         address[] tos,
         uint256[] amounts,
-        uint64 nextResetTime,
+        uint40 nextResetTime,
         string description
     );
 
@@ -122,7 +122,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         EncodedTimeShift recurrency,
         string memory name
     ) public returns (uint256 allowanceId) {
-        uint64 nextResetTime;
+        uint40 nextResetTime;
 
         if (parentAllowanceId == NO_PARENT_ID) {
             // Top-level allowances can only be created by the Safe
@@ -133,7 +133,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
             // For top-level allowances, recurrency needs to be set and cannot be zero
             // applyShift reverts with InvalidTimeShift if recurrency is unspecified
             // Therefore, nextResetTime is always greater than the current time
-            nextResetTime = uint64(block.timestamp).applyShift(recurrency);
+            nextResetTime = uint40(block.timestamp).applyShift(recurrency);
         } else {
             Allowance storage parentAllowance = _getAllowance(parentAllowanceId);
 
@@ -153,7 +153,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
             // Recurrency can be zero in sub-allowances and is inherited from the parent
             if (!recurrency.isInherited()) {
                 // Will revert with InvalidTimeShift if recurrency is invalid
-                nextResetTime = uint64(block.timestamp).applyShift(recurrency);
+                nextResetTime = uint40(block.timestamp).applyShift(recurrency);
             }
         }
 
@@ -250,7 +250,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         address token = allowance.token;
 
         // Make sure the payment is within budget all the way up to its top-level budget
-        (uint64 nextResetTime,) = _checkAndUpdateAllowanceChain(allowanceId, amount);
+        (uint40 nextResetTime,) = _checkAndUpdateAllowanceChain(allowanceId, amount);
 
         if (!_performTransfer(token, to, amount)) {
             revert PaymentExecutionFailed(allowanceId, token, to, amount);
@@ -292,7 +292,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
             }
         }
 
-        (uint64 nextResetTime,) = _checkAndUpdateAllowanceChain(allowanceId, totalAmount);
+        (uint40 nextResetTime,) = _checkAndUpdateAllowanceChain(allowanceId, totalAmount);
 
         address token = allowance.token;
         if (!_performMultiTransfer(token, tos, amounts)) {
@@ -386,7 +386,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
 
     function _checkAndUpdateAllowanceChain(uint256 allowanceId, uint256 amount)
         internal
-        returns (uint64 nextResetTime, bool allowanceResets)
+        returns (uint40 nextResetTime, bool allowanceResets)
     {
         Allowance storage allowance = allowances[allowanceId]; // allowanceId always points to an existing allowance
 
@@ -401,9 +401,9 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         } else {
             nextResetTime = allowance.nextResetTime;
 
-            if (uint64(block.timestamp) >= nextResetTime) {
+            if (uint40(block.timestamp) >= nextResetTime) {
                 allowanceResets = true;
-                nextResetTime = uint64(block.timestamp).applyShift(allowance.recurrency);
+                nextResetTime = uint40(block.timestamp).applyShift(allowance.recurrency);
             }
 
             if (allowanceResets) {

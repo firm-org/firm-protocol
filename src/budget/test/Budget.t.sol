@@ -46,7 +46,7 @@ contract BudgetTest is FirmTest {
             uint256 amount,
             uint256 spent,
             address token,
-            uint64 nextResetTime,
+            uint40 nextResetTime,
             address spender,
             EncodedTimeShift recurrency,
             bool isDisabled
@@ -73,7 +73,7 @@ contract BudgetTest is FirmTest {
         budget.setAllowanceAmount(allowanceId, 1);
         budget.setAllowanceName(allowanceId, "new name");
 
-        (, uint256 amount,,, uint64 nextResetTime, address spender,,) = budget.allowances(allowanceId);
+        (, uint256 amount,,, uint40 nextResetTime, address spender,,) = budget.allowances(allowanceId);
 
         assertEq(amount, 1);
         assertEq(nextResetTime, 1 days);
@@ -103,7 +103,7 @@ contract BudgetTest is FirmTest {
     }
 
     function testAllowanceIsKeptTrackOfOnSingle() public {
-        uint64 initialTime = uint64(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
+        uint40 initialTime = uint40(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
         uint256 allowanceId = 1;
 
         vm.prank(address(avatar));
@@ -122,7 +122,7 @@ contract BudgetTest is FirmTest {
     }
 
     function testAllowanceIsKeptTrackOfOnMulti() public {
-        uint64 initialTime = uint64(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
+        uint40 initialTime = uint40(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
         uint256 allowanceId = 1;
 
         vm.prank(address(avatar));
@@ -152,7 +152,7 @@ contract BudgetTest is FirmTest {
     }
 
     function testMultipleAllowances() public {
-        uint64 initialTime = uint64(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
+        uint40 initialTime = uint40(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
 
         uint256 firstAllowanceId = 1;
         uint256 secondAllowanceId = 2;
@@ -172,7 +172,7 @@ contract BudgetTest is FirmTest {
     }
 
     function testCreateSuballowance() public returns (uint256 topLevelAllowance, uint256 subAllowance) {
-        uint64 initialTime = uint64(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
+        uint40 initialTime = uint40(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
         vm.warp(initialTime);
 
         vm.prank(address(avatar));
@@ -218,7 +218,7 @@ contract BudgetTest is FirmTest {
     }
 
     function testCreateSuballowanceWithInheritedRecurrency() public {
-        uint64 initialTime = uint64(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
+        uint40 initialTime = uint40(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
         vm.warp(initialTime);
 
         vm.prank(address(avatar));
@@ -234,7 +234,7 @@ contract BudgetTest is FirmTest {
     }
 
     function testAllowanceChain() public {
-        uint64 initialTime = uint64(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
+        uint40 initialTime = uint40(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
         vm.warp(initialTime);
 
         vm.prank(address(avatar));
@@ -381,7 +381,7 @@ contract BudgetTest is FirmTest {
         address token,
         address indexed to,
         uint256 amount,
-        uint64 nextResetTime,
+        uint40 nextResetTime,
         string descrition
     );
 
@@ -390,9 +390,9 @@ contract BudgetTest is FirmTest {
         uint256 allowanceId,
         address to,
         uint256 amount,
-        uint64 expectedNextResetTime
+        uint40 expectedNextResetTime
     ) public {
-        (,, uint256 initialSpent, address token, uint64 initialNextReset,, EncodedTimeShift shift,) =
+        (,, uint256 initialSpent, address token, uint40 initialNextReset,, EncodedTimeShift shift,) =
             budget.allowances(allowanceId);
 
         if (block.timestamp >= initialNextReset) {
@@ -404,7 +404,7 @@ contract BudgetTest is FirmTest {
         emit PaymentExecuted(allowanceId, actor, token, to, amount, expectedNextResetTime, "");
         budget.executePayment(allowanceId, to, amount, "");
 
-        (,, uint256 spent,, uint64 nextResetTime,,,) = budget.allowances(allowanceId);
+        (,, uint256 spent,, uint40 nextResetTime,,,) = budget.allowances(allowanceId);
 
         assertEq(spent, initialSpent + amount);
         assertEq(nextResetTime, shift.isInherited() ? 0 : expectedNextResetTime);
