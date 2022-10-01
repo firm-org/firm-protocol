@@ -3,6 +3,8 @@ pragma solidity 0.8.16;
 
 import {BudgetModule} from "./BudgetModule.sol";
 
+uint256 internal constant PAYMENTS_LENGTH_INDEX = 0;
+
 contract RecurringPayments is BudgetModule {
     string public constant moduleId = "org.firm.budget.recurring";
     uint256 public constant moduleVersion = 1;
@@ -33,13 +35,15 @@ contract RecurringPayments is BudgetModule {
     {
         AllowancePayments storage allowancePayments = payments[allowanceId];
 
+        if (amount == 0) {
+            revert ZeroAmount();
+        }
+
         unchecked {
             paymentId = ++allowancePayments.nextExecutionTime[PAYMENTS_LENGTH_INDEX];
         }
         allowancePayments.paymentData[paymentId] = RecurringPayment({disabled: false, to: to, amount: amount});
     }
-    
-    error UnexistentPayment(uint256 allowanceId, uint256 paymentId);
 
     // Unprotected
     function executePayment(uint256 allowanceId, uint256 paymentId) external {
@@ -65,7 +69,7 @@ contract RecurringPayments is BudgetModule {
     // Unprotected
     function executeManyPayments(uint256 allowanceId, uint40[] calldata paymentIds) external {
         uint40[2 ** 40] storage nextExecutionTime = payments[allowanceId].nextExecutionTime;
-        
+
         uint256[] memory amounts = new uint256[](paymentIds.length);
         address[] memory tos = new address[](paymentIds.length);
 
@@ -77,7 +81,7 @@ contract RecurringPayments is BudgetModule {
             bool badPaymentId = paymentId == PAYMENTS_LENGTH_INDEX || paymentId > paymentsLength;
             if (badPaymentId) {
                 revert UnexistentPayment(allowanceId, paymentId);
-            }   
+            }
 
             require(!payment.disabled);
             require(uint40(block.timestamp) >= nextExecutionTime[paymentId]);
