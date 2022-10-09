@@ -464,7 +464,7 @@ abstract contract BudgetTest is FirmTest {
         uint256 amount,
         uint40 expectedNextResetTime
     ) public {
-        (,, uint256 initialSpent, address token, uint40 initialNextReset,, EncodedTimeShift shift,) =
+        (,, uint256 initialSpent, address token_, uint40 initialNextReset,, EncodedTimeShift shift,) =
             budget.allowances(allowanceId);
 
         if (block.timestamp >= initialNextReset) {
@@ -473,7 +473,7 @@ abstract contract BudgetTest is FirmTest {
 
         vm.prank(actor);
         vm.expectEmit(true, true, true, true);
-        emit PaymentExecuted(allowanceId, actor, token, to, amount, expectedNextResetTime, "");
+        emit PaymentExecuted(allowanceId, actor, token_, to, amount, expectedNextResetTime, "");
         budget.executePayment(allowanceId, to, amount, "");
 
         (,, uint256 spent,, uint40 nextResetTime,,,) = budget.allowances(allowanceId);
