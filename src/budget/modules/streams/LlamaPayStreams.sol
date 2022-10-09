@@ -3,7 +3,7 @@ pragma solidity 0.8.16;
 
 import {LlamaPay, LlamaPayFactory} from "llamapay/LlamaPayFactory.sol";
 
-import {BudgetModule} from "./BudgetModule.sol";
+import {BudgetModule} from "../BudgetModule.sol";
 
 contract LlamaPayStreams is BudgetModule {
     string public constant moduleId = "org.firm.budget.llamapay-streams";
