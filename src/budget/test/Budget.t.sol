@@ -401,19 +401,19 @@ abstract contract BudgetTest is FirmTest {
         
         performDebit(RECEIVER, allowanceId3, 2);
         (,, spent,,,,,) = budget.allowances(allowanceId1);
-        assertEq(spent, 4, "a");
+        assertEq(spent, 4);
         (,, spent,,,,,) = budget.allowances(allowanceId2);
-        assertEq(spent, 1, "aa");
+        assertEq(spent, 1);
         (,, spent,,,,,) = budget.allowances(allowanceId3);
-        assertEq(spent, 0, "aaa");
+        assertEq(spent, 0);
 
         performDebit(RECEIVER, allowanceId1, 4);
         (,, spent,,,,,) = budget.allowances(allowanceId1);
-        assertEq(spent, 0, "b");
+        assertEq(spent, 0);
         (,, spent,,,,,) = budget.allowances(allowanceId2);
-        assertEq(spent, 1, "bb");
+        assertEq(spent, 1);
         (,, spent,,,,,) = budget.allowances(allowanceId3);
-        assertEq(spent, 0, "bbb");
+        assertEq(spent, 0);
     }
 
     function createDailyAllowance(address spender, uint256 expectedId) public returns (uint256 allowanceId) {
