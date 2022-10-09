@@ -398,7 +398,7 @@ abstract contract BudgetTest is FirmTest {
         budget.executePayment(allowanceId3, RECEIVER, 1, "");
         vm.stopPrank();
         uint256 spent;
-        
+
         performDebit(RECEIVER, allowanceId3, 2);
         (,, spent,,,,,) = budget.allowances(allowanceId1);
         assertEq(spent, 4);
@@ -426,7 +426,7 @@ abstract contract BudgetTest is FirmTest {
     function performDebit(address debiter, uint256 allowanceId, uint256 amount) internal {
         vm.startPrank(debiter);
         if (token == NATIVE_ASSET) {
-            budget.debitAllowance{ value: amount }(allowanceId, amount, "");
+            budget.debitAllowance{value: amount}(allowanceId, amount, "");
         } else {
             ERC20Token(token).approve(address(budget), amount);
             budget.debitAllowance(allowanceId, amount, "");

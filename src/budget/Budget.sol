@@ -352,7 +352,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
             if (msg.value != 0) {
                 revert NativeValueMismatch();
             }
-            
+
             // TODO: do we need to make this 'safe'?
             IERC20(allowance.token).transferFrom(actor, address(safe()), amount);
         } else {
