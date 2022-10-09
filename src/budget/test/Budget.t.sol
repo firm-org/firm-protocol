@@ -5,22 +5,24 @@ import {FirmTest} from "../../common/test/lib/FirmTest.sol";
 import {RolesStub} from "../../common/test/mocks/RolesStub.sol";
 import {roleFlag} from "../../common/test/mocks/RolesAuthMock.sol";
 import {AvatarStub} from "../../common/test/mocks/AvatarStub.sol";
+import {ERC20Token} from "../../factory/test/lib/ERC20Token.sol";
 import {UpgradeableModuleProxyFactory} from "../../factory/UpgradeableModuleProxyFactory.sol";
 
 import {TimeShift, DateTimeLib} from "../../budget/TimeShiftLib.sol";
 import {SafeAware} from "../../bases/SafeAware.sol";
 import "../Budget.sol";
 
-contract BudgetTest is FirmTest {
+abstract contract BudgetTest is FirmTest {
     AvatarStub avatar;
     RolesStub roles;
     Budget budget;
+    address token;
 
     address SPENDER = account("spender");
     address RECEIVER = account("receiver");
     address SOMEONE_ELSE = account("someone else");
 
-    function setUp() public {
+    function setUp() public virtual {
         avatar = new AvatarStub();
         roles = new RolesStub();
         budget = Budget(createProxy(new Budget(), abi.encodeCall(Budget.initialize, (avatar, roles, address(0)))));
@@ -45,7 +47,7 @@ contract BudgetTest is FirmTest {
             uint256 parentId,
             uint256 amount,
             uint256 spent,
-            address token,
+            address token_,
             uint40 nextResetTime,
             address spender,
             EncodedTimeShift recurrency,
@@ -55,7 +57,7 @@ contract BudgetTest is FirmTest {
         assertEq(parentId, NO_PARENT_ID);
         assertEq(amount, 10);
         assertEq(spent, 0);
-        assertEq(token, address(0));
+        assertEq(token_, address(token));
         assertEq(nextResetTime, 1 days);
         assertEq(spender, SPENDER);
         assertEq(
@@ -355,9 +357,39 @@ contract BudgetTest is FirmTest {
         budget.executeMultiPayment(allowanceId, tos, amounts, "");
     }
 
+    function testCanDebitAllowance() public {
+        vm.prank(address(avatar));
+        uint256 allowanceId = 1;
+        createDailyAllowance(SPENDER, allowanceId);
+
+        // Since the budget allows spending 10, allowance should be full after the first
+        // payment execution, but since 5 are debited, another execution of 5 is allowed
+        uint256 spent;
+        vm.prank(SPENDER);
+        budget.executePayment(allowanceId, RECEIVER, 10, "");
+        (,, spent,,,,,) = budget.allowances(allowanceId);
+        assertEq(spent, 10);
+
+        vm.startPrank(RECEIVER);
+        if (token == NATIVE_ASSET) {
+            budget.debitAllowance{ value: 5 }(allowanceId, 5, "");
+        } else {
+            ERC20Token(token).approve(address(budget), 5);
+            budget.debitAllowance(allowanceId, 5, "");
+        }
+        (,, spent,,,,,) = budget.allowances(allowanceId);
+        assertEq(spent, 5);
+        vm.stopPrank();
+
+        vm.prank(SPENDER);
+        budget.executePayment(allowanceId, RECEIVER, 5, "");
+        (,, spent,,,,,) = budget.allowances(allowanceId);
+        assertEq(spent, 10);
+    }
+
     function createDailyAllowance(address spender, uint256 expectedId) public returns (uint256 allowanceId) {
         allowanceId = budget.createAllowance(
-            NO_PARENT_ID, spender, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
+            NO_PARENT_ID, spender, address(token), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
         );
         assertEq(allowanceId, expectedId);
     }
@@ -408,5 +440,24 @@ contract BudgetTest is FirmTest {
 
         assertEq(spent, initialSpent + amount);
         assertEq(nextResetTime, shift.isInherited() ? 0 : expectedNextResetTime);
+    }
+}
+
+contract TokenBudgetTest is BudgetTest {
+    function setUp() public override {
+        super.setUp();
+
+        ERC20Token token_ = new ERC20Token();
+        token_.mint(address(avatar), 1e6 ether);
+        token = address(token_);
+    }
+}
+
+contract EtherBudgetTest is BudgetTest {
+    function setUp() public override {
+        super.setUp();
+
+        token = NATIVE_ASSET;
+        vm.deal(address(avatar), 1e6 ether);
     }
 }

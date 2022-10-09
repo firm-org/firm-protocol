@@ -30,4 +30,6 @@ contract AvatarStub is IAvatar {
         pure
         returns (address[] memory array, address next)
     {}
+
+    receive() external payable {}
 }
