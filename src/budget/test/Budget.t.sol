@@ -370,16 +370,9 @@ abstract contract BudgetTest is FirmTest {
         (,, spent,,,,,) = budget.allowances(allowanceId);
         assertEq(spent, 10);
 
-        vm.startPrank(RECEIVER);
-        if (token == NATIVE_ASSET) {
-            budget.debitAllowance{ value: 5 }(allowanceId, 5, "");
-        } else {
-            ERC20Token(token).approve(address(budget), 5);
-            budget.debitAllowance(allowanceId, 5, "");
-        }
+        performDebit(RECEIVER, allowanceId, 5);
         (,, spent,,,,,) = budget.allowances(allowanceId);
         assertEq(spent, 5);
-        vm.stopPrank();
 
         vm.prank(SPENDER);
         budget.executePayment(allowanceId, RECEIVER, 5, "");
@@ -387,11 +380,58 @@ abstract contract BudgetTest is FirmTest {
         assertEq(spent, 10);
     }
 
+    function testCanDebitOnChains() public {
+        vm.prank(address(avatar));
+        uint256 allowanceId1 = budget.createAllowance(
+            NO_PARENT_ID, SPENDER, address(token), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
+        );
+        vm.startPrank(SPENDER);
+        uint256 allowanceId2 = budget.createAllowance(
+            allowanceId1, SPENDER, address(token), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
+        );
+        uint256 allowanceId3 = budget.createAllowance(
+            allowanceId2, SPENDER, address(token), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
+        );
+
+        budget.executePayment(allowanceId1, RECEIVER, 3, "");
+        budget.executePayment(allowanceId2, RECEIVER, 2, "");
+        budget.executePayment(allowanceId3, RECEIVER, 1, "");
+        vm.stopPrank();
+        uint256 spent;
+        
+        performDebit(RECEIVER, allowanceId3, 2);
+        (,, spent,,,,,) = budget.allowances(allowanceId1);
+        assertEq(spent, 4, "a");
+        (,, spent,,,,,) = budget.allowances(allowanceId2);
+        assertEq(spent, 1, "aa");
+        (,, spent,,,,,) = budget.allowances(allowanceId3);
+        assertEq(spent, 0, "aaa");
+
+        performDebit(RECEIVER, allowanceId1, 4);
+        (,, spent,,,,,) = budget.allowances(allowanceId1);
+        assertEq(spent, 0, "b");
+        (,, spent,,,,,) = budget.allowances(allowanceId2);
+        assertEq(spent, 1, "bb");
+        (,, spent,,,,,) = budget.allowances(allowanceId3);
+        assertEq(spent, 0, "bbb");
+    }
+
     function createDailyAllowance(address spender, uint256 expectedId) public returns (uint256 allowanceId) {
         allowanceId = budget.createAllowance(
             NO_PARENT_ID, spender, address(token), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
         );
         assertEq(allowanceId, expectedId);
+    }
+
+    function performDebit(address debiter, uint256 allowanceId, uint256 amount) internal {
+        vm.startPrank(debiter);
+        if (token == NATIVE_ASSET) {
+            budget.debitAllowance{ value: amount }(allowanceId, amount, "");
+        } else {
+            ERC20Token(token).approve(address(budget), amount);
+            budget.debitAllowance(allowanceId, amount, "");
+        }
+        vm.stopPrank();
     }
 
     function _generateMultiPaymentArrays(uint256 num, address to, uint256 amount)
