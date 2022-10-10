@@ -13,7 +13,7 @@ contract LlamaPayStreamsTest is BudgetModuleTest {
     LlamaPayStreams streams;
     uint256 allowanceId;
 
-    address RECEIVER = account("receiver");
+    address RECEIVER = account("Receiver");
 
     constructor() {
         // Deployed just once to mimic how we deal with an existing instance
@@ -27,40 +27,41 @@ contract LlamaPayStreamsTest is BudgetModuleTest {
         allowanceId = dailyAllowanceFor(address(streams), 50000 ether);
     }
 
-    function basicMonthlyAmountToSecs(uint256 monthlyAmount) internal returns (uint256) {
-        return monthlyAmount * 10**20 / (30 days);
-    }
+    function testCreateStream() public returns (LlamaPay llamaPay, address payer, uint256 amountPerSec) {
+        amountPerSec = basicMonthlyAmountToSecs(1000);
 
-    function testCreateStream() public returns (LlamaPay llamaPay) {
-        uint256 amountPerSec = basicMonthlyAmountToSecs(1000);
-        
-        vm.warp(1);
         vm.prank(address(avatar));
-        streams.configure(allowanceId, 8 weeks);
+        streams.configure(allowanceId, 60 days);
         vm.prank(address(avatar));
         streams.startStream(allowanceId, RECEIVER, amountPerSec, "");
-        
-        vm.warp(4 weeks);
-        ForwarderLib.Forwarder payer;
-        (llamaPay, payer,) = streams.streamManagers(allowanceId);
+
+        timetravel(30 days);
+
+        ForwarderLib.Forwarder payer_;
+        (llamaPay, payer_,) = streams.streamManagers(allowanceId);
+        payer = ForwarderLib.Forwarder.unwrap(payer_);
         assertEq(address(llamaPay.token()), address(token));
 
-        llamaPay.withdraw(ForwarderLib.Forwarder.unwrap(payer), RECEIVER, uint216(amountPerSec));
+        llamaPay.withdraw(payer, RECEIVER, uint216(amountPerSec));
+        assertBalance(RECEIVER, 1000, 1);
+        assertBalance(address(llamaPay), 1000, 1);
     }
 
-    /*
-    function testCreateTwoStreamReusingInstance() public {
-        LlamaPay llamaPay1 = testCreateStream();
-        uint256 allowanceId2 = dailyAllowanceFor(address(streams), 1000 ether);
+    function testCreateMultipleStreams() public {
+        (LlamaPay llamaPay, address payer, uint256 amountPerSec1) = testCreateStream();
+
+        uint256 amountPerSec2 = basicMonthlyAmountToSecs(2000);
 
         vm.prank(address(avatar));
-        streams.startStream(allowanceId2, RECEIVER, 1, "");
+        streams.startStream(allowanceId, RECEIVER, amountPerSec2, "");
 
-        (LlamaPay llamaPay2,,) = streams.streamManagers(allowanceId2);
-        assertEq(address(llamaPay1), address(llamaPay2));
-        assertEq(address(llamaPay2.token()), address(token));
+        timetravel(30 days);
+
+        llamaPay.withdraw(payer, RECEIVER, uint216(amountPerSec1));
+        llamaPay.withdraw(payer, RECEIVER, uint216(amountPerSec2));
+        assertBalance(RECEIVER, 4000, 3);
+        assertBalance(address(llamaPay), 3000, 3);
     }
-    */
 
     function testCantCreateStreamIfNotAdmin() public {
         vm.prank(address(avatar));
@@ -69,5 +70,13 @@ contract LlamaPayStreamsTest is BudgetModuleTest {
             abi.encodeWithSelector(BudgetModule.UnauthorizedNotAllowanceAdmin.selector, allowanceId, address(this))
         );
         streams.startStream(allowanceId, RECEIVER, 1, "");
+    }
+
+    function assertBalance(address who, uint256 expectedBalance, uint256 maxDelta) internal {
+        assertApproxEqAbs(token.balanceOf(who), expectedBalance * 10 ** token.decimals(), maxDelta);
+    }
+
+    function basicMonthlyAmountToSecs(uint256 monthlyAmount) internal pure returns (uint256) {
+        return monthlyAmount * 10 ** 20 / (30 days);
     }
 }

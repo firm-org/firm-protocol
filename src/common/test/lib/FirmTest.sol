@@ -23,4 +23,8 @@ contract FirmTest is Test {
         proxy = proxyFactory.deployUpgradeableModule(impl, initdata, 0);
         vm.label(proxy, "Proxy");
     }
+
+    function timetravel(uint256 time) internal {
+        vm.warp(block.timestamp + time);
+    }
 }

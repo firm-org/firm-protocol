@@ -54,7 +54,7 @@ contract LlamaPayStreams is BudgetModule {
         );
         deposit(allowanceId);
     }
-    
+
     // Unprotected
     function deposit(uint256 allowanceId) public {
         StreamManager storage streamManager = _getStreamManager(allowanceId);
@@ -67,14 +67,16 @@ contract LlamaPayStreams is BudgetModule {
             revert NoStreamsYet(allowanceId);
         }
 
+        uint256 existingBalance = streamer.balances(forwarder.addr());
         uint256 secondsToFund = uint40(block.timestamp) + streamManager.prepayBuffer - lastUpdate;
-        uint256 amount = secondsToFund * paidPerSec - streamer.balances(forwarder.addr());
+        uint256 amount = secondsToFund * paidPerSec - existingBalance;
         uint256 tokenAmount = amount / streamer.DECIMALS_DIVISOR();
+        // The first time we do a deposit, we leave one token in the forwarder
+        // as a gas optimization
+        bool leaveExtraToken = existingBalance == 0 && streamer.token().balanceOf(forwarder.addr()) == 0;
 
-        budget.executePayment(allowanceId, forwarder.addr(), tokenAmount, "Streams deposit");
-        forwarder.forwardChecked(
-            address(streamer), abi.encodeCall(streamer.deposit, (tokenAmount))
-        );
+        budget.executePayment(allowanceId, forwarder.addr(), tokenAmount + (leaveExtraToken ? 1 : 0), "Streams deposit");
+        forwarder.forwardChecked(address(streamer), abi.encodeCall(streamer.deposit, (tokenAmount)));
     }
 
     function _getStreamManager(uint256 allowanceId) internal view returns (StreamManager storage) {

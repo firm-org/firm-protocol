@@ -32,6 +32,7 @@ contract OwnedForwarder {
 
 library ForwarderLib {
     type Forwarder is address;
+
     using ForwarderLib for Forwarder;
 
     function create(bytes32 salt) internal returns (Forwarder) {
