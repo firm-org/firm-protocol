@@ -10,7 +10,7 @@ contract UpgradeableModuleProxyFactory is Ownable {
     error TakenAddress();
     error FailedInitialization();
     error ModuleVersionAlreadyRegistered();
-    error UnexistentModule();
+    error UnexistentModuleVersion();
 
     event ModuleRegistered(IModuleMetadata indexed implementation, string moduleId, uint256 version);
     event ModuleProxyCreation(address indexed proxy, IModuleMetadata indexed implementation);
@@ -41,7 +41,7 @@ contract UpgradeableModuleProxyFactory is Ownable {
         }
         implementation = modules[moduleId][version];
         if (address(implementation) == address(0)) {
-            revert UnexistentModule();
+            revert UnexistentModuleVersion();
         }
     }
 

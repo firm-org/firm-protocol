@@ -4,11 +4,82 @@ pragma solidity 0.8.16;
 import {FirmTest} from "../../common/test/lib/FirmTest.sol";
 import {IAvatar, SafeAware} from "../../bases/SafeAware.sol";
 
-import {UpgradeableModuleProxyFactory, IModuleMetadata} from "../UpgradeableModuleProxyFactory.sol";
-import {TargetBase, TargetV1, TargetV2} from "./lib/TestTargets.sol";
+import {UpgradeableModuleProxyFactory, LATEST_VERSION, Ownable} from "../UpgradeableModuleProxyFactory.sol";
+import {TargetBase, TargetV1, TargetV2, IModuleMetadata} from "./lib/TestTargets.sol";
 
 contract UpgradeableModuleProxyRegistryTest is FirmTest {
+    UpgradeableModuleProxyFactory factory;
+    TargetV1 implV1;
 
+    address OWNER = account("Owner");
+    address SOMEONE = account("Someone");
+
+    function setUp() public {
+        vm.prank(OWNER);
+        factory = new UpgradeableModuleProxyFactory();
+
+        implV1 = new TargetV1();
+    }
+
+    function testInitialState() public {
+        assertEq(factory.owner(), OWNER);
+        assertEq(factory.latestModuleVersion("org.firm.test-target"), 0);
+        vm.expectRevert(abi.encodeWithSelector(UpgradeableModuleProxyFactory.UnexistentModuleVersion.selector));
+        factory.getImplementation("org.firm.test-target", 1);
+        vm.expectRevert(abi.encodeWithSelector(UpgradeableModuleProxyFactory.UnexistentModuleVersion.selector));
+        factory.getImplementation("org.firm.test-target", LATEST_VERSION);
+    }
+
+    function testOwnerCanRegister() public {
+        vm.prank(OWNER);
+        factory.register(implV1);
+
+        assertEq(address(factory.getImplementation("org.firm.test-target", 1)), address(implV1));
+        assertEq(address(factory.getImplementation("org.firm.test-target", LATEST_VERSION)), address(implV1));
+        assertEq(factory.latestModuleVersion("org.firm.test-target"), implV1.moduleVersion());
+    }
+
+    function testCanRegisterMultipleVersions() public {
+        testOwnerCanRegister();
+
+        TargetV2 implV2 = new TargetV2();
+        vm.prank(OWNER);
+        factory.register(implV2);
+
+        assertEq(address(factory.getImplementation("org.firm.test-target", 2)), address(implV2));
+        assertEq(address(factory.getImplementation("org.firm.test-target", LATEST_VERSION)), address(implV2));
+
+        assertEq(factory.latestModuleVersion("org.firm.test-target"), implV2.moduleVersion());
+        assertEq(address(factory.getImplementation("org.firm.test-target", 1)), address(implV1));
+        assertEq(address(factory.getImplementation("org.firm.test-target", 2)), address(implV2));
+    }
+
+    function testNotOwnerCannotRegister() public {
+        vm.prank(SOMEONE);
+        vm.expectRevert("Ownable: caller is not the owner");
+        factory.register(implV1);
+    }
+
+    function testCantReregisterSameVersion() public {
+        vm.prank(OWNER);
+        factory.register(implV1);
+        vm.prank(OWNER);
+        vm.expectRevert(abi.encodeWithSelector(UpgradeableModuleProxyFactory.ModuleVersionAlreadyRegistered.selector));
+        factory.register(implV1);
+    }
+
+    function testOwnerCanChangeOwner() public {
+        vm.prank(OWNER);
+        factory.transferOwnership(SOMEONE);
+
+        assertEq(factory.owner(), SOMEONE);
+    }
+
+    function testNotOwnerCantChangeOwner() public {
+        vm.prank(SOMEONE);
+        vm.expectRevert("Ownable: caller is not the owner");
+        factory.transferOwnership(OWNER);
+    }
 }
 
 contract UpgradeableModuleProxyDeployTest is FirmTest {
@@ -72,5 +143,12 @@ contract UpgradeableModuleProxyDeployTest is FirmTest {
         vm.prank(SOMEONE);
         vm.expectRevert(abi.encodeWithSelector(SafeAware.UnauthorizedNotSafe.selector));
         proxy.upgrade(newImpl);
+    }
+
+    function testRevertsIfInitializerReverts() public {
+
+    }
+
+    function testRevertsIfRepeatingNonce() public {
     }
 }
