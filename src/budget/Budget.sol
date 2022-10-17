@@ -337,7 +337,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         bytes memory data = abi.encodeCall(this.__safeContext_performMultiTransfer, (token, tos, amounts));
 
         (bool callSuccess, bytes memory retData) =
-            execAndReturnData(_implementation(), 0, data, SafeEnums.Operation.DelegateCall);
+            execAndReturnData(address(_implementation()), 0, data, SafeEnums.Operation.DelegateCall);
         return callSuccess && retData.length == 32 && abi.decode(retData, (bool));
     }
 

@@ -25,9 +25,15 @@ contract RecurringPayments is BudgetModule {
 
     mapping(uint256 => AllowancePayments) payments;
 
-    event RecurringPaymentCreated(uint256 indexed allowanceId, uint40 indexed paymentId, address indexed to, uint256 amount);
-    event RecurringPaymentExecuted(uint256 indexed allowanceId, uint40 indexed paymentId, uint64 nextExecutionTime, address actor);
-    event RecurringPaymentsExecuted(uint256 indexed allowanceId, uint40[] paymentIds, uint64 nextExecutionTime, address actor);
+    event RecurringPaymentCreated(
+        uint256 indexed allowanceId, uint40 indexed paymentId, address indexed to, uint256 amount
+    );
+    event RecurringPaymentExecuted(
+        uint256 indexed allowanceId, uint40 indexed paymentId, uint64 nextExecutionTime, address actor
+    );
+    event RecurringPaymentsExecuted(
+        uint256 indexed allowanceId, uint40[] paymentIds, uint64 nextExecutionTime, address actor
+    );
 
     error ZeroAmount();
     error UnexistentPayment(uint256 allowanceId, uint256 paymentId);
@@ -80,7 +86,10 @@ contract RecurringPayments is BudgetModule {
     }
 
     // Unprotected
-    function executePayments(uint256 allowanceId, uint40[] calldata paymentIds) external returns (uint40 nextExecutionTime) {
+    function executePayments(uint256 allowanceId, uint40[] calldata paymentIds)
+        external
+        returns (uint40 nextExecutionTime)
+    {
         uint40[2 ** 40] storage nextExecutionTimes = payments[allowanceId].nextExecutionTime;
 
         uint256[] memory amounts = new uint256[](paymentIds.length);
