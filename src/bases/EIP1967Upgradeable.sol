@@ -11,7 +11,7 @@ import {IModuleMetadata} from "./IModuleMetadata.sol";
  * address must already be set in the correct slot (in our case, the proxy does on creation)
  */
 abstract contract EIP1967Upgradeable is SafeAware {
-    event Upgraded(address indexed implementation, string moduleId, uint256 version);
+    event Upgraded(IModuleMetadata indexed implementation, string moduleId, uint256 version);
 
     // EIP1967_IMPL_SLOT = keccak256('eip1967.proxy.implementation') - 1
     bytes32 internal constant EIP1967_IMPL_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
@@ -33,17 +33,15 @@ abstract contract EIP1967Upgradeable is SafeAware {
      * It also must conform to the IModuleMetadata interface (this is somewhat of an implicit guard against bad upgrades)
      * @param _newImplementation The address of the new implementation address the proxy will use
      */
-    function upgrade(address _newImplementation) public onlySafe {
+    function upgrade(IModuleMetadata _newImplementation) public onlySafe {
         assembly {
             sstore(EIP1967_IMPL_SLOT, _newImplementation)
         }
 
-        IModuleMetadata upgradeMetadata = IModuleMetadata(_newImplementation);
-
-        emit Upgraded(_newImplementation, upgradeMetadata.moduleId(), upgradeMetadata.moduleVersion());
+        emit Upgraded(_newImplementation, _newImplementation.moduleId(), _newImplementation.moduleVersion());
     }
 
-    function _implementation() internal view returns (address impl) {
+    function _implementation() internal view returns (IModuleMetadata impl) {
         assembly {
             impl := sload(EIP1967_IMPL_SLOT)
         }
@@ -56,10 +54,10 @@ abstract contract EIP1967Upgradeable is SafeAware {
      * If we were running in impl conext, the IMPL_CONTRACT_FLAG would be stored there
      */
     function _isForeignContext() internal view returns (bool) {
-        return _implementation() == address(0);
+        return address(_implementation()) == address(0);
     }
 
     function _isImplementationContext() internal view returns (bool) {
-        return _implementation() == IMPL_CONTRACT_FLAG;
+        return address(_implementation()) == IMPL_CONTRACT_FLAG;
     }
 }

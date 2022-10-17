@@ -2,23 +2,23 @@
 pragma solidity 0.8.16;
 
 import {Ownable} from "openzeppelin/access/Ownable.sol";
-import {FirmBase} from "../bases/FirmBase.sol";
+import {IModuleMetadata} from "../bases/IModuleMetadata.sol";
 
 uint256 constant LATEST_VERSION = type(uint256).max;
 
 contract UpgradeableModuleProxyFactory is Ownable {
-    error TakenAddress(address proxy);
+    error TakenAddress();
     error FailedInitialization();
     error ModuleVersionAlreadyRegistered();
     error UnexistentModule();
 
-    event ModuleRegistered(FirmBase indexed implementation, string moduleId, uint256 version);
-    event ModuleProxyCreation(address indexed proxy, FirmBase indexed implementation);
+    event ModuleRegistered(IModuleMetadata indexed implementation, string moduleId, uint256 version);
+    event ModuleProxyCreation(address indexed proxy, IModuleMetadata indexed implementation);
 
-    mapping(string => mapping(uint256 => FirmBase)) public modules;
+    mapping(string => mapping(uint256 => IModuleMetadata)) internal modules;
     mapping(string => uint256) public latestModuleVersion;
 
-    function register(FirmBase implementation) external onlyOwner {
+    function register(IModuleMetadata implementation) external onlyOwner {
         string memory moduleId = implementation.moduleId();
         uint256 version = implementation.moduleVersion();
 
@@ -35,27 +35,28 @@ contract UpgradeableModuleProxyFactory is Ownable {
         emit ModuleRegistered(implementation, moduleId, version);
     }
 
+    function getImplementation(string memory moduleId, uint256 version) public view returns (IModuleMetadata implementation) {
+        if (version == LATEST_VERSION) {
+            version = latestModuleVersion[moduleId];
+        }
+        implementation = modules[moduleId][version];
+        if (address(implementation) == address(0)) {
+            revert UnexistentModule();
+        }
+    }
+
     function deployUpgradeableModule(string memory moduleId, uint256 version, bytes memory initializer, uint256 salt)
         public
         returns (address proxy)
     {
-        if (version == LATEST_VERSION) {
-            version = latestModuleVersion[moduleId];
-        }
-        FirmBase implementation = modules[moduleId][version];
-        if (address(implementation) == address(0)) {
-            revert UnexistentModule();
-        }
-
-        return deployUpgradeableModule(implementation, initializer, salt);
+        return deployUpgradeableModule(getImplementation(moduleId, version), initializer, salt);
     }
 
-    function deployUpgradeableModule(FirmBase implementation, bytes memory initializer, uint256 salt)
+    function deployUpgradeableModule(IModuleMetadata implementation, bytes memory initializer, uint256 salt)
         public
         returns (address proxy)
     {
         proxy = createProxy(implementation, keccak256(abi.encodePacked(keccak256(initializer), salt)));
-        emit ModuleProxyCreation(proxy, implementation);
 
         (bool success,) = proxy.call(initializer);
         if (!success) {
@@ -63,7 +64,7 @@ contract UpgradeableModuleProxyFactory is Ownable {
         }
     }
 
-    function createProxy(FirmBase implementation, bytes32 salt) internal returns (address addr) {
+    function createProxy(IModuleMetadata implementation, bytes32 salt) internal returns (address proxy) {
         bytes memory initcode = abi.encodePacked(
             hex"73",
             implementation,
@@ -71,11 +72,13 @@ contract UpgradeableModuleProxyFactory is Ownable {
         );
 
         assembly {
-            addr := create2(0, add(initcode, 0x20), mload(initcode), salt)
+            proxy := create2(0, add(initcode, 0x20), mload(initcode), salt)
         }
 
-        if (addr == address(0)) {
-            revert TakenAddress(addr);
+        if (proxy == address(0)) {
+            revert TakenAddress();
         }
+
+        emit ModuleProxyCreation(proxy, implementation);
     }
 }

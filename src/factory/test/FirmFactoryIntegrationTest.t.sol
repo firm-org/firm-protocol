@@ -186,9 +186,8 @@ contract FirmFactoryIntegrationTest is FirmTest {
     function testModuleUpgrades() public {
         (GnosisSafe safe, Budget budget,) = createFirm(address(this));
 
-        address moduleMockImpl = address(new ModuleMock(1));
         vm.prank(address(safe));
-        budget.upgrade(moduleMockImpl);
+        budget.upgrade(new ModuleMock(1));
 
         assertEq(ModuleMock(address(budget)).foo(), 1);
     }
