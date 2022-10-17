@@ -146,9 +146,16 @@ contract UpgradeableModuleProxyDeployTest is FirmTest {
     }
 
     function testRevertsIfInitializerReverts() public {
-
+        vm.expectRevert(abi.encodeWithSelector(UpgradeableModuleProxyFactory.FailedInitialization.selector));
+        factory.deployUpgradeableModule("org.firm.test-target", 2, abi.encodeCall(TargetBase.setNumber, (1)), 1);
     }
 
     function testRevertsIfRepeatingNonce() public {
+        uint256 nonce = 1;
+        factory.deployUpgradeableModule("org.firm.test-target", 1, abi.encodeCall(TargetBase.init, (IAvatar(SAFE))), nonce);
+        factory.deployUpgradeableModule("org.firm.test-target", 2, abi.encodeCall(TargetBase.init, (IAvatar(SAFE))), nonce);
+        
+        vm.expectRevert(abi.encodeWithSelector(UpgradeableModuleProxyFactory.ProxyAlreadyDeployedForNonce.selector));
+        factory.deployUpgradeableModule("org.firm.test-target", 1, abi.encodeCall(TargetBase.init, (IAvatar(SAFE))), nonce);
     }
 }

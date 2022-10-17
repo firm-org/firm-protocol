@@ -7,7 +7,7 @@ import {IModuleMetadata} from "../bases/IModuleMetadata.sol";
 uint256 constant LATEST_VERSION = type(uint256).max;
 
 contract UpgradeableModuleProxyFactory is Ownable {
-    error TakenAddress();
+    error ProxyAlreadyDeployedForNonce();
     error FailedInitialization();
     error ModuleVersionAlreadyRegistered();
     error UnexistentModuleVersion();
@@ -76,7 +76,7 @@ contract UpgradeableModuleProxyFactory is Ownable {
         }
 
         if (proxy == address(0)) {
-            revert TakenAddress();
+            revert ProxyAlreadyDeployedForNonce();
         }
 
         emit ModuleProxyCreation(proxy, implementation);
