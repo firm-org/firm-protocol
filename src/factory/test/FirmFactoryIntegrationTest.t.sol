@@ -162,7 +162,14 @@ contract FirmFactoryIntegrationTest is FirmTest {
 
         // almost next month, revert bc of recurring execution too early
         vm.warp(DateTimeLib.timestampFromDateTime(2022, 1, 31, 23, 59, 59));
-        vm.expectRevert(abi.encodeWithSelector(RecurringPayments.AlreadyExecutedForPeriod.selector, recurringAllowanceId, paymentIds[0], DateTimeLib.timestampFromDateTime(2022, 2, 1, 0, 0, 0)));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                RecurringPayments.AlreadyExecutedForPeriod.selector,
+                recurringAllowanceId,
+                paymentIds[0],
+                DateTimeLib.timestampFromDateTime(2022, 2, 1, 0, 0, 0)
+            )
+        );
         recurringPayments.executePayment(recurringAllowanceId, paymentIds[0]);
 
         // next month

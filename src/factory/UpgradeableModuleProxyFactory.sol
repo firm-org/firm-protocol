@@ -1,17 +1,70 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import {EIP1967Upgradeable} from "../bases/EIP1967Upgradeable.sol";
+import {Ownable} from "openzeppelin/access/Ownable.sol";
+import {FirmBase} from "../bases/FirmBase.sol";
 
-contract UpgradeableModuleProxyFactory {
+uint256 constant LATEST_VERSION = type(uint256).max;
+
+contract UpgradeableModuleProxyFactory is Ownable {
     error TakenAddress(address proxy);
     error FailedInitialization();
+    error ModuleVersionAlreadyRegistered();
+    error UnexistentModule();
 
-    event ModuleProxyCreation(address indexed proxy, EIP1967Upgradeable indexed implementation);
+    event ModuleRegistered(FirmBase indexed implementation, string moduleId, uint256 version);
+    event ModuleProxyCreation(address indexed proxy, FirmBase indexed implementation);
 
-    function createUpgradeableProxy(EIP1967Upgradeable implementation, bytes32 salt) internal returns (address addr) {
-        // if (address(target) == address(0)) revert ZeroAddress(target);
-        // Removed as this is a responsibility of the caller and we shouldn't pay for the check on each proxy creation
+    mapping(string => mapping(uint256 => FirmBase)) public modules;
+    mapping(string => uint256) public latestModuleVersion;
+
+    function register(FirmBase implementation) external onlyOwner {
+        string memory moduleId = implementation.moduleId();
+        uint256 version = implementation.moduleVersion();
+
+        if (address(modules[moduleId][version]) != address(0)) {
+            revert ModuleVersionAlreadyRegistered();
+        }
+
+        modules[moduleId][version] = implementation;
+
+        if (version > latestModuleVersion[moduleId]) {
+            latestModuleVersion[moduleId] = version;
+        }
+
+        emit ModuleRegistered(implementation, moduleId, version);
+    }
+
+    function deployUpgradeableModule(string memory moduleId, uint256 version, bytes memory initializer, uint256 salt)
+        public
+        returns (address proxy)
+    {
+        if (version == LATEST_VERSION) {
+            version = latestModuleVersion[moduleId];
+        }
+        FirmBase implementation = modules[moduleId][version];
+        if (address(implementation) == address(0)) {
+            revert UnexistentModule();
+        }
+
+        return deployUpgradeableModule(implementation, initializer, salt);
+    }
+
+    function deployUpgradeableModule(FirmBase implementation, bytes memory initializer, uint256 salt)
+        public
+        returns (address proxy)
+    {
+        proxy = createProxy(implementation, keccak256(abi.encodePacked(keccak256(initializer), salt)));
+
+        (bool success,) = proxy.call(initializer);
+        if (!success) {
+            revert FailedInitialization();
+        }
+
+        emit ModuleProxyCreation(proxy, implementation);
+    }
+
+    function createProxy(FirmBase implementation, bytes32 salt) internal returns (address addr) {
         bytes memory initcode = abi.encodePacked(
             hex"73",
             implementation,
@@ -25,19 +78,5 @@ contract UpgradeableModuleProxyFactory {
         if (addr == address(0)) {
             revert TakenAddress(addr);
         }
-    }
-
-    function deployUpgradeableModule(EIP1967Upgradeable implementation, bytes memory initializer, uint256 salt)
-        public
-        returns (address proxy)
-    {
-        proxy = createUpgradeableProxy(implementation, keccak256(abi.encodePacked(keccak256(initializer), salt)));
-
-        (bool success,) = proxy.call(initializer);
-        if (!success) {
-            revert FailedInitialization();
-        }
-
-        emit ModuleProxyCreation(proxy, implementation);
     }
 }
