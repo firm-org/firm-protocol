@@ -55,13 +55,12 @@ contract UpgradeableModuleProxyFactory is Ownable {
         returns (address proxy)
     {
         proxy = createProxy(implementation, keccak256(abi.encodePacked(keccak256(initializer), salt)));
+        emit ModuleProxyCreation(proxy, implementation);
 
         (bool success,) = proxy.call(initializer);
         if (!success) {
             revert FailedInitialization();
         }
-
-        emit ModuleProxyCreation(proxy, implementation);
     }
 
     function createProxy(FirmBase implementation, bytes32 salt) internal returns (address addr) {
