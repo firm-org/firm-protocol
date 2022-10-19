@@ -26,8 +26,8 @@ contract FirmFactory {
 
     error EnableModuleFailed();
 
-    event NewFirm(address indexed creator, GnosisSafe indexed safe, Roles roles, Budget budget);
-    event DeployedBackdoors(GnosisSafe indexed safe, address[] backdoors);
+    event NewFirmCreated(address indexed creator, GnosisSafe indexed safe, Roles roles, Budget budget);
+    event BackdoorsDeployed(GnosisSafe indexed safe, address[] backdoors);
 
     constructor(
         GnosisSafeProxyFactory _safeFactory,
@@ -71,12 +71,12 @@ contract FirmFactory {
         Budget budget = Budget(modules[0]);
         Roles roles = Roles(address(budget.roles()));
 
-        emit NewFirm(msg.sender, safe, roles, budget);
+        emit NewFirmCreated(msg.sender, safe, roles, budget);
 
         if (withBackdoors) {
             (address[] memory backdoors,) = safe.getModulesPaginated(address(budget), 2);
 
-            emit DeployedBackdoors(safe, backdoors);
+            emit BackdoorsDeployed(safe, backdoors);(safe, backdoors);
         }
     }
 
