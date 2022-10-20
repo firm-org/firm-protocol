@@ -6,7 +6,7 @@ import {IGuard} from "zodiac/interfaces/IGuard.sol";
 
 abstract contract IZodiacModule {
     event TargetSet(IAvatar indexed previousTarget, IAvatar indexed newTarget);
-    event GuardChanged(address guard);
+    event ChangedGuard(address guard);
 
     error NotIERC165Compliant(address guard_);
 

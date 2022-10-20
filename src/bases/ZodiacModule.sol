@@ -45,7 +45,7 @@ abstract contract ZodiacModule is FirmBase, IZodiacModule {
             }
         }
         zodiacState().guard = _guard;
-        emit GuardChanged(guardAddr);
+        emit ChangedGuard(guardAddr);
     }
 
     /**
