@@ -13,7 +13,7 @@ contract UpgradeableModuleProxyFactory is Ownable {
     error UnexistentModuleVersion();
 
     event ModuleRegistered(IModuleMetadata indexed implementation, string moduleId, uint256 version);
-    event ModuleProxyCreation(address indexed proxy, IModuleMetadata indexed implementation);
+    event ModuleProxyCreated(address indexed proxy, IModuleMetadata indexed implementation);
 
     mapping(string => mapping(uint256 => IModuleMetadata)) internal modules;
     mapping(string => uint256) public latestModuleVersion;
@@ -79,6 +79,6 @@ contract UpgradeableModuleProxyFactory is Ownable {
             revert ProxyAlreadyDeployedForNonce();
         }
 
-        emit ModuleProxyCreation(proxy, implementation);
+        emit ModuleProxyCreated(proxy, implementation);
     }
 }

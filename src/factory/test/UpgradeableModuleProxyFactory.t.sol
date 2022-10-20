@@ -119,7 +119,7 @@ contract UpgradeableModuleProxyDeployTest is FirmTest {
         proxy.setNumber(43);
     }
     
-    event ModuleProxyCreation(address indexed proxy, IModuleMetadata indexed implementation);
+    event ModuleProxyCreated(address indexed proxy, IModuleMetadata indexed implementation);
     event Initialized(IAvatar indexed safe, IModuleMetadata indexed implementation);
     event Upgraded(IModuleMetadata indexed implementation, string moduleId, uint256 version);
     function testEventsAreEmittedInOrder() public {
@@ -127,7 +127,7 @@ contract UpgradeableModuleProxyDeployTest is FirmTest {
         IModuleMetadata implV2 = factory.getImplementation("org.firm.test-target", 2);
 
         vm.expectEmit(false, true, false, false, address(factory));
-        emit ModuleProxyCreation(address(0), implV1);
+        emit ModuleProxyCreated(address(0), implV1);
         vm.expectEmit(true, true, false, false);
         emit Initialized(IAvatar(SAFE), implV1);
         proxy = TargetBase(factory.deployUpgradeableModule("org.firm.test-target", 1, abi.encodeCall(TargetBase.init, (IAvatar(SAFE))), 1));
