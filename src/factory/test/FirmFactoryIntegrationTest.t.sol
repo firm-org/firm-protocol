@@ -14,7 +14,6 @@ import {Budget, TimeShiftLib, NO_PARENT_ID} from "../../budget/Budget.sol";
 import {TimeShift} from "../../budget/TimeShiftLib.sol";
 import {Roles, IRoles, IAvatar, ONLY_ROOT_ROLE, ROOT_ROLE_ID} from "../../roles/Roles.sol";
 import {FirmRelayer} from "../../metatx/FirmRelayer.sol";
-import {RecurringPayments, BudgetModule} from "../../budget/modules/RecurringPayments.sol";
 import {SafeEnums} from "../../bases/IZodiacModule.sol";
 import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsDateTimeLibrary.sol";
 
@@ -26,8 +25,6 @@ contract FirmFactoryIntegrationTest is FirmTest {
     FirmFactory factory;
     FirmRelayer relayer;
     ERC20Token token;
-
-    RecurringPayments immutable recurringPaymentsImpl = new RecurringPayments();
 
     function setUp() public {
         token = new ERC20Token();
@@ -120,67 +117,6 @@ contract FirmFactoryIntegrationTest is FirmTest {
         relayer.relay(request, _signPacked(relayer.requestTypedDataHash(request), spenderPk));
 
         assertEq(token.balanceOf(receiver), 15);
-    }
-
-    function testPaymentsFromBudgetModules() public {
-        (GnosisSafe safe, Budget budget, Roles roles) = createFirm(address(this));
-        token.mint(address(safe), 100);
-
-        address spender = account("spender");
-        address receiver = account("receiver");
-
-        vm.startPrank(address(safe));
-        uint8 roleId = roles.createRole(ONLY_ROOT_ROLE, "Executive");
-        roles.setRole(spender, roleId, true);
-
-        vm.warp(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
-        uint256 allowanceId = budget.createAllowance(
-            NO_PARENT_ID, roleFlag(roleId), address(token), 6, TimeShift(TimeShiftLib.TimeUnit.Yearly, 0).encode(), ""
-        );
-        vm.stopPrank();
-
-        bytes memory initRecurringPayments = abi.encodeCall(BudgetModule.initialize, (budget, address(0)));
-        RecurringPayments recurringPayments = RecurringPayments(
-            factory.moduleFactory().deployUpgradeableModule(recurringPaymentsImpl, initRecurringPayments, 1)
-        );
-
-        vm.startPrank(spender);
-        uint256 recurringAllowanceId = budget.createAllowance(
-            allowanceId,
-            address(recurringPayments),
-            address(token),
-            3,
-            TimeShift(TimeShiftLib.TimeUnit.Monthly, 0).encode(),
-            ""
-        );
-        uint40[] memory paymentIds = new uint40[](2);
-        paymentIds[0] = recurringPayments.addPayment(recurringAllowanceId, receiver, 1);
-        paymentIds[1] = recurringPayments.addPayment(recurringAllowanceId, receiver, 2);
-        vm.stopPrank();
-
-        recurringPayments.executePayments(recurringAllowanceId, paymentIds);
-
-        // almost next month, revert bc of recurring execution too early
-        vm.warp(DateTimeLib.timestampFromDateTime(2022, 1, 31, 23, 59, 59));
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                RecurringPayments.AlreadyExecutedForPeriod.selector,
-                recurringAllowanceId,
-                paymentIds[0],
-                DateTimeLib.timestampFromDateTime(2022, 2, 1, 0, 0, 0)
-            )
-        );
-        recurringPayments.executePayment(recurringAllowanceId, paymentIds[0]);
-
-        // next month
-        vm.warp(DateTimeLib.timestampFromDateTime(2022, 2, 1, 0, 0, 0));
-        recurringPayments.executePayment(recurringAllowanceId, paymentIds[0]);
-        recurringPayments.executePayment(recurringAllowanceId, paymentIds[1]);
-
-        // next month, revert bc top-level allowance is out of budget
-        vm.warp(DateTimeLib.timestampFromDateTime(2022, 3, 1, 0, 0, 0));
-        vm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, allowanceId, 1, 0));
-        recurringPayments.executePayment(recurringAllowanceId, paymentIds[0]);
     }
 
     function testModuleUpgrades() public {
