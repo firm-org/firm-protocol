@@ -22,6 +22,16 @@ abstract contract BudgetModuleTest is FirmTest {
         budget = Budget(createProxy(new Budget(), abi.encodeCall(Budget.initialize, (avatar, roles, address(0)))));
     }
 
+    function module() internal virtual view returns (BudgetModule);
+
+    function testInitialState() public {
+        assertEq(address(module().budget()), address(budget));
+        assertUnsStrg(address(module()), "firm.budgetmodule.budget", address(budget));
+
+        assertEq(address(module().safe()), address(avatar));
+        assertUnsStrg(address(module()), "firm.safeaware.safe", address(avatar));
+    }
+
     function dailyAllowanceFor(address spender, uint256 amount) internal returns (uint256 allowanceId) {
         token.mint(address(avatar), amount * 356 * 1000); // give it tokens so allowance is good for 1,000 years
         vm.prank(address(avatar));

@@ -27,6 +27,10 @@ contract LlamaPayStreamsTest is BudgetModuleTest {
         allowanceId = dailyAllowanceFor(address(streams), 50000 ether);
     }
 
+    function module() internal override view returns (BudgetModule) {
+        return streams;
+    }
+
     function testCreateStream() public returns (LlamaPay llamaPay, address payer, uint256 amountPerSec) {
         amountPerSec = basicMonthlyAmountToSecs(1000);
 

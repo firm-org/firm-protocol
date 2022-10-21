@@ -22,6 +22,17 @@ contract FirmTest is Test {
     function createProxy(FirmBase impl, bytes memory initdata) internal returns (address proxy) {
         proxy = proxyFactory.deployUpgradeableModule(impl, initdata, 0);
         vm.label(proxy, "Proxy");
+
+        assertUnsStrg(address(impl), "eip1967.proxy.implementation", address(0xffff));
+        assertUnsStrg(address(proxy), "eip1967.proxy.implementation", address(impl));
+    }
+
+    function assertUnsStrg(address addr, string memory key, bytes32 expectedValue) internal {
+        assertEq(vm.load(addr, bytes32(uint256(keccak256(abi.encodePacked(key))) - 1)), expectedValue);
+    }
+
+    function assertUnsStrg(address addr, string memory key, address expectedAddr) internal {
+        assertUnsStrg(addr, key, bytes32(uint256(uint160(expectedAddr))));
     }
 
     function timetravel(uint256 time) internal {

@@ -17,14 +17,12 @@ contract EIP1967UpgradeableTest is BasesTest {
     }
 
     function testRawStorage() public {
+        assertUnsStrg(address(moduleOneImpl), "eip1967.proxy.implementation", address(0xffff));
+        assertUnsStrg(address(moduleTwoImpl), "eip1967.proxy.implementation", address(0xffff));
+
         // Bar (first declared storage variable of ModuleMock) is stored on slot 0
         assertEq(uint256(vm.load(address(module), 0)), INITIAL_BAR);
-        assertImplAtEIP1967Slot(address(moduleOneImpl));
-    }
-
-    function assertImplAtEIP1967Slot(address _impl) internal {
-        bytes32 implSlot = bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1);
-        assertEq(vm.load(address(module), implSlot).fromLast20Bytes(), _impl);
+        assertUnsStrg(address(module), "eip1967.proxy.implementation", address(moduleOneImpl));
     }
 
     event Upgraded(address indexed implementation, string moduleId, uint256 version);
@@ -35,7 +33,7 @@ contract EIP1967UpgradeableTest is BasesTest {
         emit Upgraded(address(moduleTwoImpl), "org.firm.modulemock", 0);
         module.upgrade(moduleTwoImpl);
 
-        assertImplAtEIP1967Slot(address(moduleTwoImpl));
+        assertUnsStrg(address(module), "eip1967.proxy.implementation", address(moduleTwoImpl));
         assertEq(module.foo(), MODULE_TWO_FOO);
         assertEq(module.bar(), INITIAL_BAR);
     }
