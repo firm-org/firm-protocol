@@ -76,7 +76,7 @@ contract FirmFactory {
         if (withBackdoors) {
             (address[] memory backdoors,) = safe.getModulesPaginated(address(budget), 2);
 
-            emit BackdoorsDeployed(safe, backdoors);(safe, backdoors);
+            emit BackdoorsDeployed(safe, backdoors);
         }
     }
 
