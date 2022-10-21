@@ -75,7 +75,7 @@ contract LlamaPayStreams is BudgetModule {
         // as a gas optimization
         bool leaveExtraToken = existingBalance == 0 && streamer.token().balanceOf(forwarder.addr()) == 0;
 
-        budget.executePayment(allowanceId, forwarder.addr(), tokenAmount + (leaveExtraToken ? 1 : 0), "Streams deposit");
+        budget().executePayment(allowanceId, forwarder.addr(), tokenAmount + (leaveExtraToken ? 1 : 0), "Streams deposit");
         forwarder.forwardChecked(address(streamer), abi.encodeCall(streamer.deposit, (tokenAmount)));
     }
 
@@ -94,7 +94,7 @@ contract LlamaPayStreams is BudgetModule {
         returns (LlamaPay streamer)
     {
         // The `onlyAllowanceAdmin` modifier already ensured that the allowance exists
-        (,,, address token,,,,) = budget.allowances(allowanceId);
+        (,,, address token,,,,) = budget().allowances(allowanceId);
         (address streamer_, bool isDeployed) = llamaPayFactory.getLlamaPayContractByToken(token);
 
         streamManager.forwarder = ForwarderLib.create(keccak256(abi.encodePacked(allowanceId, token)));
