@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
+import {Bytes32AddressLib} from "solmate/utils/Bytes32AddressLib.sol";
+
 // TODO: implement in assembly using etk
 contract OwnedForwarder {
     address internal immutable owner;
@@ -31,9 +33,26 @@ contract OwnedForwarder {
 }
 
 library ForwarderLib {
-    type Forwarder is address;
+    using Bytes32AddressLib for bytes32;
 
+    type Forwarder is address;
     using ForwarderLib for Forwarder;
+
+    function getForwarder(bytes32 salt) internal view returns (Forwarder) {
+        return getForwarder(salt, address(this));
+    }
+
+    function getForwarder(bytes32 salt, address deployer) internal pure returns (Forwarder) {
+        return Forwarder.wrap(keccak256(abi.encodePacked(
+            bytes1(0xff),
+            deployer,
+            salt,
+            keccak256(abi.encodePacked(
+                type(OwnedForwarder).creationCode,
+                bytes32(uint256(uint160(deployer)))
+            ))
+        )).fromLast20Bytes());
+    }
 
     function create(bytes32 salt) internal returns (Forwarder) {
         return Forwarder.wrap(address(new OwnedForwarder{salt: salt}(address(this))));
@@ -67,7 +86,7 @@ library ForwarderLib {
         }
     }
 
-    function addr(Forwarder forwarder) internal view returns (address) {
+    function addr(Forwarder forwarder) internal pure returns (address) {
         return Forwarder.unwrap(forwarder);
     }
 }

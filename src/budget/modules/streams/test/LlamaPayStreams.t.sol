@@ -8,6 +8,8 @@ import {LlamaPayFactory, LlamaPay} from "llamapay/LlamaPayFactory.sol";
 import {LlamaPayStreams, ForwarderLib} from "../LlamaPayStreams.sol";
 
 contract LlamaPayStreamsTest is BudgetModuleTest {
+    using ForwarderLib for ForwarderLib.Forwarder;
+
     LlamaPayFactory llamaPayFactory;
 
     LlamaPayStreams streams;
@@ -36,15 +38,19 @@ contract LlamaPayStreamsTest is BudgetModuleTest {
 
         vm.prank(address(avatar));
         streams.configure(allowanceId, 60 days);
+
+        (bool enabled, IERC20 token_,,) = streams.streamConfigs(allowanceId);
+        (address llamaPay_,) = llamaPayFactory.getLlamaPayContractByToken(address(token));
+        llamaPay = LlamaPay(llamaPay_);
+        payer = ForwarderLib.getForwarder(keccak256(abi.encodePacked(allowanceId, token)), address(streams)).addr();
+        assertTrue(enabled);
+        assertEq(address(llamaPay.token()), address(token));
+        assertEq(address(token), address(token_));
+
         vm.prank(address(avatar));
         streams.startStream(allowanceId, RECEIVER, amountPerSec, "");
 
         timetravel(30 days);
-
-        ForwarderLib.Forwarder payer_;
-        (llamaPay, payer_,) = streams.streamManagers(allowanceId);
-        payer = ForwarderLib.Forwarder.unwrap(payer_);
-        assertEq(address(llamaPay.token()), address(token));
 
         llamaPay.withdraw(payer, RECEIVER, uint216(amountPerSec));
         assertBalance(RECEIVER, 1000, 1);
