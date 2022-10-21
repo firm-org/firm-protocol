@@ -15,6 +15,7 @@ import {TimeShift} from "../../budget/TimeShiftLib.sol";
 import {Roles, IRoles, IAvatar, ONLY_ROOT_ROLE, ROOT_ROLE_ID} from "../../roles/Roles.sol";
 import {FirmRelayer} from "../../metatx/FirmRelayer.sol";
 import {SafeEnums} from "../../bases/IZodiacModule.sol";
+import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsDateTimeLibrary.sol";
 
 import {LocalDeploy} from "../../../scripts/LocalDeploy.sol";
 
@@ -38,12 +39,12 @@ contract FirmFactoryIntegrationTest is FirmTest {
         createFirm(address(this));
     }
 
-    event NewFirm(address indexed creator, GnosisSafe indexed safe, Roles roles, Budget budget);
+    event NewFirmCreated(address indexed creator, GnosisSafe indexed safe, Roles roles, Budget budget);
 
     function testInitialState() public {
         // we don't match the deployed contract addresses for simplicity (could precalculate them but unnecessary)
         vm.expectEmit(true, false, false, false);
-        emit NewFirm(address(this), GnosisSafe(payable(0)), Roles(address(0)), Budget(address(0)));
+        emit NewFirmCreated(address(this), GnosisSafe(payable(0)), Roles(address(0)), Budget(address(0)));
 
         (GnosisSafe safe, Budget budget, Roles roles) = createFirm(address(this));
 
@@ -121,9 +122,9 @@ contract FirmFactoryIntegrationTest is FirmTest {
     function testModuleUpgrades() public {
         (GnosisSafe safe, Budget budget,) = createFirm(address(this));
 
-        address moduleMockImpl = address(new ModuleMock(1));
+        ModuleMock newImpl = new ModuleMock(1);
         vm.prank(address(safe));
-        budget.upgrade(moduleMockImpl);
+        budget.upgrade(newImpl);
 
         assertEq(ModuleMock(address(budget)).foo(), 1);
     }

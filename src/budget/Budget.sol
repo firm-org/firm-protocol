@@ -11,6 +11,7 @@ import {TimeShiftLib, EncodedTimeShift} from "./TimeShiftLib.sol";
 
 address constant NATIVE_ASSET = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 uint256 constant NO_PARENT_ID = 0;
+uint256 constant INHERITED_AMOUNT = 0;
 uint40 constant INHERITED_RESET_TIME = 0;
 address constant IMPL_INIT_ADDRESS = address(1);
 
@@ -95,6 +96,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
     error DisabledAllowance(uint256 allowanceId);
     error UnauthorizedNotAllowanceAdmin(uint256 allowanceId);
     error TokenMismatch(address patentToken, address childToken);
+    error ZeroAmountForTopLevelAllowance();
     error ZeroAmountPayment();
     error BadInput();
     error BadExecutionContext();
@@ -128,6 +130,13 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
             // Top-level allowances can only be created by the Safe
             if (_msgSender() != address(safe())) {
                 revert UnauthorizedNotAllowanceAdmin(NO_PARENT_ID);
+            }
+
+            // We don't allow setting amount 0 on top-level allowances as clients
+            // could support setting 0 as the amount for the allowance and that
+            // will create an allowance that allows completely wiping the safe (for the token)
+            if (amount == INHERITED_AMOUNT) {
+                revert ZeroAmountForTopLevelAllowance();
             }
 
             // For top-level allowances, recurrency needs to be set and cannot be zero
@@ -200,6 +209,11 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
      */
     function setAllowanceAmount(uint256 allowanceId, uint256 amount) external {
         Allowance storage allowance = _getAllowanceAndValidateAdmin(allowanceId);
+
+        if (amount == INHERITED_AMOUNT && allowance.parentId == NO_PARENT_ID) {
+            revert ZeroAmountForTopLevelAllowance();
+        }
+
         allowance.amount = amount;
         emit AllowanceAmountChanged(allowanceId, amount);
     }
@@ -236,7 +250,10 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
      * @param amount Amount of the allowance's token being sent
      * @param description Description of the payment
      */
-    function executePayment(uint256 allowanceId, address to, uint256 amount, string memory description) external {
+    function executePayment(uint256 allowanceId, address to, uint256 amount, string memory description)
+        external
+        returns (uint40 nextResetTime)
+    {
         Allowance storage allowance = _getAllowance(allowanceId);
 
         if (!_isAuthorized(_msgSender(), allowance.spender)) {
@@ -250,7 +267,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         address token = allowance.token;
 
         // Make sure the payment is within budget all the way up to its top-level budget
-        (uint40 nextResetTime,) = _checkAndUpdateAllowanceChain(allowanceId, amount);
+        (nextResetTime,) = _checkAndUpdateAllowanceChain(allowanceId, amount);
 
         if (!_performTransfer(token, to, amount)) {
             revert PaymentExecutionFailed(allowanceId, token, to, amount);
@@ -271,7 +288,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         address[] calldata tos,
         uint256[] calldata amounts,
         string memory description
-    ) external {
+    ) external returns (uint40 nextResetTime) {
         Allowance storage allowance = _getAllowance(allowanceId);
 
         if (!_isAuthorized(_msgSender(), allowance.spender)) {
@@ -292,7 +309,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
             }
         }
 
-        (uint40 nextResetTime,) = _checkAndUpdateAllowanceChain(allowanceId, totalAmount);
+        (nextResetTime,) = _checkAndUpdateAllowanceChain(allowanceId, totalAmount);
 
         address token = allowance.token;
         if (!_performMultiTransfer(token, tos, amounts)) {
@@ -320,7 +337,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         bytes memory data = abi.encodeCall(this.__safeContext_performMultiTransfer, (token, tos, amounts));
 
         (bool callSuccess, bytes memory retData) =
-            execAndReturnData(_implementation(), 0, data, SafeEnums.Operation.DelegateCall);
+            execAndReturnData(address(_implementation()), 0, data, SafeEnums.Operation.DelegateCall);
         return callSuccess && retData.length == 32 && abi.decode(retData, (bool));
     }
 
@@ -375,6 +392,10 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         return allowances[allowanceId];
     }
 
+    function isAdminOnAllowance(uint256 allowanceId, address actor) public view returns (bool) {
+        return _isAdminOnAllowance(_getAllowance(allowanceId), actor);
+    }
+
     function _isAdminOnAllowance(Allowance storage allowance, address actor) internal view returns (bool) {
         // Changes to the allowance state can be done by the same entity that could
         // create that allowance in the first place
@@ -415,11 +436,13 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
             }
         }
 
-        uint256 spentAfterPayment = amount + (allowanceResets ? 0 : allowance.spent);
-        if (spentAfterPayment > allowance.amount) {
-            revert Overbudget(allowanceId, amount, allowance.amount - allowance.spent);
-        }
+        if (allowance.amount != INHERITED_AMOUNT) {
+            uint256 spentAfterPayment = amount + (allowanceResets ? 0 : allowance.spent);
+            if (spentAfterPayment > allowance.amount) {
+                revert Overbudget(allowanceId, amount, allowance.amount - allowance.spent);
+            }
 
-        allowance.spent = spentAfterPayment;
+            allowance.spent = spentAfterPayment;
+        }
     }
 }
