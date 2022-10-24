@@ -79,7 +79,7 @@ contract RecurringPayments is BudgetModule {
         }
 
         nextExecutionTimes[paymentId] = type(uint40).max; // reentrancy lock
-        nextExecutionTime = budget.executePayment(allowanceId, payment.to, payment.amount, "");
+        nextExecutionTime = budget().executePayment(allowanceId, payment.to, payment.amount, "");
         nextExecutionTimes[paymentId] = nextExecutionTime;
 
         emit RecurringPaymentExecuted(allowanceId, paymentId, nextExecutionTime, _msgSender());
@@ -120,7 +120,7 @@ contract RecurringPayments is BudgetModule {
             nextExecutionTimes[paymentId] = type(uint40).max;
         }
 
-        nextExecutionTime = budget.executeMultiPayment(allowanceId, tos, amounts, "");
+        nextExecutionTime = budget().executeMultiPayment(allowanceId, tos, amounts, "");
 
         for (uint256 i = 0; i < paymentIds.length; i++) {
             nextExecutionTimes[paymentIds[i]] = nextExecutionTime;
