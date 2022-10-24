@@ -168,7 +168,11 @@ contract LlamaPayStreams is BudgetModule {
     // REBALANCING AND DEPOSIT MANAGEMENT
     ////////////////////////
 
-    // Unprotected so it can be called by anyone who wishes to rebalance
+    /**
+    * @notice Rebalance LlamaPay deposit for streams from allowance
+    * @dev This function is unprotected so it can be called by anyone who wishes to rebalance
+    * @param allowanceId The allowance ID
+    */
     function rebalance(uint256 allowanceId) public {
         StreamConfig storage streamConfig = _getStreamConfig(allowanceId);
         IERC20 token = streamConfig.token;
