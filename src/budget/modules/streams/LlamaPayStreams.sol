@@ -43,6 +43,15 @@ contract LlamaPayStreams is BudgetModule {
         llamaPayFactory = llamaPayFactory_;
     }
 
+    ////////////////////////
+    // Config
+    ////////////////////////
+
+    /**
+    * @notice Configure the streams for the allowance
+    * @param allowanceId The allowance ID
+    * @param prepayBuffer The prepay buffer in seconds
+    */
     function configure(uint256 allowanceId, uint40 prepayBuffer) external onlyAllowanceAdmin(allowanceId) {
         StreamConfig storage streamConfig = streamConfigs[allowanceId];
 
@@ -57,6 +66,11 @@ contract LlamaPayStreams is BudgetModule {
         _setPrepayBuffer(allowanceId, streamConfig, prepayBuffer);
     }
 
+    /**
+    * @notice Set the prepay buffer for the allowance
+    * @param allowanceId The allowance ID
+    * @param prepayBuffer The prepay buffer in seconds
+    */
     function setPrepayBuffer(uint256 allowanceId, uint40 prepayBuffer) external onlyAllowanceAdmin(allowanceId) {
         _setPrepayBuffer(allowanceId, _getStreamConfig(allowanceId), prepayBuffer);
         rebalance(allowanceId);
@@ -73,30 +87,102 @@ contract LlamaPayStreams is BudgetModule {
         emit PrepayBufferSet(allowanceId, prepayBuffer);
     }
 
-    // LlamaPay always uses numbers with 20 decimals
+    ////////////////////////
+    // STREAM MANAGEMENT
+    ////////////////////////
+
+    /**
+    * @notice Start a new stream from the allowance
+    * @param allowanceId The allowance ID
+    * @param to The recipient of the stream
+    * @param amountPerSec The amount of tokens per second to stream (Always 20 decimals for LlamaPay)
+    * @param description The description of the stream
+    */
     function startStream(uint256 allowanceId, address to, uint256 amountPerSec, string calldata description)
         external
         onlyAllowanceAdmin(allowanceId)
     {
+        _executeAndRebalance(
+            allowanceId,
+            abi.encodeCall(LlamaPay.createStreamWithReason, (to, uint216(amountPerSec), description))
+        );
+    }
+
+    /**
+     * @notice Modify an existing stream 
+     * @dev LlamaPay cancels and creates a new stream under the hood
+     * @param allowanceId The allowance ID
+     * @param oldTo The old recipient of the stream
+     * @param oldAmountPerSec The old amount of tokens per second to stream (Always 20 decimals for LlamaPay)
+     * @param newTo The new recipient of the stream
+     * @param newAmountPerSec The new amount of tokens per second to stream (Always 20 decimals for LlamaPay)
+     */
+    function modifyStream(uint256 allowanceId, address oldTo, uint256 oldAmountPerSec, address newTo, uint256 newAmountPerSec)
+        external
+        onlyAllowanceAdmin(allowanceId)
+    {
+        _executeAndRebalance(
+            allowanceId,
+            abi.encodeCall(LlamaPay.modifyStream, (oldTo, uint216(oldAmountPerSec), newTo, uint216(newAmountPerSec)))
+        );
+    }
+
+    /**
+    * @notice Pause a stream
+    * @param allowanceId The allowance ID
+    * @param to The recipient of the stream
+    * @param amountPerSec The amount of tokens per second streamed (Always 20 decimals for LlamaPay)
+    */
+    function pauseStream(uint256 allowanceId, address to, uint256 amountPerSec)
+        external
+        onlyAllowanceAdmin(allowanceId)
+    {
+        _executeAndRebalance(allowanceId, abi.encodeCall(LlamaPay.pauseStream, (to, uint216(amountPerSec))));
+    }
+
+    /**
+    * @notice Cancel a stream
+    * @param allowanceId The allowance ID
+    * @param to The recipient of the stream
+    * @param amountPerSec The amount of tokens per second streamed (Always 20 decimals for LlamaPay)
+    */
+    function cancelStream(uint256 allowanceId, address to, uint256 amountPerSec)
+        external
+        onlyAllowanceAdmin(allowanceId)
+    {
+        _executeAndRebalance(allowanceId, abi.encodeCall(LlamaPay.cancelStream, (to, uint216(amountPerSec))));
+    }
+
+    function _executeAndRebalance(uint256 allowanceId, bytes memory data) internal {
         StreamConfig storage streamConfig = _getStreamConfig(allowanceId);
         IERC20 token = streamConfig.token;
         LlamaPay streamer = _streamerForToken(token);
         ForwarderLib.Forwarder forwarder = ForwarderLib.getForwarder(_forwarderSalt(allowanceId, token));
 
-        forwarder.forwardChecked(
-            address(streamer), abi.encodeCall(streamer.createStreamWithReason, (to, uint216(amountPerSec), description))
-        );
+        forwarder.forwardChecked(address(streamer), data);
 
-        rebalance(allowanceId);
+        _rebalance(allowanceId, streamConfig, token, streamer, forwarder);
     }
+
+    ////////////////////////
+    // REBALANCING AND DEPOSIT MANAGEMENT
+    ////////////////////////
 
     // Unprotected so it can be called by anyone who wishes to rebalance
     function rebalance(uint256 allowanceId) public {
         StreamConfig storage streamConfig = _getStreamConfig(allowanceId);
         IERC20 token = streamConfig.token;
-        LlamaPay streamer = _streamerForToken(token);
-        ForwarderLib.Forwarder forwarder = ForwarderLib.getForwarder(_forwarderSalt(allowanceId, token));
 
+        _rebalance(
+            allowanceId,
+            streamConfig,
+            token,
+            _streamerForToken(token),
+            ForwarderLib.getForwarder(_forwarderSalt(allowanceId, token))
+        );
+    }
+
+    function _rebalance(uint256 allowanceId, StreamConfig storage streamConfig, IERC20 token, LlamaPay streamer, ForwarderLib.Forwarder forwarder) internal {
         uint256 existingBalance;
         uint256 targetAmount;
         {

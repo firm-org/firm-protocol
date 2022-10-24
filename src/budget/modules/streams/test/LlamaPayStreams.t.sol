@@ -59,6 +59,15 @@ contract LlamaPayStreamsTest is BudgetModuleTest {
         assertBalance(address(llamaPay), 1000, 1);
     }
 
+    function testCantCreateStreamIfNotAdmin() public {
+        vm.prank(address(avatar));
+        streams.configure(allowanceId, 1);
+        vm.expectRevert(
+            abi.encodeWithSelector(BudgetModule.UnauthorizedNotAllowanceAdmin.selector, allowanceId, address(this))
+        );
+        streams.startStream(allowanceId, RECEIVER, 1, "");
+    }
+
     function testCreateMultipleStreams() public {
         (LlamaPay llamaPay, address forwarder, uint256 amountPerSec1) = testCreateStream();
 
@@ -106,13 +115,75 @@ contract LlamaPayStreamsTest is BudgetModuleTest {
         assertOneLeftoverToken(forwarder);
     }
 
-    function testCantCreateStreamIfNotAdmin() public {
+    function testCanModifyStream() public {
+        (LlamaPay llamaPay, address forwarder, uint256 amountPerSec) = testCreateStream();
+        streams.rebalance(allowanceId);
+        assertBalance(address(llamaPay), 2000, 1);
+        assertOneLeftoverToken(forwarder);
+
+        address newReceiver = account("New Receiver");
+        uint256 newAmountPerSec = basicMonthlyAmountToSecs(2000);
         vm.prank(address(avatar));
-        streams.configure(allowanceId, 1);
+        streams.modifyStream(allowanceId, RECEIVER, amountPerSec, newReceiver, newAmountPerSec);
+        assertBalance(address(llamaPay), 4000, 1);
+        assertOneLeftoverToken(forwarder);
+
+        timetravel(30 days);
+
+        vm.expectRevert("stream doesn't exist");
+        llamaPay.withdraw(forwarder, RECEIVER, uint216(amountPerSec));
+
+        llamaPay.withdraw(forwarder, newReceiver, uint216(newAmountPerSec));
+        assertBalance(newReceiver, 2000, 1);
+        assertBalance(address(llamaPay), 2000, 1);
+    }
+
+    function testCantModifyStreamIfNotAdmin() public {
+        (,, uint256 amountPerSec) = testCreateStream();
         vm.expectRevert(
             abi.encodeWithSelector(BudgetModule.UnauthorizedNotAllowanceAdmin.selector, allowanceId, address(this))
         );
-        streams.startStream(allowanceId, RECEIVER, 1, "");
+        streams.modifyStream(allowanceId, RECEIVER, amountPerSec, account("someone"), 1);
+    }
+
+    function testCanPauseStream() public {
+        (LlamaPay llamaPay, address forwarder, uint256 amountPerSec) = testCreateStream();
+
+        vm.prank(address(avatar));
+        streams.pauseStream(allowanceId, RECEIVER, amountPerSec);
+
+        assertBalance(address(llamaPay), 0, 1);
+
+        vm.expectRevert("stream doesn't exist");
+        llamaPay.withdraw(forwarder, RECEIVER, uint216(amountPerSec));
+    }
+
+    function testCantPauseStreamIfNotAdmin() public {
+        (,, uint256 amountPerSec) = testCreateStream();
+        vm.expectRevert(
+            abi.encodeWithSelector(BudgetModule.UnauthorizedNotAllowanceAdmin.selector, allowanceId, address(this))
+        );
+        streams.pauseStream(allowanceId, RECEIVER, amountPerSec);
+    }
+
+    function testCanCancelStream() public {
+        (LlamaPay llamaPay, address forwarder, uint256 amountPerSec) = testCreateStream();
+
+        vm.prank(address(avatar));
+        streams.cancelStream(allowanceId, RECEIVER, amountPerSec);
+
+        assertBalance(address(llamaPay), 0, 1);
+
+        vm.expectRevert("stream doesn't exist");
+        llamaPay.withdraw(forwarder, RECEIVER, uint216(amountPerSec));
+    }
+
+    function testCantCancelStreamIfNotAdmin() public {
+        (,, uint256 amountPerSec) = testCreateStream();
+        vm.expectRevert(
+            abi.encodeWithSelector(BudgetModule.UnauthorizedNotAllowanceAdmin.selector, allowanceId, address(this))
+        );
+        streams.cancelStream(allowanceId, RECEIVER, amountPerSec);
     }
 
     function assertBalance(address who, uint256 expectedBalance, uint256 maxDelta) internal {
