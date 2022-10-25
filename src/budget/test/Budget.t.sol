@@ -5,22 +5,24 @@ import {FirmTest} from "../../common/test/lib/FirmTest.sol";
 import {RolesStub} from "../../common/test/mocks/RolesStub.sol";
 import {roleFlag} from "../../common/test/mocks/RolesAuthMock.sol";
 import {AvatarStub} from "../../common/test/mocks/AvatarStub.sol";
+import {ERC20Token} from "../../factory/test/lib/ERC20Token.sol";
 import {UpgradeableModuleProxyFactory} from "../../factory/UpgradeableModuleProxyFactory.sol";
 
 import {TimeShift, DateTimeLib} from "../../budget/TimeShiftLib.sol";
 import {SafeAware} from "../../bases/SafeAware.sol";
 import "../Budget.sol";
 
-contract BudgetTest is FirmTest {
+abstract contract BudgetTest is FirmTest {
     AvatarStub avatar;
     RolesStub roles;
     Budget budget;
+    address token;
 
     address SPENDER = account("spender");
     address RECEIVER = account("receiver");
     address SOMEONE_ELSE = account("someone else");
 
-    function setUp() public {
+    function setUp() public virtual {
         avatar = new AvatarStub();
         roles = new RolesStub();
         budget = Budget(createProxy(new Budget(), abi.encodeCall(Budget.initialize, (avatar, roles, address(0)))));
@@ -45,7 +47,7 @@ contract BudgetTest is FirmTest {
             uint256 parentId,
             uint256 amount,
             uint256 spent,
-            address token,
+            address token_,
             uint40 nextResetTime,
             address spender,
             EncodedTimeShift recurrency,
@@ -55,7 +57,7 @@ contract BudgetTest is FirmTest {
         assertEq(parentId, NO_PARENT_ID);
         assertEq(amount, 10);
         assertEq(spent, 0);
-        assertEq(token, address(0));
+        assertEq(token_, address(token));
         assertEq(nextResetTime, 1 days);
         assertEq(spender, SPENDER);
         assertEq(
@@ -355,11 +357,81 @@ contract BudgetTest is FirmTest {
         budget.executeMultiPayment(allowanceId, tos, amounts, "");
     }
 
+    function testCanDebitAllowance() public {
+        vm.prank(address(avatar));
+        uint256 allowanceId = 1;
+        createDailyAllowance(SPENDER, allowanceId);
+
+        // Since the budget allows spending 10, allowance should be full after the first
+        // payment execution, but since 5 are debited, another execution of 5 is allowed
+        uint256 spent;
+        vm.prank(SPENDER);
+        budget.executePayment(allowanceId, RECEIVER, 10, "");
+        (,, spent,,,,,) = budget.allowances(allowanceId);
+        assertEq(spent, 10);
+
+        performDebit(RECEIVER, allowanceId, 5);
+        (,, spent,,,,,) = budget.allowances(allowanceId);
+        assertEq(spent, 5);
+
+        vm.prank(SPENDER);
+        budget.executePayment(allowanceId, RECEIVER, 5, "");
+        (,, spent,,,,,) = budget.allowances(allowanceId);
+        assertEq(spent, 10);
+    }
+
+    function testCanDebitOnChains() public {
+        vm.prank(address(avatar));
+        uint256 allowanceId1 = budget.createAllowance(
+            NO_PARENT_ID, SPENDER, address(token), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
+        );
+        vm.startPrank(SPENDER);
+        uint256 allowanceId2 = budget.createAllowance(
+            allowanceId1, SPENDER, address(token), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
+        );
+        uint256 allowanceId3 = budget.createAllowance(
+            allowanceId2, SPENDER, address(token), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
+        );
+
+        budget.executePayment(allowanceId1, RECEIVER, 3, "");
+        budget.executePayment(allowanceId2, RECEIVER, 2, "");
+        budget.executePayment(allowanceId3, RECEIVER, 1, "");
+        vm.stopPrank();
+        uint256 spent;
+
+        performDebit(RECEIVER, allowanceId3, 2);
+        (,, spent,,,,,) = budget.allowances(allowanceId1);
+        assertEq(spent, 4);
+        (,, spent,,,,,) = budget.allowances(allowanceId2);
+        assertEq(spent, 1);
+        (,, spent,,,,,) = budget.allowances(allowanceId3);
+        assertEq(spent, 0);
+
+        performDebit(RECEIVER, allowanceId1, 4);
+        (,, spent,,,,,) = budget.allowances(allowanceId1);
+        assertEq(spent, 0);
+        (,, spent,,,,,) = budget.allowances(allowanceId2);
+        assertEq(spent, 1);
+        (,, spent,,,,,) = budget.allowances(allowanceId3);
+        assertEq(spent, 0);
+    }
+
     function createDailyAllowance(address spender, uint256 expectedId) public returns (uint256 allowanceId) {
         allowanceId = budget.createAllowance(
-            NO_PARENT_ID, spender, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
+            NO_PARENT_ID, spender, address(token), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
         );
         assertEq(allowanceId, expectedId);
+    }
+
+    function performDebit(address debiter, uint256 allowanceId, uint256 amount) internal {
+        vm.startPrank(debiter);
+        if (token == NATIVE_ASSET) {
+            budget.debitAllowance{value: amount}(allowanceId, amount, "");
+        } else {
+            ERC20Token(token).approve(address(budget), amount);
+            budget.debitAllowance(allowanceId, amount, "");
+        }
+        vm.stopPrank();
     }
 
     function _generateMultiPaymentArrays(uint256 num, address to, uint256 amount)
@@ -392,7 +464,7 @@ contract BudgetTest is FirmTest {
         uint256 amount,
         uint40 expectedNextResetTime
     ) public {
-        (,, uint256 initialSpent, address token, uint40 initialNextReset,, EncodedTimeShift shift,) =
+        (,, uint256 initialSpent, address token_, uint40 initialNextReset,, EncodedTimeShift shift,) =
             budget.allowances(allowanceId);
 
         if (block.timestamp >= initialNextReset) {
@@ -401,12 +473,31 @@ contract BudgetTest is FirmTest {
 
         vm.prank(actor);
         vm.expectEmit(true, true, true, true);
-        emit PaymentExecuted(allowanceId, actor, token, to, amount, expectedNextResetTime, "");
+        emit PaymentExecuted(allowanceId, actor, token_, to, amount, expectedNextResetTime, "");
         budget.executePayment(allowanceId, to, amount, "");
 
         (,, uint256 spent,, uint40 nextResetTime,,,) = budget.allowances(allowanceId);
 
         assertEq(spent, initialSpent + amount);
         assertEq(nextResetTime, shift.isInherited() ? 0 : expectedNextResetTime);
+    }
+}
+
+contract TokenBudgetTest is BudgetTest {
+    function setUp() public override {
+        super.setUp();
+
+        ERC20Token token_ = new ERC20Token();
+        token_.mint(address(avatar), 1e6 ether);
+        token = address(token_);
+    }
+}
+
+contract EtherBudgetTest is BudgetTest {
+    function setUp() public override {
+        super.setUp();
+
+        token = NATIVE_ASSET;
+        vm.deal(address(avatar), 1e6 ether);
     }
 }

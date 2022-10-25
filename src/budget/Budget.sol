@@ -91,6 +91,14 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         uint40 nextResetTime,
         string description
     );
+    event AllowanceDebited(
+        uint256 indexed allowanceId,
+        address indexed actor,
+        address token,
+        uint256 amount,
+        uint40 nextResetTime,
+        bytes description
+    );
 
     error UnexistentAllowance(uint256 allowanceId);
     error DisabledAllowance(uint256 allowanceId);
@@ -103,6 +111,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
     error UnauthorizedPaymentExecution(uint256 allowanceId, address actor);
     error Overbudget(uint256 allowanceId, uint256 amount, uint256 remainingBudget);
     error PaymentExecutionFailed(uint256 allowanceId, address token, address to, uint256 amount);
+    error NativeValueMismatch();
 
     /**
      * @notice Creates a new allowance giving permission to spend funds from the Safe to a given address or addresses with a certain role
@@ -255,9 +264,10 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         returns (uint40 nextResetTime)
     {
         Allowance storage allowance = _getAllowance(allowanceId);
+        address actor = _msgSender();
 
-        if (!_isAuthorized(_msgSender(), allowance.spender)) {
-            revert UnauthorizedPaymentExecution(allowanceId, _msgSender());
+        if (!_isAuthorized(actor, allowance.spender)) {
+            revert UnauthorizedPaymentExecution(allowanceId, actor);
         }
 
         if (amount == 0) {
@@ -267,13 +277,13 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         address token = allowance.token;
 
         // Make sure the payment is within budget all the way up to its top-level budget
-        (nextResetTime,) = _checkAndUpdateAllowanceChain(allowanceId, amount);
+        (nextResetTime,) = _checkAndUpdateAllowanceChain(allowanceId, amount, add);
 
         if (!_performTransfer(token, to, amount)) {
             revert PaymentExecutionFailed(allowanceId, token, to, amount);
         }
 
-        emit PaymentExecuted(allowanceId, _msgSender(), token, to, amount, nextResetTime, description);
+        emit PaymentExecuted(allowanceId, actor, token, to, amount, nextResetTime, description);
     }
 
     /**
@@ -290,9 +300,10 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         string memory description
     ) external returns (uint40 nextResetTime) {
         Allowance storage allowance = _getAllowance(allowanceId);
+        address actor = _msgSender();
 
-        if (!_isAuthorized(_msgSender(), allowance.spender)) {
-            revert UnauthorizedPaymentExecution(allowanceId, _msgSender());
+        if (!_isAuthorized(actor, allowance.spender)) {
+            revert UnauthorizedPaymentExecution(allowanceId, actor);
         }
 
         uint256 count = tos.length;
@@ -309,14 +320,52 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
             }
         }
 
-        (nextResetTime,) = _checkAndUpdateAllowanceChain(allowanceId, totalAmount);
+        (nextResetTime,) = _checkAndUpdateAllowanceChain(allowanceId, totalAmount, add);
 
         address token = allowance.token;
         if (!_performMultiTransfer(token, tos, amounts)) {
             revert PaymentExecutionFailed(allowanceId, token, address(0), totalAmount);
         }
 
-        emit MultiPaymentExecuted(allowanceId, _msgSender(), token, tos, amounts, nextResetTime, description);
+        emit MultiPaymentExecuted(allowanceId, actor, token, tos, amounts, nextResetTime, description);
+    }
+
+    /**
+     * @notice Deposit funds into safe debiting funds into an allowance. Frequently used to return a payment
+     * @dev Anyone is allowed to perform this action, independently of whether they could have spent funds in the first place
+     * @param allowanceId ID of the allowance to be debited (along with its ancester tree)
+     * @param amount Amount being debited
+     * @param description Description of the debit
+     */
+    function debitAllowance(uint256 allowanceId, uint256 amount, bytes calldata description)
+        external
+        payable
+        returns (uint40 nextResetTime)
+    {
+        Allowance storage allowance = _getAllowance(allowanceId);
+        address actor = _msgSender();
+
+        // Since funds are going to the safe which is trusted we don't need to follow checks-effects-interactions
+        // A malicious token could re-enter, but it would only have effects in allowances for that bad token
+        // And we don't need to worry about 'callbacks' since the safe is always the receiver and shouldn't do it
+        if (allowance.token != NATIVE_ASSET) {
+            if (msg.value != 0) {
+                revert NativeValueMismatch();
+            }
+
+            // TODO: do we need to make this 'safe'?
+            IERC20(allowance.token).transferFrom(actor, address(safe()), amount);
+        } else {
+            if (msg.value != amount) {
+                revert NativeValueMismatch();
+            }
+
+            payable(address(safe())).transfer(amount);
+        }
+
+        (nextResetTime,) = _checkAndUpdateAllowanceChain(allowanceId, amount, zeroCappedSub);
+
+        emit AllowanceDebited(allowanceId, actor, allowance.token, amount, nextResetTime, description);
     }
 
     function _performTransfer(address token, address to, uint256 amount) internal returns (bool) {
@@ -405,10 +454,11 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         return parentId == NO_PARENT_ID ? actor == address(safe()) : _isAuthorized(actor, allowances[parentId].spender);
     }
 
-    function _checkAndUpdateAllowanceChain(uint256 allowanceId, uint256 amount)
-        internal
-        returns (uint40 nextResetTime, bool allowanceResets)
-    {
+    function _checkAndUpdateAllowanceChain(
+        uint256 allowanceId,
+        uint256 amount,
+        function(uint256, uint256) pure returns (uint256) op
+    ) internal returns (uint40 nextResetTime, bool allowanceResets) {
         Allowance storage allowance = allowances[allowanceId]; // allowanceId always points to an existing allowance
 
         if (allowance.isDisabled) {
@@ -418,7 +468,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         if (allowance.nextResetTime == INHERITED_RESET_TIME) {
             // Note that since top-level allowances are not allowed to have an inherited reset time,
             // this branch is only ever executed for sub-allowances (which always have a parentId)
-            (nextResetTime, allowanceResets) = _checkAndUpdateAllowanceChain(allowance.parentId, amount);
+            (nextResetTime, allowanceResets) = _checkAndUpdateAllowanceChain(allowance.parentId, amount, op);
         } else {
             nextResetTime = allowance.nextResetTime;
 
@@ -432,17 +482,25 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
             }
 
             if (allowance.parentId != NO_PARENT_ID) {
-                _checkAndUpdateAllowanceChain(allowance.parentId, amount);
+                _checkAndUpdateAllowanceChain(allowance.parentId, amount, op);
             }
         }
 
         if (allowance.amount != INHERITED_AMOUNT) {
-            uint256 spentAfterPayment = amount + (allowanceResets ? 0 : allowance.spent);
+            uint256 spentAfterPayment = op(allowanceResets ? 0 : allowance.spent, amount);
             if (spentAfterPayment > allowance.amount) {
                 revert Overbudget(allowanceId, amount, allowance.amount - allowance.spent);
             }
 
             allowance.spent = spentAfterPayment;
         }
+    }
+
+    function add(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a + b;
+    }
+
+    function zeroCappedSub(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a > b ? a - b : 0;
     }
 }
