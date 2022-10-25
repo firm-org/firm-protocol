@@ -5,7 +5,7 @@ import {GnosisSafe} from "gnosis-safe/GnosisSafe.sol";
 import {GnosisSafeProxyFactory} from "gnosis-safe/proxies/GnosisSafeProxyFactory.sol";
 import {LlamaPayFactory} from "llamapay/LlamaPayFactory.sol";
 
-import {DeployBase} from "./TestinProdDeploy.s.sol";
+import {DeployBase} from "./TestinprodDeploy.s.sol";
 
 contract LocalDeploy is DeployBase {
     function baseContracts() internal override returns (address safeProxyFactory, address safeImpl, address llamaPayFactory) {

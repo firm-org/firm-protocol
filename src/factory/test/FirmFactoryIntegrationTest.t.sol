@@ -45,7 +45,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
             vm.prank(usdc.masterMinter()); // master rug
             usdc.configureMinter(address(this), type(uint256).max);
         } else {
-            deployer = DeployBase(address(new LocalDeploy()));
+            deployer = new LocalDeploy();
             token = new ERC20Token();
         }
 
