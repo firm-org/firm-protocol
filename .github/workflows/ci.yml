@@ -17,4 +17,9 @@ jobs:
           version: nightly
 
       - name: Run tests
-        run: forge test -vvv --force
+        run: forge test --force -vvv
+
+      - name: Fork tests (mainnet)
+        env:
+          MAINNET_FORK_URL: ${{ secrets.MAINNET_FORK_URL }}
+        run: forge test --match-contract FirmFactoryIntegrationTest --fork-url "$MAINNET_FORK_URL" -vvvv
