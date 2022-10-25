@@ -1,0 +1,23 @@
+{
+    "1": {
+        "v0.1.0": {
+            "firmFactory": "0x7784b0c1c3b7523a9b2243ffbff452d234cb0e11",
+            "blockNumber": 15483275
+        }
+    },
+    "5": {
+        "v0.1.0": {
+            "firmFactory": "0x69a952b2d9404f7b162d0db3df0d1f6e462d448a",
+            "blockNumber": 7508428
+        },
+        "v0.2.0": {
+            "firmFactory": "0xa1b159a50613c8f0c6b01d02b8a2258a94eed480",
+            "blockNumber": 7638312
+        },
+        "v0.3.0-rc.1": {
+            "firmFactory": "0x229f7159dab0840B8dd6215F09Dc7238B11c70e1",
+            "modulesFactory": "0x2Ef2b36AD44D5c5fdeECC5a6a38464BFe50b5Da2",
+            "blockNumber": 7833032
+        }
+    }
+}
