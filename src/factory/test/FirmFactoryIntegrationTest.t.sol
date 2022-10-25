@@ -6,7 +6,6 @@ import {GnosisSafe} from "gnosis-safe/GnosisSafe.sol";
 import {FirmTest} from "src/common/test/lib/FirmTest.sol";
 import {roleFlag} from "src/common/test/mocks/RolesAuthMock.sol";
 import {ModuleMock} from "src/common/test/mocks/ModuleMock.sol";
-import {ERC20Token} from "./lib/ERC20Token.sol";
 
 import {Budget, TimeShiftLib, NO_PARENT_ID} from "src/budget/Budget.sol";
 import {TimeShift} from "src/budget/TimeShiftLib.sol";
@@ -17,6 +16,10 @@ import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsD
 
 import {TestinprodFactory, UpgradeableModuleProxyFactory} from "../TestinprodFactory.sol";
 import {LocalDeploy} from "scripts/LocalDeploy.s.sol";
+import {TestinprodDeploy, DeployBase} from "scripts/TestinprodDeploy.s.sol";
+
+import {ERC20Token} from "./lib/ERC20Token.sol";
+import {IUSDCMinting} from "./lib/IUSDCMinting.sol";
 
 contract FirmFactoryIntegrationTest is FirmTest {
     using TimeShiftLib for *;
@@ -26,9 +29,19 @@ contract FirmFactoryIntegrationTest is FirmTest {
     ERC20Token token;
 
     function setUp() public {
-        token = new ERC20Token();
+        DeployBase deployer;
 
-        LocalDeploy deployer = new LocalDeploy();
+        if (block.chainid == 1) {
+            deployer = new TestinprodDeploy();
+            token = ERC20Token(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48); // mainnet USDC
+
+            IUSDCMinting usdc = IUSDCMinting(address(token));
+            vm.prank(usdc.masterMinter()); // master rug
+            usdc.configureMinter(address(this), type(uint256).max);
+        } else {
+            deployer = DeployBase(address(new LocalDeploy()));
+            token = new ERC20Token();
+        }
 
         (factory,) = deployer.run();
         relayer = factory.relayer();
