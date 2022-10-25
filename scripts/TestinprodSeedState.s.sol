@@ -11,7 +11,7 @@ import {BackdoorModule} from "../src/factory/local-utils/BackdoorModule.sol";
 import {roleFlag} from "../src/common/test/mocks/RolesAuthMock.sol";
 import {TestnetTokenFaucet} from "../src/testnet/TestnetTokenFaucet.sol";
 
-contract TestinProdSeedState is Test {
+contract TestinprodSeedState is Test {
     error UnsupportedChain(uint256 chainId);
 
     // send some native asset to safe before running it
