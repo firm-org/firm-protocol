@@ -10,21 +10,24 @@ import {IAvatar} from "../bases/IZodiacModule.sol";
 import {Roles} from "../roles/Roles.sol";
 import {Budget} from "../budget/Budget.sol";
 
-import {UpgradeableModuleProxyFactory} from "./UpgradeableModuleProxyFactory.sol";
+import {UpgradeableModuleProxyFactory, LATEST_VERSION} from "./UpgradeableModuleProxyFactory.sol";
 
 import {BackdoorModule} from "./local-utils/BackdoorModule.sol";
 
+string constant ROLES_MODULE_ID = "org.firm.roles";
+string constant BUDGET_MODULE_ID = "org.firm.budget";
+
 contract FirmFactory {
     GnosisSafeProxyFactory public immutable safeFactory;
-    UpgradeableModuleProxyFactory public immutable moduleFactory;
+    address public immutable safeImpl;
 
+    UpgradeableModuleProxyFactory public immutable moduleFactory;
     FirmRelayer public immutable relayer;
 
-    address public immutable safeImpl;
-    Roles public immutable rolesImpl;
-    Budget public immutable budgetImpl;
+    uint256 internal immutable safeProxySize;
 
     error EnableModuleFailed();
+    error InvalidContext();
 
     event NewFirmCreated(address indexed creator, GnosisSafe indexed safe, Roles roles, Budget budget);
     event BackdoorsDeployed(GnosisSafe indexed safe, address[] backdoors);
@@ -33,16 +36,14 @@ contract FirmFactory {
         GnosisSafeProxyFactory _safeFactory,
         UpgradeableModuleProxyFactory _moduleFactory,
         FirmRelayer _relayer,
-        address _safeImpl,
-        Roles _rolesImpl,
-        Budget _budgetImpl
+        address _safeImpl
     ) {
         safeFactory = _safeFactory;
         moduleFactory = _moduleFactory;
         relayer = _relayer;
         safeImpl = _safeImpl;
-        rolesImpl = _rolesImpl;
-        budgetImpl = _budgetImpl;
+
+        safeProxySize = _safeFactory.proxyRuntimeCode().length;
     }
 
     function createFirm(address creator, bool withBackdoors, uint256 nonce) public returns (GnosisSafe safe) {
@@ -80,20 +81,25 @@ contract FirmFactory {
         }
     }
 
+    // Safe will delegatecall here as part of its setup, can only run on a delegatecall 
     function installModules(bool _withBackdoors) public {
-        // Safe will delegatecall here as part of its setup
+        // Ensure that we are running on a delegatecall from a safe proxy
+        if (address(this).code.length != safeProxySize) {
+            revert InvalidContext();
+        }
+
         // We don't need to explictly guard against this function being called with a regular call
         // since we both perform calls on 'this' with the ABI of a Safe (will fail on this contract)
 
         IAvatar safe = IAvatar(address(this));
         Roles roles = Roles(
             moduleFactory.deployUpgradeableModule(
-                rolesImpl, abi.encodeCall(Roles.initialize, (safe, address(relayer))), 1
+                ROLES_MODULE_ID, LATEST_VERSION, abi.encodeCall(Roles.initialize, (safe, address(relayer))), 1
             )
         );
         Budget budget = Budget(
             moduleFactory.deployUpgradeableModule(
-                budgetImpl, abi.encodeCall(Budget.initialize, (safe, roles, address(relayer))), 1
+                BUDGET_MODULE_ID, LATEST_VERSION, abi.encodeCall(Budget.initialize, (safe, roles, address(relayer))), 1
             )
         );
 

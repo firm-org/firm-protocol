@@ -1,28 +1,27 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import "gnosis-safe/GnosisSafe.sol";
-import "gnosis-safe/proxies/GnosisSafeProxyFactory.sol";
+import {GnosisSafe} from "gnosis-safe/GnosisSafe.sol";
 
-import {FirmTest} from "../../common/test/lib/FirmTest.sol";
-import {roleFlag} from "../../common/test/mocks/RolesAuthMock.sol";
-import {ModuleMock} from "../../common/test/mocks/ModuleMock.sol";
-import "./lib/ERC20Token.sol";
+import {FirmTest} from "src/common/test/lib/FirmTest.sol";
+import {roleFlag} from "src/common/test/mocks/RolesAuthMock.sol";
+import {ModuleMock} from "src/common/test/mocks/ModuleMock.sol";
+import {ERC20Token} from "./lib/ERC20Token.sol";
 
-import {FirmFactory, UpgradeableModuleProxyFactory} from "../FirmFactory.sol";
-import {Budget, TimeShiftLib, NO_PARENT_ID} from "../../budget/Budget.sol";
-import {TimeShift} from "../../budget/TimeShiftLib.sol";
-import {Roles, IRoles, IAvatar, ONLY_ROOT_ROLE, ROOT_ROLE_ID} from "../../roles/Roles.sol";
-import {FirmRelayer} from "../../metatx/FirmRelayer.sol";
-import {SafeEnums} from "../../bases/IZodiacModule.sol";
+import {Budget, TimeShiftLib, NO_PARENT_ID} from "src/budget/Budget.sol";
+import {TimeShift} from "src/budget/TimeShiftLib.sol";
+import {Roles, IRoles, IAvatar, ONLY_ROOT_ROLE, ROOT_ROLE_ID} from "src/roles/Roles.sol";
+import {FirmRelayer} from "src/metatx/FirmRelayer.sol";
+import {SafeEnums} from "src/bases/IZodiacModule.sol";
 import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsDateTimeLibrary.sol";
 
-import {LocalDeploy} from "../../../scripts/LocalDeploy.sol";
+import {TestinprodFactory, UpgradeableModuleProxyFactory} from "../TestinprodFactory.sol";
+import {LocalDeploy} from "scripts/LocalDeploy.s.sol";
 
 contract FirmFactoryIntegrationTest is FirmTest {
     using TimeShiftLib for *;
 
-    FirmFactory factory;
+    TestinprodFactory factory;
     FirmRelayer relayer;
     ERC20Token token;
 
@@ -31,7 +30,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
 
         LocalDeploy deployer = new LocalDeploy();
 
-        factory = deployer.run();
+        (factory,) = deployer.run();
         relayer = factory.relayer();
     }
 

@@ -1,29 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import 'forge-std/Test.sol';
+import {GnosisSafe} from "gnosis-safe/GnosisSafe.sol";
+import {GnosisSafeProxyFactory} from "gnosis-safe/proxies/GnosisSafeProxyFactory.sol";
+import {LlamaPayFactory} from "llamapay/LlamaPayFactory.sol";
 
-import "gnosis-safe/GnosisSafe.sol";
-import "gnosis-safe/proxies/GnosisSafeProxyFactory.sol";
+import {DeployBase} from "./TestinProdDeploy.s.sol";
 
-import {FirmFactory, UpgradeableModuleProxyFactory} from "../src/factory/FirmFactory.sol";
-import {FirmRelayer} from "../src/metatx/FirmRelayer.sol";
-import {Roles, IRoles, IAvatar, ONLY_ROOT_ROLE} from "../src/roles/Roles.sol";
-import {Budget, TimeShiftLib, NO_PARENT_ID} from "../src/budget/Budget.sol";
-
-contract LocalDeploy is Test {
-    function run() public returns (FirmFactory factory) {
+contract LocalDeploy is DeployBase {
+    function baseContracts() internal override returns (address safeProxyFactory, address safeImpl, address llamaPayFactory) {
         vm.startBroadcast();
-
-        factory = new FirmFactory(
-            new GnosisSafeProxyFactory(),
-            new UpgradeableModuleProxyFactory(),
-            new FirmRelayer(),
-            address(new GnosisSafe()),
-            new Roles(),
-            new Budget()
-        );
-
+        
+        safeProxyFactory = address(new GnosisSafeProxyFactory());
+        safeImpl = address(new GnosisSafe());
+        llamaPayFactory = address(new LlamaPayFactory());
+        
         vm.stopBroadcast();
     }
 }
