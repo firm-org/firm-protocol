@@ -156,7 +156,7 @@ contract LlamaPayStreams is BudgetModule {
     function _executeAndRebalance(uint256 allowanceId, bytes memory data) internal {
         StreamConfig storage streamConfig = _getStreamConfig(allowanceId);
         IERC20 token = streamConfig.token;
-        LlamaPay streamer = _streamerForToken(token);
+        LlamaPay streamer = streamerForToken(token);
         ForwarderLib.Forwarder forwarder = ForwarderLib.getForwarder(_forwarderSalt(allowanceId, token));
 
         forwarder.forwardChecked(address(streamer), data);
@@ -181,7 +181,7 @@ contract LlamaPayStreams is BudgetModule {
             allowanceId,
             streamConfig,
             token,
-            _streamerForToken(token),
+            streamerForToken(token),
             ForwarderLib.getForwarder(_forwarderSalt(allowanceId, token))
         );
     }
@@ -275,9 +275,14 @@ contract LlamaPayStreams is BudgetModule {
         );
     }
 
-    function _streamerForToken(IERC20 token) internal view returns (LlamaPay) {
+    function streamerForToken(IERC20 token) public view returns (LlamaPay) {
         (address streamer,) = llamaPayFactory.getLlamaPayContractByToken(address(token));
         return LlamaPay(streamer);
+    }
+
+    function forwarderForAllowance(uint256 allowanceId) public view returns (ForwarderLib.Forwarder) {
+        StreamConfig storage streamConfig = _getStreamConfig(allowanceId);
+        return ForwarderLib.getForwarder(_forwarderSalt(allowanceId, streamConfig.token));
     }
 
     function _forwarderSalt(uint256 allowanceId, IERC20 token) internal pure returns (bytes32) {

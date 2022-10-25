@@ -1,37 +1,55 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import "gnosis-safe/GnosisSafe.sol";
-import "gnosis-safe/proxies/GnosisSafeProxyFactory.sol";
+import {GnosisSafe} from "gnosis-safe/GnosisSafe.sol";
 
-import {FirmTest} from "../../common/test/lib/FirmTest.sol";
-import {roleFlag} from "../../common/test/mocks/RolesAuthMock.sol";
-import {ModuleMock} from "../../common/test/mocks/ModuleMock.sol";
-import "./lib/ERC20Token.sol";
+import {FirmTest} from "src/common/test/lib/FirmTest.sol";
+import {roleFlag} from "src/common/test/mocks/RolesAuthMock.sol";
+import {ModuleMock} from "src/common/test/mocks/ModuleMock.sol";
 
-import {FirmFactory, UpgradeableModuleProxyFactory} from "../FirmFactory.sol";
-import {Budget, TimeShiftLib, NO_PARENT_ID} from "../../budget/Budget.sol";
-import {TimeShift} from "../../budget/TimeShiftLib.sol";
-import {Roles, IRoles, IAvatar, ONLY_ROOT_ROLE, ROOT_ROLE_ID} from "../../roles/Roles.sol";
-import {FirmRelayer} from "../../metatx/FirmRelayer.sol";
-import {SafeEnums} from "../../bases/IZodiacModule.sol";
+import {Budget, TimeShiftLib, NO_PARENT_ID, INHERITED_AMOUNT} from "src/budget/Budget.sol";
+import {TimeShift} from "src/budget/TimeShiftLib.sol";
+import {Roles, IRoles, IAvatar, ONLY_ROOT_ROLE, ROOT_ROLE_ID} from "src/roles/Roles.sol";
+import {FirmRelayer} from "src/metatx/FirmRelayer.sol";
+import {SafeEnums} from "src/bases/IZodiacModule.sol";
 import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsDateTimeLibrary.sol";
 
-import {LocalDeploy} from "../../../scripts/LocalDeploy.sol";
+import {LlamaPayStreams, BudgetModule, IERC20, ForwarderLib} from "src/budget/modules/streams/LlamaPayStreams.sol";
+
+import {TestinprodFactory, UpgradeableModuleProxyFactory, LATEST_VERSION} from "../TestinprodFactory.sol";
+import {LocalDeploy} from "scripts/LocalDeploy.s.sol";
+import {TestinprodDeploy, DeployBase} from "scripts/TestinprodDeploy.s.sol";
+
+import {ERC20Token} from "./lib/ERC20Token.sol";
+import {IUSDCMinting} from "./lib/IUSDCMinting.sol";
+
+string constant LLAMAPAYSTREAMS_MODULE_ID = "org.firm.budget.llamapay-streams";
 
 contract FirmFactoryIntegrationTest is FirmTest {
     using TimeShiftLib for *;
+    using ForwarderLib for ForwarderLib.Forwarder;
 
-    FirmFactory factory;
+    TestinprodFactory factory;
+    UpgradeableModuleProxyFactory moduleFactory;
     FirmRelayer relayer;
     ERC20Token token;
 
     function setUp() public {
-        token = new ERC20Token();
+        DeployBase deployer;
 
-        LocalDeploy deployer = new LocalDeploy();
+        if (block.chainid == 1) {
+            deployer = new TestinprodDeploy();
+            token = ERC20Token(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48); // mainnet USDC
 
-        factory = deployer.run();
+            IUSDCMinting usdc = IUSDCMinting(address(token));
+            vm.prank(usdc.masterMinter()); // master rug
+            usdc.configureMinter(address(this), type(uint256).max);
+        } else {
+            deployer = new LocalDeploy();
+            token = new ERC20Token();
+        }
+
+        (factory, moduleFactory) = deployer.run();
         relayer = factory.relayer();
     }
 
@@ -127,6 +145,48 @@ contract FirmFactoryIntegrationTest is FirmTest {
         budget.upgrade(newImpl);
 
         assertEq(ModuleMock(address(budget)).foo(), 1);
+    }
+
+    function testBudgetStreaming() public {
+        uint256 treasuryAmount = 3e7 * 10 ** token.decimals();
+        address receiver = account("Receiver");
+
+        (GnosisSafe safe, Budget budget, Roles roles) = createFirm(address(this));
+        token.mint(address(safe), treasuryAmount);
+
+        vm.prank(address(safe));
+        roles.setRole(address(this), ROOT_ROLE_ID, true);
+
+        vm.prank(address(safe));
+        uint256 yearlyAllowanceId = budget.createAllowance(
+            NO_PARENT_ID, roleFlag(ROOT_ROLE_ID), address(token), treasuryAmount / 10, TimeShift(TimeShiftLib.TimeUnit.Yearly, 0).encode(), "Monthly budget"
+        );
+        
+        LlamaPayStreams streams = LlamaPayStreams(moduleFactory.deployUpgradeableModule(
+            LLAMAPAYSTREAMS_MODULE_ID,
+            LATEST_VERSION,
+            abi.encodeCall(BudgetModule.initialize, (budget, address(relayer))),
+            1
+        ));
+
+        uint256 streamAllowanceId = budget.createAllowance(
+            yearlyAllowanceId, address(streams), address(token), INHERITED_AMOUNT, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode(), "Stream budget"
+        );
+        streams.configure(streamAllowanceId, 90 days);
+        
+        uint256 amountPerSecond = uint256(10_000 * 10 ** 20) / (30 days);
+        streams.startStream(streamAllowanceId, receiver, amountPerSecond, "Receiver salary");
+        timetravel(30 days);
+
+        uint256 newAmountPerSecond = amountPerSecond / 2;
+        streams.modifyStream(streamAllowanceId, receiver, amountPerSecond, receiver, newAmountPerSecond);
+        timetravel(30 days);
+
+        streams.streamerForToken(IERC20(address(token))).withdraw(
+            streams.forwarderForAllowance(streamAllowanceId).addr(), receiver, uint216(newAmountPerSecond)
+        );
+
+        assertApproxEqAbs(token.balanceOf(receiver), 15_000 * 10 ** token.decimals(), 2);
     }
 
     function createFirm(address owner) internal returns (GnosisSafe safe, Budget budget, Roles roles) {
