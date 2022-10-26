@@ -83,6 +83,7 @@ contract ForwarderLibTest is FirmTest {
         (address sender, uint256 value) = abi.decode(ret, (address, uint256));
         assertEq(sender, forwarder.addr());
         assertEq(value, 1 ether);
+        assertEq(address(target).balance, 1 ether);
     }
 
     function testForwardTargetRevert() public {

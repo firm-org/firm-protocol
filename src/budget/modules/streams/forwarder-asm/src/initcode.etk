@@ -1,6 +1,7 @@
 initcode:
     ## Copy runtime code and return it
-    %push(end - runtime) # [runtimeLength]
+    %push(end - runtime)
+                     # [runtimeLength]
     dup1             #  [runtimeLength, runtimeLength]
     %push(runtime)   #  [runtimeLabel, runtimeLength, runtimeLength]
     returndatasize   #  [0, runtimeLabel, runtimeLength, runtimeLength]
