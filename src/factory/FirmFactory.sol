@@ -81,7 +81,7 @@ contract FirmFactory {
         }
     }
 
-    // Safe will delegatecall here as part of its setup, can only run on a delegatecall 
+    // Safe will delegatecall here as part of its setup, can only run on a delegatecall
     function installModules(bool _withBackdoors) public {
         // Ensure that we are running on a delegatecall from a safe proxy
         if (address(this).code.length != safeProxySize) {

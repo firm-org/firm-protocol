@@ -18,11 +18,15 @@ contract TestnetTokenFaucet is Ownable {
         string symbol;
     }
 
-    mapping (string => TestnetERC20) public tokenWithSymbol;
+    mapping(string => TestnetERC20) public tokenWithSymbol;
     TokenData[] public allTokens;
     uint256 public tokenCount;
 
-    function create(string memory name, string memory symbol, uint8 decimals) public onlyOwner returns (TestnetERC20 token) {
+    function create(string memory name, string memory symbol, uint8 decimals)
+        public
+        onlyOwner
+        returns (TestnetERC20 token)
+    {
         require(address(tokenWithSymbol[symbol]) == address(0), "testnet faucet: token exists");
 
         token = new TestnetERC20(name, symbol, decimals);
@@ -35,7 +39,7 @@ contract TestnetTokenFaucet is Ownable {
         require(address(tokenWithSymbol[symbol]) != address(0), "testnet faucet: token doesnt exist");
         drip(tokenWithSymbol[symbol], to, amount);
     }
-    
+
     function drip(TestnetERC20 token, address to, uint256 amount) public {
         token.mint(to, amount);
     }

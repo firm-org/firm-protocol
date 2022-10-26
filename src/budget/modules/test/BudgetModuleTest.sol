@@ -22,7 +22,7 @@ abstract contract BudgetModuleTest is FirmTest {
         budget = Budget(createProxy(new Budget(), abi.encodeCall(Budget.initialize, (avatar, roles, address(0)))));
     }
 
-    function module() internal virtual view returns (BudgetModule);
+    function module() internal view virtual returns (BudgetModule);
 
     function testInitialState() public {
         assertEq(address(module().budget()), address(budget));

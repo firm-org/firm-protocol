@@ -26,7 +26,7 @@ contract TargetV1 is TargetBase {
         someNumber = number;
     }
 
-    function getNumber() public override view returns (uint256) {
+    function getNumber() public view override returns (uint256) {
         return someNumber;
     }
 }
@@ -38,7 +38,7 @@ contract TargetV2 is TargetBase {
         revert SomeError();
     }
 
-    function getNumber() public override view returns (uint256) {
+    function getNumber() public view override returns (uint256) {
         return someNumber * 2;
     }
 }

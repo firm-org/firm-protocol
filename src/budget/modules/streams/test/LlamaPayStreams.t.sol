@@ -29,7 +29,7 @@ contract LlamaPayStreamsTest is BudgetModuleTest {
         allowanceId = dailyAllowanceFor(address(streams), 50000 ether);
     }
 
-    function module() internal override view returns (BudgetModule) {
+    function module() internal view override returns (BudgetModule) {
         return streams;
     }
 

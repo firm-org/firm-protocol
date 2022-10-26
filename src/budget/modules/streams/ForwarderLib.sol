@@ -7,6 +7,7 @@ library ForwarderLib {
     using Bytes32AddressLib for bytes32;
 
     type Forwarder is address;
+
     using ForwarderLib for Forwarder;
 
     error ForwarderAlreadyDeployed();
@@ -16,12 +17,10 @@ library ForwarderLib {
     }
 
     function getForwarder(bytes32 salt, address deployer) internal pure returns (Forwarder) {
-        return Forwarder.wrap(keccak256(abi.encodePacked(
-            bytes1(0xff),
-            deployer,
-            salt,
-            keccak256(forwarderCreationCode(deployer))
-        )).fromLast20Bytes());
+        return Forwarder.wrap(
+            keccak256(abi.encodePacked(bytes1(0xff), deployer, salt, keccak256(forwarderCreationCode(deployer))))
+                .fromLast20Bytes()
+        );
     }
 
     function forwarderCreationCode(address owner) internal pure returns (bytes memory) {

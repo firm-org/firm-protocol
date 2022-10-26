@@ -35,7 +35,11 @@ contract UpgradeableModuleProxyFactory is Ownable {
         emit ModuleRegistered(implementation, moduleId, version);
     }
 
-    function getImplementation(string memory moduleId, uint256 version) public view returns (IModuleMetadata implementation) {
+    function getImplementation(string memory moduleId, uint256 version)
+        public
+        view
+        returns (IModuleMetadata implementation)
+    {
         if (version == LATEST_VERSION) {
             version = latestModuleVersion[moduleId];
         }
