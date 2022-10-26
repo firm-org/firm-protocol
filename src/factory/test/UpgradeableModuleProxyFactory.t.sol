@@ -93,7 +93,11 @@ contract UpgradeableModuleProxyDeployTest is FirmTest {
         factory = new UpgradeableModuleProxyFactory();
         factory.register(new TargetV1());
         factory.register(new TargetV2());
-        proxy = TargetBase(factory.deployUpgradeableModule("org.firm.test-target", 1, abi.encodeCall(TargetBase.init, (IAvatar(SAFE))), 0));
+        proxy = TargetBase(
+            factory.deployUpgradeableModule(
+                "org.firm.test-target", 1, abi.encodeCall(TargetBase.init, (IAvatar(SAFE))), 0
+            )
+        );
     }
 
     function testReturnDataOnUpgradedVersion() public {
@@ -118,10 +122,11 @@ contract UpgradeableModuleProxyDeployTest is FirmTest {
         vm.expectRevert(abi.encodeWithSelector(TargetBase.SomeError.selector));
         proxy.setNumber(43);
     }
-    
+
     event ModuleProxyCreated(address indexed proxy, IModuleMetadata indexed implementation);
     event Initialized(IAvatar indexed safe, IModuleMetadata indexed implementation);
     event Upgraded(IModuleMetadata indexed implementation, string moduleId, uint256 version);
+
     function testEventsAreEmittedInOrder() public {
         IModuleMetadata implV1 = factory.getImplementation("org.firm.test-target", 1);
         IModuleMetadata implV2 = factory.getImplementation("org.firm.test-target", 2);
@@ -130,8 +135,12 @@ contract UpgradeableModuleProxyDeployTest is FirmTest {
         emit ModuleProxyCreated(address(0), implV1);
         vm.expectEmit(true, true, false, false);
         emit Initialized(IAvatar(SAFE), implV1);
-        proxy = TargetBase(factory.deployUpgradeableModule("org.firm.test-target", 1, abi.encodeCall(TargetBase.init, (IAvatar(SAFE))), 1));
-        
+        proxy = TargetBase(
+            factory.deployUpgradeableModule(
+                "org.firm.test-target", 1, abi.encodeCall(TargetBase.init, (IAvatar(SAFE))), 1
+            )
+        );
+
         vm.prank(SAFE);
         vm.expectEmit(true, false, false, true, address(proxy));
         emit Upgraded(implV2, "org.firm.test-target", 2);
@@ -152,10 +161,16 @@ contract UpgradeableModuleProxyDeployTest is FirmTest {
 
     function testRevertsIfRepeatingNonce() public {
         uint256 nonce = 1;
-        factory.deployUpgradeableModule("org.firm.test-target", 1, abi.encodeCall(TargetBase.init, (IAvatar(SAFE))), nonce);
-        factory.deployUpgradeableModule("org.firm.test-target", 2, abi.encodeCall(TargetBase.init, (IAvatar(SAFE))), nonce);
-        
+        factory.deployUpgradeableModule(
+            "org.firm.test-target", 1, abi.encodeCall(TargetBase.init, (IAvatar(SAFE))), nonce
+        );
+        factory.deployUpgradeableModule(
+            "org.firm.test-target", 2, abi.encodeCall(TargetBase.init, (IAvatar(SAFE))), nonce
+        );
+
         vm.expectRevert(abi.encodeWithSelector(UpgradeableModuleProxyFactory.ProxyAlreadyDeployedForNonce.selector));
-        factory.deployUpgradeableModule("org.firm.test-target", 1, abi.encodeCall(TargetBase.init, (IAvatar(SAFE))), nonce);
+        factory.deployUpgradeableModule(
+            "org.firm.test-target", 1, abi.encodeCall(TargetBase.init, (IAvatar(SAFE))), nonce
+        );
     }
 }

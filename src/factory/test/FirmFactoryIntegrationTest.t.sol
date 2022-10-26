@@ -159,21 +159,33 @@ contract FirmFactoryIntegrationTest is FirmTest {
 
         vm.prank(address(safe));
         uint256 yearlyAllowanceId = budget.createAllowance(
-            NO_PARENT_ID, roleFlag(ROOT_ROLE_ID), address(token), treasuryAmount / 10, TimeShift(TimeShiftLib.TimeUnit.Yearly, 0).encode(), "Monthly budget"
+            NO_PARENT_ID,
+            roleFlag(ROOT_ROLE_ID),
+            address(token),
+            treasuryAmount / 10,
+            TimeShift(TimeShiftLib.TimeUnit.Yearly, 0).encode(),
+            "Monthly budget"
         );
-        
-        LlamaPayStreams streams = LlamaPayStreams(moduleFactory.deployUpgradeableModule(
-            LLAMAPAYSTREAMS_MODULE_ID,
-            LATEST_VERSION,
-            abi.encodeCall(BudgetModule.initialize, (budget, address(relayer))),
-            1
-        ));
+
+        LlamaPayStreams streams = LlamaPayStreams(
+            moduleFactory.deployUpgradeableModule(
+                LLAMAPAYSTREAMS_MODULE_ID,
+                LATEST_VERSION,
+                abi.encodeCall(BudgetModule.initialize, (budget, address(relayer))),
+                1
+            )
+        );
 
         uint256 streamAllowanceId = budget.createAllowance(
-            yearlyAllowanceId, address(streams), address(token), INHERITED_AMOUNT, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode(), "Stream budget"
+            yearlyAllowanceId,
+            address(streams),
+            address(token),
+            INHERITED_AMOUNT,
+            TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode(),
+            "Stream budget"
         );
         streams.configure(streamAllowanceId, 90 days);
-        
+
         uint256 amountPerSecond = uint256(10_000 * 10 ** 20) / (30 days);
         streams.startStream(streamAllowanceId, receiver, amountPerSecond, "Receiver salary");
         timetravel(30 days);

@@ -12,7 +12,7 @@ abstract contract FirmBase is EIP1967Upgradeable, ERC2771Context, IModuleMetadat
     function __init_firmBase(IAvatar safe_, address trustedForwarder_) internal {
         // checks-effects-interactions violated so that the init event always fires first
         emit Initialized(safe_, _implementation());
-        
+
         __init_setSafe(safe_);
         if (trustedForwarder_ != address(0)) {
             _setTrustedForwarder(trustedForwarder_, true);
