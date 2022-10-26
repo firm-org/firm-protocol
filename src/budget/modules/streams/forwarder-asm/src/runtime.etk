@@ -1,0 +1,52 @@
+## length = 59 bytes (if length changes, update initcode.etk)
+
+start:
+    # if (msg.sender != owner) revert("")
+    %push(0xffffffffffffffffffffffffffffffffffffffff) # Owner placeholder
+                     #  [owner]
+    sender           #  [sender, owner]
+    eq               #  [sender == owner]
+    not              #  [sender != owner]
+    %push(fail)      #  [failLabel, sender != owner]
+    jumpi            #  []
+
+    # if (msg.data.length < 20) revert("")
+    %push(20)        #  [20]
+    calldatasize     #  [cds, 20]
+    lt               #  [cds < 20]
+    %push(fail)      #  [failLabel, cds < 20]
+    jumpi            #  []
+
+    calldatasize     #  [cds]
+    returndatasize   #  [0, cds]
+    returndatasize   #  [0, 0, cds]
+    calldatacopy     #  []
+    %push(exit)      #  [exitLabel]
+    returndatasize   #  [0, exitLabel]
+    returndatasize   #  [0, 0, exitLabel]
+    returndatasize   #  [0, 0, 0, exitLabel]
+    returndatasize   #  [0, 0, 0, 0, exitLabel]
+    returndatasize   #  [0, 0, 0, 0, 0, exitLabel]
+    calldatasize     #  [cds, 0, 0, 0, 0, 0, exitLabel]
+    returndatasize   #  [0, cds, 0, 0, 0, 0, 0, exitLabel]
+    push32 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc
+                     #  [implSlot, 0, cds, 0, 0, 0, 0, 0, exitLabel]
+    sload            #  [addr, 0, cds, 0, 0, 0, 0, 0, exitLabel]
+    gas              #  [gas, addr, 0, cds, 0, 0, 0, 0, 0, exitLabel]
+    delegatecall     #  [success, 0, 0, 0, exitLabel]
+    swap2            #  [0, 0, success, 0, exitLabel]
+    returndatasize   #  [rds, 0, 0, success, 0, exitLabel]
+    swap2            #  [0, 0, rds, success, 0, exitLabel]
+    returndatacopy   #  [success, 0, exitLabel] # return data in memory starting at 0
+    returndatasize   #  [rds, success, 0, exitLabel]
+    swap3            #  [exitLabel, success, 0, rds]
+    jumpi            #  [0, rds]
+    revert           #  []
+exit:
+    jumpdest         #  [0, rds]
+    return           #  []
+fail:
+    jumpdest         #  []
+    returndatasize   #  [0]
+    returndatasize   #  [0, 0]
+    revert           #  []
