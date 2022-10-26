@@ -1,0 +1,61 @@
+start:
+    # if (msg.sender != owner) revert("")
+    %push(0xffffffffffffffffffffffffffffffffffffffff) # Owner placeholder
+                     #  [owner]
+    caller           #  [sender, owner]
+    sub              #  [sender != owner] # will only be falsy if not the same address
+    %push(fail)      #  [failLabel, sender != owner]
+    jumpi            #  []
+
+    %push(exit)      #  [exitLabel]
+    returndatasize   #  [0, exitLabel]
+    returndatasize   #  [0, 0, exitLabel]
+    returndatasize   #  [0, 0, 0, exitLabel]
+    returndatasize   #  [0, 0, 0, 0, exitLabel]
+    returndatasize   #  [0, 0, 0, 0, 0, exitLabel]
+
+    # if (msg.data.length < 20) revert("")
+    %push(20)        #  [20, 0, 0, 0, 0, 0, exitLabel]
+    dup1             #  [20, 20, 0, 0, 0, 0, 0, exitLabel]
+    calldatasize     #  [cds, 20, 20, 0, 0, 0, 0, 0, exitLabel]
+    lt               #  [cds < 20, 20, 0, 0, 0, 0, 0, exitLabel]
+    %push(fail)      #  [failLabel, cds < 20, 20, 0, 0, 0, 0, 0, exitLabel]
+    jumpi            #  [20, 0, 0, 0, 0, 0, exitLabel]
+
+    # copy msg.data[0..msg.data.length - 20] to memory starting from 0
+    calldatasize     #  [cds, 20, 0, 0, 0, 0, 0, exitLabel]
+    sub              #  [dataLength, 0, 0, 0, 0, 0, exitLabel]
+    dup1             #  [dataLength, dataLength, 0, 0, 0, 0, 0, exitLabel]
+    returndatasize   #  [0, dataLength, dataLength, 0, 0, 0, 0, 0, exitLabel]
+    returndatasize   #  [0, 0, dataLength, dataLength, 0, 0, 0, 0, 0, exitLabel]
+    calldatacopy     #  [dataLength, 0, 0, 0, 0, 0, exitLabel] # data for call in memory at position zero
+
+    # prepare call params and perform call
+    returndatasize   #  [0, dataLength, 0, 0, 0, 0, 0, exitLabel]
+    callvalue        #  [value, 0, dataLength, 0, 0, 0, 0, 0, exitLabel]
+    dup3             #  [dataLength, value, 0, dataLength, 0, 0, 0, 0, 0, exitLabel]
+    calldataload     #  [addr right padded, value, 0, dataLength, 0, 0, 0, 0, 0, exitLabel]
+    %push(12 * 8)    #  [shift, addr right padded, value, 0, dataLength, 0, 0, 0, 0, 0, exitLabel]
+    shr              #  [addr, value, 0, dataLength, 0, 0, 0, 0, 0, exitLabel]
+    gas              #  [gas, addr, value, 0, dataLength, 0, 0, 0, 0, 0, exitLabel]
+    call             #  [success, 0, 0, 0, exitLabel]
+
+    # copy return data to memory starting from 0
+    swap2            #  [0, 0, success, 0, exitLabel]
+    returndatasize   #  [rds, 0, 0, success, 0, exitLabel]
+    swap2            #  [0, 0, rds, success, 0, exitLabel]
+    returndatacopy   #  [success, 0, exitLabel] # return data in memory starting at 0
+    returndatasize   #  [rds, success, 0, exitLabel]
+    swap3            #  [exitLabel, success, 0, rds]
+
+    # if (!success) revert
+    jumpi            #  [0, rds]
+    revert           #  []
+exit:
+    jumpdest         #  [0, rds]
+    return           #  []
+fail:
+    jumpdest         #  [...]
+    returndatasize   #  [0, ...]
+    returndatasize   #  [0, 0, ...]
+    revert           #  [...]
