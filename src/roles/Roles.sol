@@ -219,7 +219,7 @@ contract Roles is FirmBase, IRoles {
         bytes32 userRoles = getUserRoles[user];
         // either user has the specified role or user has root role (whichs gives it permission to do anything)
         // Note: For root it will return true even if the role hasn't been created yet
-        return uint256(userRoles >> roleId) & 1 != 0 || _hasRootRole(userRoles);
+        return uint256(userRoles >> roleId) & 1 != 0 || isRoleAdmin(user, roleId) || _hasRootRole(userRoles);
     }
 
     /**
