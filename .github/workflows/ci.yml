@@ -21,5 +21,10 @@ jobs:
 
       - name: Fork tests (mainnet)
         env:
-          MAINNET_FORK_URL: ${{ secrets.MAINNET_FORK_URL }}
-        run: forge test --match-contract FirmFactoryIntegrationTest --fork-url "$MAINNET_FORK_URL" -vvvv
+          FORK_URL: ${{ secrets.MAINNET_FORK_URL }}
+        run: forge test --match-contract FirmFactoryIntegrationTest --fork-url "$FORK_URL" -vvvv
+
+      - name: Fork tests (polygon)
+        env:
+          FORK_URL: ${{ secrets.POLYGON_FORK_URL }}
+        run: forge test --match-contract FirmFactoryIntegrationTest --fork-url "$FORK_URL" -vvvv

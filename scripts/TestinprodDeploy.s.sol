@@ -52,6 +52,11 @@ contract TestinprodDeploy is DeployBase {
             safeProxyFactory = 0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2;
             safeImpl = 0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552;
             llamaPayFactory = 0xcCDd688d7eDcF89bFa217492E247d1395FcEC23D;
+        } else if (block.chainid == 137) {
+            // Polygon
+            safeProxyFactory = 0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2;
+            safeImpl = 0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552;
+            llamaPayFactory = 0xde1C04855c2828431ba637675B6929A684f84C7F;
         } else {
             revert UnsupportedChain(block.chainid);
         }
