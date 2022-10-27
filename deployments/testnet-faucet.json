@@ -4,5 +4,11 @@
             "address": "0x88A135e2f78C6Ef38E1b72A4B75Ad835fBd50CCE",
             "blockNumber": 7721502
         }
+    },
+    "137": {
+        "v1.0.0": {
+            "address": "0xa1dd2a67e26dc400b6dd31354ba653ea4eef86f5",
+            "blockNumber": 34868802
+        }
     }
 }
