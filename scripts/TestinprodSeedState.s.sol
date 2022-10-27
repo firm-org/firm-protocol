@@ -11,14 +11,25 @@ import {BackdoorModule} from "../src/factory/local-utils/BackdoorModule.sol";
 import {roleFlag} from "../src/common/test/mocks/RolesAuthMock.sol";
 import {TestnetTokenFaucet} from "../src/testnet/TestnetTokenFaucet.sol";
 
+import {LlamaPayStreams, BudgetModule, IERC20, ForwarderLib} from "src/budget/modules/streams/LlamaPayStreams.sol";
+import {TestinprodFactory, UpgradeableModuleProxyFactory, LATEST_VERSION} from "src/factory/TestinprodFactory.sol";
+
+string constant LLAMAPAYSTREAMS_MODULE_ID = "org.firm.budget.llamapay-streams";
+
 contract TestinprodSeedState is Test {
     error UnsupportedChain(uint256 chainId);
 
     // send some native asset to safe before running it
     function run(GnosisSafe safe) public {
         TestnetTokenFaucet faucet;
+        UpgradeableModuleProxyFactory moduleFactory;
+        
         if (block.chainid == 5) {
             faucet = TestnetTokenFaucet(0x88A135e2f78C6Ef38E1b72A4B75Ad835fBd50CCE);
+            moduleFactory = UpgradeableModuleProxyFactory(0x2Ef2b36AD44D5c5fdeECC5a6a38464BFe50b5Da2);
+        } else if (block.chainid == 137) {
+            faucet = TestnetTokenFaucet(0xA1dD2A67E26DC400b6dd31354bA653ea4EeF86F5);
+            moduleFactory = UpgradeableModuleProxyFactory(0xCb3Dee447443B7F34aCd640AC8e304188512c2EC);
         } else {
             revert UnsupportedChain(block.chainid);
         }
@@ -94,10 +105,23 @@ contract TestinprodSeedState is Test {
 
         // create some payments from the allowances
         budgetBackdoor.executePayment(subAllowanceId2, 0x6b2b69c6e5490Be701AbFbFa440174f808C1a33B, 3600e6, "Devcon expenses");
-        budgetBackdoor.executePayment(gasAllowanceId, 0x0FF6156B4bed7A1322f5F59eB5af46760De2b872, 0.01 ether, "v0.3 deployment gas");
+        // budgetBackdoor.executePayment(gasAllowanceId, 0x0FF6156B4bed7A1322f5F59eB5af46760De2b872, 0.01 ether, "v0.3 deployment gas");
         budgetBackdoor.executePayment(generalAllowanceId, 0xFaE470CD6bce7EBac42B6da5082944D72328bC3b, 3000e6, "Equipment for new hire");
         budgetBackdoor.executePayment(subAllowanceId1, 0xe688b84b23f322a994A53dbF8E15FA82CDB71127, 22000e6, "Process monthly payroll");
         budgetBackdoor.executePayment(generalAllowanceId, 0x328375e18E7db8F1CA9d9bA8bF3E9C94ee34136A, 3000e6, "Special bonus");
+
+        LlamaPayStreams streams = LlamaPayStreams(
+            moduleFactory.deployUpgradeableModule(
+                LLAMAPAYSTREAMS_MODULE_ID,
+                LATEST_VERSION,
+                abi.encodeCall(BudgetModule.initialize, (budget, address(0))),
+                1
+            )
+        );
+        uint256 streamsAllowanceId = budget.createAllowance(subAllowanceId1, address(streams), address(faucet.tokenWithSymbol("USDC")), 0, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode(), "Streams module");
+        streams.configure(streamsAllowanceId, 30 days);
+        uint256 amountPerSecond = uint256(1000 * 10 ** 20) / (30 days);
+        streams.startStream(streamsAllowanceId, 0xF1F182B70255AC4846E28fd56038F9019c8d36b0, amountPerSecond, "f1 salary");
 
         vm.stopBroadcast();
     }
