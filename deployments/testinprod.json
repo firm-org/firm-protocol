@@ -26,7 +26,7 @@
         }
     },
     "137": {
-        "v0.3.0-rc.2": {
+        "v0.3.0": {
             "firmFactory": "0x74dBa876C971b05B36806F67bd749f1abe8B4f7b",
             "modulesFactory": "0xCb3Dee447443B7F34aCd640AC8e304188512c2EC",
             "blockNumber": 34868283
