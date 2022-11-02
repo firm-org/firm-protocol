@@ -16,6 +16,11 @@ address constant IMPL_INIT_ADDRESS = address(1);
  * https://github.com/Rari-Capital/solmate/blob/main/src/auth/authorities/RolesAuthority.sol)
  * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/AccessControl.sol
  */
+// Using Roles as a standalone contract would result in a significant gas
+// overhead due to the fact that every role check would be an external call. I
+// suggest adopting making roles part of the same contract which would use them.
+// If bytecode size of 24KB is an issue it can be addressed with EIP2535 or
+// similar techniques https://twitter.com/ylv_io/status/1580188968376598529
 contract Roles is FirmBase, IRoles {
     string public constant moduleId = "org.firm.roles";
     uint256 public constant moduleVersion = 1;

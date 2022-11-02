@@ -33,6 +33,9 @@ abstract contract EIP1967Upgradeable is SafeAware {
      * It also must conform to the IModuleMetadata interface (this is somewhat of an implicit guard against bad upgrades)
      * @param _newImplementation The address of the new implementation address the proxy will use
      */
+     // `proxy will freeze` is an understatement. It essentially can lock entire
+    // system. A recommend using rollback test
+    // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/afb20119b33072da041c97ea717d3ce4417b5e01/contracts/proxy/ERC1967/ERC1967Upgrade.sol#L81
     function upgrade(IModuleMetadata _newImplementation) public onlySafe {
         assembly {
             sstore(EIP1967_IMPL_SLOT, _newImplementation)

@@ -49,9 +49,30 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         uint256 parentId;
         uint256 amount;
         uint256 spent;
+        // This is somewhat a weak abstraction because people tend to think in
+        // terms of USD (or other currency) to spend; so it would not matter if
+        // it is USDC, DAI or USDT, especially for non-technical and non-defi
+        // people. On another note budgets in volatile market assets (like
+        // Bitcoin) doesn't make much sense anyway. Maybe budgets should be
+        // pegged to dollars for the simplicity?
+        // In fact I would go as far as supporting only one spending asset for the
+        // v1, like USDC. Safe can hold any number of different assets but doing
+        // budgeting on only one assets would extremely simplify things and it
+        // is hard to imagine an edge case where a dollar would not work.
+        // It is also trivial to trade any asset to USDC
         address token;
+        // Solidity uses 32 bytes slots for storate layout; It would be more gas
+        // efficient to use uint256 for nextResetTime than uint40 unless you
+        // pack it with other variables. I suggest to leave gas and storage
+        // optimization until the project in the final phase
         uint40 nextResetTime;
         address spender;
+        // While using TimeUnits such daily, weekly etc sounds attractive it
+        // implies higher gas costs and much harder to audit. In fact Solidity
+        // team dropped years suffix for the same reason. I suggest to keep it
+        // simple and use only seconds because not even each day has the same
+        // number of seconds (see leap seconds).
+        // https://docs.soliditylang.org/en/v0.8.17/units-and-global-variables.html?highlight=seconds#time-units
         EncodedTimeShift recurrency;
         bool isDisabled;
     }
@@ -137,6 +158,8 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
 
         if (parentAllowanceId == NO_PARENT_ID) {
             // Top-level allowances can only be created by the Safe
+            // It would be better to use one role system for everything instead
+            // of dual system of safe and roles
             if (_msgSender() != address(safe())) {
                 revert UnauthorizedNotAllowanceAdmin(NO_PARENT_ID);
             }
@@ -293,6 +316,10 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
      * @param amounts Amounts of the allowance's token being sent
      * @param description Description of the payments
      */
+     // Tranfers are great but many DeFI protocols require calling arbitrary
+    // methods with ETC20 approval. It seems to make sense for budget to support
+    // such functionality. It would be secure enough with a limit ERC20 amount
+    // approved
     function executeMultiPayment(
         uint256 allowanceId,
         address[] calldata tos,
@@ -355,12 +382,14 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
 
             // TODO: do we need to make this 'safe'?
             IERC20(allowance.token).transferFrom(actor, address(safe()), amount);
+            // TODO: check that safe balance indeed increased by amount
         } else {
             if (msg.value != amount) {
                 revert NativeValueMismatch();
             }
 
             payable(address(safe())).transfer(amount);
+            // TODO: check that safe balance indeed increased by amount
         }
 
         (nextResetTime,) = _checkAndUpdateAllowanceChain(allowanceId, amount, zeroCappedSub);
@@ -370,6 +399,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
 
     function _performTransfer(address token, address to, uint256 amount) internal returns (bool) {
         if (token == NATIVE_ASSET) {
+            // possible reentry attack
             return exec(to, amount, hex"", SafeEnums.Operation.Call);
         } else {
             (bool callSuccess, bytes memory retData) =
@@ -441,6 +471,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         return allowances[allowanceId];
     }
 
+    // This can get expensive fast if other modules will keep calling isAdminOnAllowance
     function isAdminOnAllowance(uint256 allowanceId, address actor) public view returns (bool) {
         return _isAdminOnAllowance(_getAllowance(allowanceId), actor);
     }
@@ -468,6 +499,8 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         if (allowance.nextResetTime == INHERITED_RESET_TIME) {
             // Note that since top-level allowances are not allowed to have an inherited reset time,
             // this branch is only ever executed for sub-allowances (which always have a parentId)
+            // It is certainly possible to run out of gas in this mehtod due to
+            // nexted allowances.
             (nextResetTime, allowanceResets) = _checkAndUpdateAllowanceChain(allowance.parentId, amount, op);
         } else {
             nextResetTime = allowance.nextResetTime;
@@ -482,6 +515,9 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
             }
 
             if (allowance.parentId != NO_PARENT_ID) {
+                // Updating every parent would grow liniarly expensive; It be
+                // much nicer if it would be possible to update allowance in a
+                // constant gas and storage
                 _checkAndUpdateAllowanceChain(allowance.parentId, amount, op);
             }
         }

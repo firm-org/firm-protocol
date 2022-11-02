@@ -8,6 +8,9 @@ import {EIP712} from "openzeppelin/utils/cryptography/draft-EIP712.sol";
  * @dev Custom ERC2771 forwarding relayer tailor made for Firm's UX needs
  * Inspired by https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.7.3/contracts/metatx/MinimalForwarder.sol (MIT licensed)
  */
+ // One comment on EIP712 is that it is not well supported by hardware wallets
+// like Trezor and Ledger so users may have issues signing messages with these
+// hard ware wallets. Thought I hope support of EIP712 will improve over time
 contract FirmRelayer is EIP712 {
     using ECDSA for bytes32;
 
