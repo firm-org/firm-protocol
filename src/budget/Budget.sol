@@ -104,7 +104,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
     error DisabledAllowance(uint256 allowanceId);
     error UnauthorizedNotAllowanceAdmin(uint256 allowanceId);
     error TokenMismatch(address patentToken, address childToken);
-    error ZeroAmountForTopLevelAllowance();
+    error InheritedAmountNotAllowed();
     error ZeroAmountPayment();
     error BadInput();
     error BadExecutionContext();
@@ -145,7 +145,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
             // could support setting 0 as the amount for the allowance and that
             // will create an allowance that allows completely wiping the safe (for the token)
             if (amount == INHERITED_AMOUNT) {
-                revert ZeroAmountForTopLevelAllowance();
+                revert InheritedAmountNotAllowed();
             }
 
             // For top-level allowances, recurrency needs to be set and cannot be zero
@@ -170,6 +170,11 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
             }
             // Recurrency can be zero in sub-allowances and is inherited from the parent
             if (!recurrency.isInherited()) {
+                // If recurrency is not inherited, amount cannot be inherited
+                if (amount == INHERITED_AMOUNT) {
+                    revert InheritedAmountNotAllowed();
+                }
+
                 // Will revert with InvalidTimeShift if recurrency is invalid
                 nextResetTime = uint40(block.timestamp).applyShift(recurrency);
             }
@@ -219,8 +224,8 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
     function setAllowanceAmount(uint256 allowanceId, uint256 amount) external {
         Allowance storage allowance = _getAllowanceAndValidateAdmin(allowanceId);
 
-        if (amount == INHERITED_AMOUNT && allowance.parentId == NO_PARENT_ID) {
-            revert ZeroAmountForTopLevelAllowance();
+        if (amount == INHERITED_AMOUNT && (allowance.parentId == NO_PARENT_ID || !allowance.recurrency.isInherited())) {
+            revert InheritedAmountNotAllowed();
         }
 
         allowance.amount = amount;
