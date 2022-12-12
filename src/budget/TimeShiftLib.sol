@@ -33,12 +33,12 @@ library TimeShiftLib {
 
     enum TimeUnit {
         Inherit,
-        Daily,
-        Weekly,
-        Monthly,
-        Quarterly,
-        Semiyearly,
-        Yearly
+        Daily,      // 1
+        Weekly,     // 2
+        Monthly,    // 3
+        Quarterly,  // 4
+        Semiyearly, // 5
+        Yearly      // 6
     }
 
     error InvalidTimeShift();
@@ -49,20 +49,27 @@ library TimeShiftLib {
         uint40 realTime = uint40(int40(time) + offset);
         (uint256 y, uint256 m, uint256 d) = realTime.toDate();
 
-        if (unit == TimeUnit.Daily) {
-            (y, m, d) = addDays(y, m, d, 1);
-        } else if (unit == TimeUnit.Weekly) {
-            (y, m, d) = addDays(y, m, d, 8 - DateTimeLib.getDayOfWeek(realTime));
-        } else if (unit == TimeUnit.Monthly) {
-            (y, m, d) = m < 12 ? (y, m + 1, 1) : (y + 1, 1, 1);
-        } else if (unit == TimeUnit.Quarterly) {
-            (y, m, d) = m < 10 ? (y, (1 + (m - 1) / 3) * 3 + 1, 1) : (y + 1, 1, 1);
-        } else if (unit == TimeUnit.Semiyearly) {
-            (y, m, d) = m < 7 ? (y, 7, 1) : (y + 1, 1, 1);
-        } else if (unit == TimeUnit.Yearly) {
-            (y, m, d) = (y + 1, 1, 1);
+        // Split branches for shorter paths and put the most common cases first
+        if (uint8(unit) > 3) {
+            if (unit == TimeUnit.Yearly) {
+                (y, m, d) = (y + 1, 1, 1);
+            } else if (unit == TimeUnit.Quarterly) {
+                (y, m, d) = m < 10 ? (y, (1 + (m - 1) / 3) * 3 + 1, 1) : (y + 1, 1, 1);
+            } else if (unit == TimeUnit.Semiyearly) {
+                (y, m, d) = m < 7 ? (y, 7, 1) : (y + 1, 1, 1);
+            } else {
+                revert InvalidTimeShift();
+            }
         } else {
-            revert InvalidTimeShift();
+            if (unit == TimeUnit.Monthly) {
+                (y, m, d) = m < 12 ? (y, m + 1, 1) : (y + 1, 1, 1);
+            } else if (unit == TimeUnit.Weekly) {
+                (y, m, d) = addDays(y, m, d, 8 - DateTimeLib.getDayOfWeek(realTime));
+            } else if (unit == TimeUnit.Daily) {
+                (y, m, d) = addDays(y, m, d, 1);
+            } else {
+                revert InvalidTimeShift();
+            }
         }
 
         uint256 shiftedTs = DateTimeLib.timestampFromDateTime(y, m, d, 0, 0, 0);
