@@ -184,6 +184,17 @@ contract RolesTest is FirmTest {
         roles.setRoleAdmin(ROOT_ROLE_ID, newRoleAdmin);
     }
 
+    function testRoleAdminHasRole() public {
+        vm.startPrank(address(safe));
+        uint8 roleOneId = roles.createRole(ONLY_ROOT_ROLE, "");
+        uint8 roleTwoId = roles.createRole(ONLY_ROOT_ROLE | bytes32(1 << uint256(roleOneId)), "");
+
+        assertFalse(roles.hasRole(SOMEONE, roleTwoId));
+        roles.setRole(SOMEONE, roleOneId, true);
+        assertTrue(roles.hasRole(SOMEONE, roleTwoId));
+        vm.stopPrank();
+    }
+
     function testSafeOwnerHasRole() public {
         assertTrue(roles.hasRole(SAFE_OWNER, SAFE_OWNER_ROLE_ID));
         assertFalse(roles.hasRole(SOMEONE, SAFE_OWNER_ROLE_ID));
