@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import {FirmBase, IMPL_INIT_NOOP_SAFE, IMPL_INIT_NOOP_ADDR} from "../bases/FirmBase.sol";
 import {ISafe} from "../bases/SafeAware.sol";
 
-import {IRoles, ROOT_ROLE_ID, ROLE_MANAGER_ROLE, ONLY_ROOT_ROLE} from "./IRoles.sol";
+import {IRoles, ROOT_ROLE_ID, ROLE_MANAGER_ROLE, ONLY_ROOT_ROLE, SAFE_OWNER_ROLE_ID} from "./IRoles.sol";
 
 /**
  * @title Roles
@@ -73,7 +73,7 @@ contract Roles is FirmBase, IRoles {
 
     function _createRole(bytes32 roleAdmins, string memory name) internal returns (uint8 roleId) {
         uint256 roleId_ = roleCount;
-        if (roleId_ > type(uint8).max) {
+        if (roleId_ == SAFE_OWNER_ROLE_ID) {
             revert RoleLimitReached();
         }
         unchecked {
@@ -137,6 +137,10 @@ contract Roles is FirmBase, IRoles {
      * @param isGrant Whether the role is being granted or revoked
      */
     function setRole(address user, uint8 roleId, bool isGrant) external {
+        if (roleId == SAFE_OWNER_ROLE_ID) {
+            revert UnauthorizedNotAdmin(SAFE_OWNER_ROLE_ID);
+        }
+
         bytes32 oldUserRoles = getUserRoles[user];
         bytes32 newUserRoles = oldUserRoles;
 
@@ -171,7 +175,7 @@ contract Roles is FirmBase, IRoles {
         uint256 grantsLength = grantingRoles.length;
         for (uint256 i = 0; i < grantsLength;) {
             uint8 roleId = grantingRoles[i];
-            if (!_isRoleAdmin(senderRoles, roleId)) {
+            if (roleId == SAFE_OWNER_ROLE_ID || !_isRoleAdmin(senderRoles, roleId)) {
                 revert UnauthorizedNotAdmin(roleId);
             }
 
@@ -184,7 +188,7 @@ contract Roles is FirmBase, IRoles {
         uint256 revokesLength = revokingRoles.length;
         for (uint256 i = 0; i < revokesLength;) {
             uint8 roleId = revokingRoles[i];
-            if (!_isRoleAdmin(senderRoles, roleId)) {
+            if (roleId == SAFE_OWNER_ROLE_ID || !_isRoleAdmin(senderRoles, roleId)) {
                 revert UnauthorizedNotAdmin(roleId);
             }
 
@@ -206,6 +210,10 @@ contract Roles is FirmBase, IRoles {
      * @return True if the user holds the role or has the root role
      */
     function hasRole(address user, uint8 roleId) public view returns (bool) {
+        if (roleId == SAFE_OWNER_ROLE_ID) {
+            return safe().isOwner(user) || _hasRootRole(getUserRoles[user]);
+        }
+
         bytes32 userRoles = getUserRoles[user];
         // either user has the specified role or user has root role (whichs gives it permission to do anything)
         // Note: For root it will return true even if the role hasn't been created yet
@@ -219,7 +227,9 @@ contract Roles is FirmBase, IRoles {
      * @return True if the user has admin rights over the role
      */
     function isRoleAdmin(address user, uint8 roleId) public view returns (bool) {
-        return _isRoleAdmin(getUserRoles[user], roleId);
+        return roleId < SAFE_OWNER_ROLE_ID
+            ? _isRoleAdmin(getUserRoles[user], roleId)
+            : false;
     }
 
     /**
@@ -228,7 +238,7 @@ contract Roles is FirmBase, IRoles {
      * @return True if the role has been created
      */
     function roleExists(uint8 roleId) public view returns (bool) {
-        return roleId < roleCount;
+        return roleId < roleCount || roleId == SAFE_OWNER_ROLE_ID;
     }
 
     function _isRoleAdmin(bytes32 _userRoles, uint8 roleId) internal view returns (bool) {

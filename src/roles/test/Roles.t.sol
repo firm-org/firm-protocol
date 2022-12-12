@@ -63,12 +63,12 @@ contract RolesTest is FirmTest {
         testCannotCreateRolesWithoutRolesManagerRole();
     }
 
-    function testCanOnlyHave256Roles() public {
+    function testCanOnlyHave255RegularRoles() public {
         vm.startPrank(ADMIN);
-        for (uint256 i = 0; i < 254; i++) {
+        for (uint256 i = 0; i < 253; i++) {
             roles.createRole(ONLY_ROOT_ROLE, "");
         }
-        assertEq(roles.roleCount(), 256);
+        assertEq(roles.roleCount(), 255);
 
         vm.expectRevert(abi.encodeWithSelector(Roles.RoleLimitReached.selector));
         roles.createRole(ONLY_ROOT_ROLE, "");
