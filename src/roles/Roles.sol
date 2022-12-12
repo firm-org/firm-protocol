@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import {FirmBase, IMPL_INIT_NOOP_SAFE, IMPL_INIT_NOOP_ADDR} from "../bases/FirmBase.sol";
 import {ISafe} from "../bases/SafeAware.sol";
 
-import {IRoles, ROOT_ROLE_ID, ROLE_MANAGER_ROLE, ONLY_ROOT_ROLE} from "./IRoles.sol";
+import {IRoles, ROOT_ROLE_ID, ROLE_MANAGER_ROLE_ID, ONLY_ROOT_ROLE, SAFE_OWNER_ROLE_ID} from "./IRoles.sol";
 
 /**
  * @title Roles
@@ -44,7 +44,7 @@ contract Roles is FirmBase, IRoles {
         __init_firmBase(safe_, trustedForwarder_);
 
         assert(_createRole(ONLY_ROOT_ROLE, "Root") == ROOT_ROLE_ID);
-        assert(_createRole(ONLY_ROOT_ROLE, "Role Manager") == ROLE_MANAGER_ROLE);
+        assert(_createRole(ONLY_ROOT_ROLE, "Role Manager") == ROLE_MANAGER_ROLE_ID);
 
         // Safe given the root role on initialization (which admins for the role can revoke)
         // Addresses with the root role have permission to do anything
@@ -64,8 +64,8 @@ contract Roles is FirmBase, IRoles {
      * @return roleId ID of the new role
      */
     function createRole(bytes32 roleAdmins, string memory name) public returns (uint8 roleId) {
-        if (!hasRole(_msgSender(), ROLE_MANAGER_ROLE)) {
-            revert UnauthorizedNoRole(ROLE_MANAGER_ROLE);
+        if (!hasRole(_msgSender(), ROLE_MANAGER_ROLE_ID)) {
+            revert UnauthorizedNoRole(ROLE_MANAGER_ROLE_ID);
         }
 
         return _createRole(roleAdmins, name);
@@ -73,7 +73,7 @@ contract Roles is FirmBase, IRoles {
 
     function _createRole(bytes32 roleAdmins, string memory name) internal returns (uint8 roleId) {
         uint256 roleId_ = roleCount;
-        if (roleId_ > type(uint8).max) {
+        if (roleId_ == SAFE_OWNER_ROLE_ID) {
             revert RoleLimitReached();
         }
         unchecked {
@@ -101,8 +101,8 @@ contract Roles is FirmBase, IRoles {
             }
         } else {
             // For all other roles, the general role manager role can change any roles admins
-            if (!hasRole(_msgSender(), ROLE_MANAGER_ROLE)) {
-                revert UnauthorizedNoRole(ROLE_MANAGER_ROLE);
+            if (!hasRole(_msgSender(), ROLE_MANAGER_ROLE_ID)) {
+                revert UnauthorizedNoRole(ROLE_MANAGER_ROLE_ID);
             }
         }
 
@@ -118,8 +118,8 @@ contract Roles is FirmBase, IRoles {
      * @param name New name for the role
      */
     function changeRoleName(uint8 roleId, string memory name) external {
-        if (!hasRole(_msgSender(), ROLE_MANAGER_ROLE)) {
-            revert UnauthorizedNoRole(ROLE_MANAGER_ROLE);
+        if (!hasRole(_msgSender(), ROLE_MANAGER_ROLE_ID)) {
+            revert UnauthorizedNoRole(ROLE_MANAGER_ROLE_ID);
         }
 
         emit RoleNameChanged(roleId, name);
@@ -137,11 +137,16 @@ contract Roles is FirmBase, IRoles {
      * @param isGrant Whether the role is being granted or revoked
      */
     function setRole(address user, uint8 roleId, bool isGrant) external {
+        if (roleId == SAFE_OWNER_ROLE_ID) {
+            revert UnauthorizedNotAdmin(SAFE_OWNER_ROLE_ID);
+        }
+
         bytes32 oldUserRoles = getUserRoles[user];
         bytes32 newUserRoles = oldUserRoles;
 
+        address sender = _msgSender();
         // Implicitly checks that roleId had been created
-        if (!_isRoleAdmin(getUserRoles[_msgSender()], roleId)) {
+        if (!_isRoleAdmin(sender, getUserRoles[sender], roleId)) {
             revert UnauthorizedNotAdmin(roleId);
         }
 
@@ -153,7 +158,7 @@ contract Roles is FirmBase, IRoles {
 
         getUserRoles[user] = newUserRoles;
 
-        emit UserRolesChanged(user, oldUserRoles, newUserRoles, _msgSender());
+        emit UserRolesChanged(user, oldUserRoles, newUserRoles, sender);
     }
 
     /**
@@ -164,14 +169,15 @@ contract Roles is FirmBase, IRoles {
      * @param revokingRoles ID of all roles being revoked
      */
     function setRoles(address user, uint8[] memory grantingRoles, uint8[] memory revokingRoles) external {
-        bytes32 senderRoles = getUserRoles[_msgSender()];
+        address sender = _msgSender();
+        bytes32 senderRoles = getUserRoles[sender];
         bytes32 oldUserRoles = getUserRoles[user];
         bytes32 newUserRoles = oldUserRoles;
 
         uint256 grantsLength = grantingRoles.length;
         for (uint256 i = 0; i < grantsLength;) {
             uint8 roleId = grantingRoles[i];
-            if (!_isRoleAdmin(senderRoles, roleId)) {
+            if (roleId == SAFE_OWNER_ROLE_ID || !_isRoleAdmin(sender, senderRoles, roleId)) {
                 revert UnauthorizedNotAdmin(roleId);
             }
 
@@ -184,7 +190,7 @@ contract Roles is FirmBase, IRoles {
         uint256 revokesLength = revokingRoles.length;
         for (uint256 i = 0; i < revokesLength;) {
             uint8 roleId = revokingRoles[i];
-            if (!_isRoleAdmin(senderRoles, roleId)) {
+            if (roleId == SAFE_OWNER_ROLE_ID || !_isRoleAdmin(sender, senderRoles, roleId)) {
                 revert UnauthorizedNotAdmin(roleId);
             }
 
@@ -196,7 +202,7 @@ contract Roles is FirmBase, IRoles {
 
         getUserRoles[user] = newUserRoles;
 
-        emit UserRolesChanged(user, oldUserRoles, newUserRoles, _msgSender());
+        emit UserRolesChanged(user, oldUserRoles, newUserRoles, sender);
     }
 
     /**
@@ -206,6 +212,10 @@ contract Roles is FirmBase, IRoles {
      * @return True if the user holds the role or has the root role
      */
     function hasRole(address user, uint8 roleId) public view returns (bool) {
+        if (roleId == SAFE_OWNER_ROLE_ID) {
+            return safe().isOwner(user) || _hasRootRole(getUserRoles[user]);
+        }
+
         bytes32 userRoles = getUserRoles[user];
         // either user has the specified role or user has root role (whichs gives it permission to do anything)
         // Note: For root it will return true even if the role hasn't been created yet
@@ -219,7 +229,9 @@ contract Roles is FirmBase, IRoles {
      * @return True if the user has admin rights over the role
      */
     function isRoleAdmin(address user, uint8 roleId) public view returns (bool) {
-        return _isRoleAdmin(getUserRoles[user], roleId);
+        return roleId < SAFE_OWNER_ROLE_ID
+            ? _isRoleAdmin(user, getUserRoles[user], roleId)
+            : false;
     }
 
     /**
@@ -228,16 +240,19 @@ contract Roles is FirmBase, IRoles {
      * @return True if the role has been created
      */
     function roleExists(uint8 roleId) public view returns (bool) {
-        return roleId < roleCount;
+        return roleId < roleCount || roleId == SAFE_OWNER_ROLE_ID;
     }
 
-    function _isRoleAdmin(bytes32 _userRoles, uint8 roleId) internal view returns (bool) {
-        return (_userRoles & getRoleAdmins[roleId]) != 0
-            || (_hasRootRole(_userRoles) && roleExists(roleId) && roleId != ROOT_ROLE_ID);
+    function _isRoleAdmin(address user, bytes32 userRoles, uint8 roleId) internal view returns (bool) {
+        bytes32 roleAdmins = getRoleAdmins[roleId];
+        return
+            (userRoles & roleAdmins) != 0
+            || (_hasRootRole(userRoles) && roleExists(roleId) && roleId != ROOT_ROLE_ID)
+            || (uint256(roleAdmins >> SAFE_OWNER_ROLE_ID) & 1 != 0 && safe().isOwner(user));
     }
 
-    function _hasRootRole(bytes32 _userRoles) internal pure returns (bool) {
+    function _hasRootRole(bytes32 userRoles) internal pure returns (bool) {
         // Since root role is always at ID 0, we don't need to shift
-        return uint256(_userRoles) & 1 != 0;
+        return uint256(userRoles) & 1 != 0;
     }
 }

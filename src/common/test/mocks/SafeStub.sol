@@ -18,10 +18,13 @@ contract SafeStub is ISafe {
         return operation == ISafe.Operation.Call ? to.call{value: value}(data) : to.delegatecall(data);
     }
 
-    // Functions to comply with interface
+    mapping (address => bool) internal owner;
+    function setOwner(address user, bool isOwner_) external {
+        owner[user] = isOwner_;
+    }
 
-    function isOwner(address) external pure returns (bool) {
-        return true;
+    function isOwner(address user) external view returns (bool) {
+        return owner[user];
     }
 
     receive() external payable {}
