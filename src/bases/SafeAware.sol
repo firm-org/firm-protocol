@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.16;
 
-import {IAvatar} from "zodiac/interfaces/IAvatar.sol";
+import {ISafe} from "./ISafe.sol";
 
 /**
  * @title SafeAware
@@ -15,7 +15,7 @@ abstract contract SafeAware {
     /**
      * @notice Address of the Safe that this module is tied to
      */
-    function safe() public view returns (IAvatar safeAddr) {
+    function safe() public view returns (ISafe safeAddr) {
         assembly {
             safeAddr := sload(SAFE_SLOT)
         }
@@ -26,12 +26,12 @@ abstract contract SafeAware {
 
     /**
      * @dev Contracts that inherit from SafeAware, including derived contracts as
-     * EIP1967Upgradeable or Zodiac, should call this function on initialization
+     * EIP1967Upgradeable or Safe, should call this function on initialization
      * Will revert if called twice
      * @param _safe The address of the GnosisSafe to use, won't be modifiable unless
      * implicitly implemented by the derived contract, which is not recommended
      */
-    function __init_setSafe(IAvatar _safe) internal {
+    function __init_setSafe(ISafe _safe) internal {
         if (address(_safe) == address(0)) {
             revert SafeAddressZero();
         }

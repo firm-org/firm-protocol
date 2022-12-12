@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import {FirmTest} from "../../common/test/lib/FirmTest.sol";
 import {RolesStub} from "../../common/test/mocks/RolesStub.sol";
 import {roleFlag} from "../../common/test/mocks/RolesAuthMock.sol";
-import {AvatarStub} from "../../common/test/mocks/AvatarStub.sol";
+import {SafeStub} from "../../common/test/mocks/SafeStub.sol";
 import {ERC20Token} from "../../factory/test/lib/ERC20Token.sol";
 import {UpgradeableModuleProxyFactory} from "../../factory/UpgradeableModuleProxyFactory.sol";
 
@@ -13,7 +13,7 @@ import {SafeAware} from "../../bases/SafeAware.sol";
 import "../Budget.sol";
 
 abstract contract BudgetTest is FirmTest {
-    AvatarStub avatar;
+    SafeStub safe;
     RolesStub roles;
     Budget budget;
     address token;
@@ -23,24 +23,23 @@ abstract contract BudgetTest is FirmTest {
     address SOMEONE_ELSE = account("someone else");
 
     function setUp() public virtual {
-        avatar = new AvatarStub();
+        safe = new SafeStub();
         roles = new RolesStub();
-        budget = Budget(createProxy(new Budget(), abi.encodeCall(Budget.initialize, (avatar, roles, address(0)))));
+        budget = Budget(createProxy(new Budget(), abi.encodeCall(Budget.initialize, (safe, roles, address(0)))));
     }
 
     function testInitialState() public {
-        assertEq(address(budget.avatar()), address(avatar));
-        assertEq(address(budget.target()), address(avatar));
+        assertEq(address(budget.safe()), address(safe));
         assertEq(address(budget.roles()), address(roles));
     }
 
     function testCannotReinit() public {
         vm.expectRevert(abi.encodeWithSelector(SafeAware.AlreadyInitialized.selector));
-        budget.initialize(avatar, roles, address(0));
+        budget.initialize(safe, roles, address(0));
     }
 
     function testCreateAllowance() public returns (uint256 allowanceId) {
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         vm.warp(0);
         allowanceId = createDailyAllowance(SPENDER, 1);
         (
@@ -70,7 +69,7 @@ abstract contract BudgetTest is FirmTest {
     function testUpdateAllowanceParams() public {
         uint256 allowanceId = testCreateAllowance();
 
-        vm.startPrank(address(avatar));
+        vm.startPrank(address(safe));
         budget.setAllowanceSpender(allowanceId, RECEIVER);
         budget.setAllowanceAmount(allowanceId, 1);
         budget.setAllowanceName(allowanceId, "new name");
@@ -88,7 +87,7 @@ abstract contract BudgetTest is FirmTest {
     }
 
     function testBadTimeshiftsRevert() public {
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         vm.expectRevert(abi.encodeWithSelector(TimeShiftLib.InvalidTimeShift.selector));
         budget.createAllowance(
             NO_PARENT_ID, SPENDER, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode(), ""
@@ -97,7 +96,7 @@ abstract contract BudgetTest is FirmTest {
 
     function testInvalidSpenderReverts() public {
         uint8 badRoleId = 101; // RolesStub returns false to roleExists when id > 100
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         vm.expectRevert(abi.encodeWithSelector(RolesAuth.UnexistentRole.selector, badRoleId));
         budget.createAllowance(
             NO_PARENT_ID, roleFlag(badRoleId), address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
@@ -108,7 +107,7 @@ abstract contract BudgetTest is FirmTest {
         uint40 initialTime = uint40(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
         uint256 allowanceId = 1;
 
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         vm.warp(initialTime);
         createDailyAllowance(SPENDER, allowanceId);
 
@@ -127,7 +126,7 @@ abstract contract BudgetTest is FirmTest {
         uint40 initialTime = uint40(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
         uint256 allowanceId = 1;
 
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         vm.warp(initialTime);
         createDailyAllowance(SPENDER, allowanceId);
 
@@ -160,7 +159,7 @@ abstract contract BudgetTest is FirmTest {
         uint256 secondAllowanceId = 2;
 
         vm.warp(initialTime);
-        vm.startPrank(address(avatar));
+        vm.startPrank(address(safe));
         createDailyAllowance(SPENDER, firstAllowanceId);
         createDailyAllowance(SPENDER, secondAllowanceId);
         vm.stopPrank();
@@ -177,7 +176,7 @@ abstract contract BudgetTest is FirmTest {
         uint40 initialTime = uint40(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
         vm.warp(initialTime);
 
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         topLevelAllowance = budget.createAllowance(
             NO_PARENT_ID, SPENDER, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Monthly, 0).encode(), ""
         );
@@ -205,7 +204,7 @@ abstract contract BudgetTest is FirmTest {
 
         vm.stopPrank();
 
-        vm.startPrank(address(avatar));
+        vm.startPrank(address(safe));
 
         vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, topLevelAllowanceId));
         budget.setAllowanceSpender(subAllowanceId, RECEIVER);
@@ -223,7 +222,7 @@ abstract contract BudgetTest is FirmTest {
         uint40 initialTime = uint40(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
         vm.warp(initialTime);
 
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         uint256 topLevelAllowance = budget.createAllowance(
             NO_PARENT_ID, SPENDER, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
         );
@@ -239,7 +238,7 @@ abstract contract BudgetTest is FirmTest {
         uint40 initialTime = uint40(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
         vm.warp(initialTime);
 
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         uint256 allowance1 = budget.createAllowance(
             NO_PARENT_ID, SPENDER, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Monthly, 0).encode(), ""
         );
@@ -281,7 +280,7 @@ abstract contract BudgetTest is FirmTest {
 
         testAllowanceChain(); // sets up the chain
 
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         budget.setAllowanceState(topLevelAllowanceId, false);
 
         vm.prank(SPENDER);
@@ -299,13 +298,13 @@ abstract contract BudgetTest is FirmTest {
         vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, 0));
         budget.setAllowanceState(topLevelAllowanceId, false);
 
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, childAllowanceId - 1));
         budget.setAllowanceState(childAllowanceId, false);
     }
 
     function testCantExecuteIfNotAuthorized() public {
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         uint256 allowanceId = 1;
         createDailyAllowance(SPENDER, allowanceId);
 
@@ -317,7 +316,7 @@ abstract contract BudgetTest is FirmTest {
     function testAllowanceSpenderWithRoleFlags() public {
         uint256 allowanceId = 1;
         uint8 roleId = 1;
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         createDailyAllowance(roleFlag(roleId), allowanceId);
 
         vm.startPrank(SPENDER);
@@ -335,7 +334,7 @@ abstract contract BudgetTest is FirmTest {
     }
 
     function testCantExecuteMultiIfNotAuthorized() public {
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         uint256 allowanceId = 1;
         createDailyAllowance(SPENDER, allowanceId);
 
@@ -346,7 +345,7 @@ abstract contract BudgetTest is FirmTest {
     }
 
     function testRevertOnBadInputToMultiPayment() public {
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         uint256 allowanceId = 1;
         createDailyAllowance(SPENDER, allowanceId);
 
@@ -358,7 +357,7 @@ abstract contract BudgetTest is FirmTest {
     }
 
     function testCanDebitAllowance() public {
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         uint256 allowanceId = 1;
         createDailyAllowance(SPENDER, allowanceId);
 
@@ -381,7 +380,7 @@ abstract contract BudgetTest is FirmTest {
     }
 
     function testCanDebitOnChains() public {
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         uint256 allowanceId1 = budget.createAllowance(
             NO_PARENT_ID, SPENDER, address(token), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
         );
@@ -488,7 +487,7 @@ contract TokenBudgetTest is BudgetTest {
         super.setUp();
 
         ERC20Token token_ = new ERC20Token();
-        token_.mint(address(avatar), 1e6 ether);
+        token_.mint(address(safe), 1e6 ether);
         token = address(token_);
     }
 }
@@ -498,6 +497,6 @@ contract EtherBudgetTest is BudgetTest {
         super.setUp();
 
         token = NATIVE_ASSET;
-        vm.deal(address(avatar), 1e6 ether);
+        vm.deal(address(safe), 1e6 ether);
     }
 }

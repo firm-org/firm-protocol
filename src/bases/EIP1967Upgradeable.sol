@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.16;
 
-import {SafeAware} from "./SafeAware.sol";
+import {SafeAware, ISafe} from "./SafeAware.sol";
 import {IModuleMetadata} from "./IModuleMetadata.sol";
+
+// When the base contract (implementation) that proxies use is created,
+// we use this no-op address when an address is needed
+ISafe constant IMPL_INIT_NOOP_SAFE = ISafe(payable(address(1)));
+address constant IMPL_INIT_NOOP_ADDR = address(1);
 
 /**
  * @title EIP1967Upgradeable

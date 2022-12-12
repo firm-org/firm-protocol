@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import {FirmBase} from "../bases/FirmBase.sol";
-import {IAvatar} from "../bases/SafeAware.sol";
+import {FirmBase, IMPL_INIT_NOOP_SAFE, IMPL_INIT_NOOP_ADDR} from "../bases/FirmBase.sol";
+import {ISafe} from "../bases/SafeAware.sol";
 
 import {IRoles, ROOT_ROLE_ID, ROLE_MANAGER_ROLE, ONLY_ROOT_ROLE} from "./IRoles.sol";
-
-address constant IMPL_INIT_ADDRESS = address(1);
 
 /**
  * @title Roles
@@ -38,10 +36,10 @@ contract Roles is FirmBase, IRoles {
     ////////////////////////////////////////////////////////////////////////////////
 
     constructor() {
-        initialize(IAvatar(IMPL_INIT_ADDRESS), IMPL_INIT_ADDRESS);
+        initialize(IMPL_INIT_NOOP_SAFE, IMPL_INIT_NOOP_ADDR);
     }
 
-    function initialize(IAvatar safe_, address trustedForwarder_) public {
+    function initialize(ISafe safe_, address trustedForwarder_) public {
         // calls SafeAware.__init_setSafe which reverts if already initialized
         __init_firmBase(safe_, trustedForwarder_);
 

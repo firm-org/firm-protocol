@@ -27,8 +27,8 @@ contract EIP1967UpgradeableTest is BasesTest {
 
     event Upgraded(address indexed implementation, string moduleId, uint256 version);
 
-    function testAvatarCanUpgradeModule() public {
-        vm.prank(address(avatar));
+    function testSafeCanUpgradeModule() public {
+        vm.prank(address(safe));
         vm.expectEmit(true, true, false, true);
         emit Upgraded(address(moduleTwoImpl), "org.firm.modulemock", 0);
         module.upgrade(moduleTwoImpl);
@@ -38,7 +38,7 @@ contract EIP1967UpgradeableTest is BasesTest {
         assertEq(module.bar(), INITIAL_BAR);
     }
 
-    function testNonAvatarCannotUpgrade() public {
+    function testNonSafeCannotUpgrade() public {
         vm.expectRevert(abi.encodeWithSelector(SafeAware.UnauthorizedNotSafe.selector));
         module.upgrade(moduleTwoImpl);
     }

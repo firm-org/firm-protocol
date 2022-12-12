@@ -2,7 +2,7 @@
 pragma solidity 0.8.16;
 
 import {FirmBase, IModuleMetadata} from "../../../bases/FirmBase.sol";
-import {IAvatar} from "../../../bases/SafeAware.sol";
+import {ISafe} from "../../../bases/ISafe.sol";
 
 abstract contract TargetBase is FirmBase {
     string public constant moduleId = "org.firm.test-target";
@@ -11,7 +11,7 @@ abstract contract TargetBase is FirmBase {
 
     error SomeError();
 
-    function init(IAvatar safe) public {
+    function init(ISafe safe) public {
         __init_firmBase(safe, address(0));
     }
 

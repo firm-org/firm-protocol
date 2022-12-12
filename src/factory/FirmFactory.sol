@@ -6,7 +6,7 @@ import {GnosisSafeProxyFactory} from "gnosis-safe/proxies/GnosisSafeProxyFactory
 
 import {FirmRelayer} from "../metatx/FirmRelayer.sol";
 
-import {IAvatar} from "../bases/IZodiacModule.sol";
+import {ISafe} from "../bases/ISafe.sol";
 import {Roles} from "../roles/Roles.sol";
 import {Budget} from "../budget/Budget.sol";
 
@@ -91,23 +91,23 @@ contract FirmFactory {
         // We don't need to explictly guard against this function being called with a regular call
         // since we both perform calls on 'this' with the ABI of a Safe (will fail on this contract)
 
-        IAvatar safe = IAvatar(address(this));
+        GnosisSafe safe = GnosisSafe(payable(address(this)));
         Roles roles = Roles(
             moduleFactory.deployUpgradeableModule(
-                ROLES_MODULE_ID, LATEST_VERSION, abi.encodeCall(Roles.initialize, (safe, address(relayer))), 1
+                ROLES_MODULE_ID, LATEST_VERSION, abi.encodeCall(Roles.initialize, (ISafe(payable(safe)), address(relayer))), 1
             )
         );
         Budget budget = Budget(
             moduleFactory.deployUpgradeableModule(
-                BUDGET_MODULE_ID, LATEST_VERSION, abi.encodeCall(Budget.initialize, (safe, roles, address(relayer))), 1
+                BUDGET_MODULE_ID, LATEST_VERSION, abi.encodeCall(Budget.initialize, (ISafe(payable(safe)), roles, address(relayer))), 1
             )
         );
 
         // NOTE: important to enable all backdoors before the real modules so the getter
         // works as expected (HACK)
         if (_withBackdoors) {
-            safe.enableModule(address(new BackdoorModule(safe, address(budget))));
-            safe.enableModule(address(new BackdoorModule(safe, address(roles))));
+            safe.enableModule(address(new BackdoorModule(ISafe(payable(safe)), address(budget))));
+            safe.enableModule(address(new BackdoorModule(ISafe(payable(safe)), address(roles))));
         }
 
         // Could optimize it by writing to Safe storage directly

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import {FirmBase} from "../../../bases/FirmBase.sol";
-import {ZodiacModule, IAvatar, SafeEnums} from "../../../bases/ZodiacModule.sol";
+import {FirmBase} from "src/bases/FirmBase.sol";
+import {ISafe, SafeModule} from "src/bases/SafeModule.sol";
 
-contract ModuleMock is FirmBase, ZodiacModule {
+contract ModuleMock is FirmBase, SafeModule {
     string public constant moduleId = "org.firm.modulemock";
     uint256 public constant moduleVersion = 0;
 
@@ -15,7 +15,7 @@ contract ModuleMock is FirmBase, ZodiacModule {
         foo = _foo;
     }
 
-    function initialize(IAvatar _safe, uint256 _bar) public {
+    function initialize(ISafe _safe, uint256 _bar) public {
         __init_firmBase(_safe, address(0));
         bar = _bar;
     }
@@ -25,6 +25,6 @@ contract ModuleMock is FirmBase, ZodiacModule {
     }
 
     function execCall(address to, uint256 value, bytes memory data) public returns (bool success) {
-        return exec(to, value, data, SafeEnums.Operation.Call);
+        return exec(to, value, data, ISafe.Operation.Call);
     }
 }
