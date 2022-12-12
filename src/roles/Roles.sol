@@ -23,7 +23,7 @@ contract Roles is FirmBase, IRoles {
     uint256 public roleCount;
 
     event RoleCreated(uint8 indexed roleId, bytes32 roleAdmins, string name, address indexed actor);
-    event RoleNameChanged(uint8 indexed roleId, string name);
+    event RoleNameChanged(uint8 indexed roleId, string name, address indexed actor);
     event RoleAdminsSet(uint8 indexed roleId, bytes32 roleAdmins, address indexed actor);
     event UserRolesChanged(address indexed user, bytes32 oldUserRoles, bytes32 newUserRoles, address indexed actor);
 
@@ -131,11 +131,12 @@ contract Roles is FirmBase, IRoles {
             revert UnexistentRole(roleId);
         }
 
+        address sender = _msgSender();
         if (!hasRole(_msgSender(), ROLE_MANAGER_ROLE_ID)) {
             revert UnauthorizedNoRole(ROLE_MANAGER_ROLE_ID);
         }
 
-        emit RoleNameChanged(roleId, name);
+        emit RoleNameChanged(roleId, name, sender);
     }
 
     ////////////////////////////////////////////////////////////////////////////////
