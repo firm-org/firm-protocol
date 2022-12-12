@@ -195,6 +195,20 @@ contract RolesTest is FirmTest {
         vm.stopPrank();
     }
 
+    function testCannotSetAdminRolesOnUnexistentRole() public {
+        uint8 unexistentRoleId = 100;
+        vm.startPrank(address(safe));
+        vm.expectRevert(abi.encodeWithSelector(Roles.UnexistentRole.selector, unexistentRoleId));
+        roles.setRoleAdmin(unexistentRoleId, ONLY_ROOT_ROLE);
+    }
+
+    function testCannotSetRoleNameOnUnexistentRole() public {
+        uint8 unexistentRoleId = 100;
+        vm.startPrank(address(safe));
+        vm.expectRevert(abi.encodeWithSelector(Roles.UnexistentRole.selector, unexistentRoleId));
+        roles.changeRoleName(unexistentRoleId, "new name");
+    }
+
     function testSafeOwnerHasRole() public {
         assertTrue(roles.hasRole(SAFE_OWNER, SAFE_OWNER_ROLE_ID));
         assertFalse(roles.hasRole(SOMEONE, SAFE_OWNER_ROLE_ID));
@@ -223,6 +237,12 @@ contract RolesTest is FirmTest {
         vm.stopPrank();
     }
 
+    function testCannotSetAdminRolesOnSafeOwnerRole() public {
+        vm.prank(address(safe));
+        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, SAFE_OWNER_ROLE_ID));
+        roles.setRoleAdmin(SAFE_OWNER_ROLE_ID, ONLY_ROOT_ROLE);
+    }
+
     function testSafeOwnerRoleCanBeRoleAdmin() public {
         vm.prank(address(safe));
         uint8 newRole = roles.createRole(bytes32(uint256(1 << SAFE_OWNER_ROLE_ID)), "");
@@ -235,5 +255,13 @@ contract RolesTest is FirmTest {
         vm.prank(SAFE_OWNER);
         vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, newRole));
         roles.setRole(SOMEONE_ELSE, newRole, true);
+    }
+
+    event RoleNameChanged(uint8 indexed roleId, string name, address indexed actor);
+    function testSafeOwnerRoleNameCanBeChanged() public {
+        vm.prank(address(safe));
+        vm.expectEmit(true, true, true, false);
+        emit RoleNameChanged(SAFE_OWNER_ROLE_ID, "new name", address(safe));
+        roles.changeRoleName(SAFE_OWNER_ROLE_ID, "new name");
     }
 }
