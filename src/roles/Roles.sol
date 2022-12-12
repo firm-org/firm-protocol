@@ -28,7 +28,8 @@ contract Roles is FirmBase, IRoles {
     event UserRolesChanged(address indexed user, bytes32 oldUserRoles, bytes32 newUserRoles, address indexed actor);
 
     error UnauthorizedNoRole(uint8 requiredRole);
-    error UnauthorizedNotAdmin(uint8 role);
+    error UnauthorizedNotAdmin(uint8 roleId);
+    error UnexistentRole(uint8 roleId);
     error RoleLimitReached();
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -94,6 +95,14 @@ contract Roles is FirmBase, IRoles {
      * @param roleAdmins Bitmap of roles that can perform admin actions on this role
      */
     function setRoleAdmin(uint8 roleId, bytes32 roleAdmins) external {
+        if (!roleExists(roleId)) {
+            revert UnexistentRole(roleId);
+        }
+
+        if (roleId == SAFE_OWNER_ROLE_ID) {
+            revert UnauthorizedNotAdmin(SAFE_OWNER_ROLE_ID);
+        }
+
         if (roleId == ROOT_ROLE_ID) {
             // Root role is treated as a special case. Only root role admins can change it
             if (!isRoleAdmin(_msgSender(), ROOT_ROLE_ID)) {
@@ -118,6 +127,10 @@ contract Roles is FirmBase, IRoles {
      * @param name New name for the role
      */
     function changeRoleName(uint8 roleId, string memory name) external {
+        if (!roleExists(roleId)) {
+            revert UnexistentRole(roleId);
+        }
+
         if (!hasRole(_msgSender(), ROLE_MANAGER_ROLE_ID)) {
             revert UnauthorizedNoRole(ROLE_MANAGER_ROLE_ID);
         }
