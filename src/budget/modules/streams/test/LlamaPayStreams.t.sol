@@ -36,7 +36,7 @@ contract LlamaPayStreamsTest is BudgetModuleTest {
     function testCreateStream() public returns (LlamaPay llamaPay, address forwarder, uint256 amountPerSec) {
         amountPerSec = basicMonthlyAmountToSecs(1000);
 
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         streams.configure(allowanceId, 60 days);
 
         (bool enabled, IERC20 token_,,) = streams.streamConfigs(allowanceId);
@@ -47,7 +47,7 @@ contract LlamaPayStreamsTest is BudgetModuleTest {
         assertEq(address(llamaPay.token()), address(token));
         assertEq(address(token), address(token_));
 
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         streams.startStream(allowanceId, RECEIVER, amountPerSec, "");
         assertBalance(address(llamaPay), 2000, 1);
         assertOneLeftoverToken(forwarder);
@@ -60,7 +60,7 @@ contract LlamaPayStreamsTest is BudgetModuleTest {
     }
 
     function testCantCreateStreamIfNotAdmin() public {
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         streams.configure(allowanceId, 1);
         vm.expectRevert(
             abi.encodeWithSelector(BudgetModule.UnauthorizedNotAllowanceAdmin.selector, allowanceId, address(this))
@@ -73,7 +73,7 @@ contract LlamaPayStreamsTest is BudgetModuleTest {
 
         uint256 amountPerSec2 = basicMonthlyAmountToSecs(2000);
 
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         streams.startStream(allowanceId, RECEIVER, amountPerSec2, "");
         assertOneLeftoverToken(forwarder);
 
@@ -93,7 +93,7 @@ contract LlamaPayStreamsTest is BudgetModuleTest {
         assertOneLeftoverToken(forwarder);
 
         // Double it first
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         streams.setPrepayBuffer(allowanceId, 120 days);
         assertBalance(address(llamaPay), 4000, 1);
         assertOneLeftoverToken(forwarder);
@@ -103,13 +103,13 @@ contract LlamaPayStreamsTest is BudgetModuleTest {
         assertBalance(address(llamaPay), 4000, 1);
 
         // Decrease it once triggering the first debit
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         streams.setPrepayBuffer(allowanceId, 30 days);
         assertBalance(address(llamaPay), 1000, 1);
         assertOneLeftoverToken(forwarder);
 
         // Decrease it again triggering another debit (wasn't approved again)
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         streams.setPrepayBuffer(allowanceId, 15 days);
         assertBalance(address(llamaPay), 500, 2);
         assertOneLeftoverToken(forwarder);
@@ -123,7 +123,7 @@ contract LlamaPayStreamsTest is BudgetModuleTest {
 
         address newReceiver = account("New Receiver");
         uint256 newAmountPerSec = basicMonthlyAmountToSecs(2000);
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         streams.modifyStream(allowanceId, RECEIVER, amountPerSec, newReceiver, newAmountPerSec);
         assertBalance(address(llamaPay), 4000, 1);
         assertOneLeftoverToken(forwarder);
@@ -149,7 +149,7 @@ contract LlamaPayStreamsTest is BudgetModuleTest {
     function testCanPauseStream() public {
         (LlamaPay llamaPay, address forwarder, uint256 amountPerSec) = testCreateStream();
 
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         streams.pauseStream(allowanceId, RECEIVER, amountPerSec);
 
         assertBalance(address(llamaPay), 0, 1);
@@ -169,7 +169,7 @@ contract LlamaPayStreamsTest is BudgetModuleTest {
     function testCanCancelStream() public {
         (LlamaPay llamaPay, address forwarder, uint256 amountPerSec) = testCreateStream();
 
-        vm.prank(address(avatar));
+        vm.prank(address(safe));
         streams.cancelStream(allowanceId, RECEIVER, amountPerSec);
 
         assertBalance(address(llamaPay), 0, 1);

@@ -3,8 +3,8 @@ pragma solidity 0.8.16;
 
 import {IERC20} from "openzeppelin/interfaces/IERC20.sol";
 
-import {FirmBase} from "../bases/FirmBase.sol";
-import {ZodiacModule, IAvatar, SafeEnums} from "../bases/ZodiacModule.sol";
+import {FirmBase, IMPL_INIT_NOOP_ADDR, IMPL_INIT_NOOP_SAFE} from "../bases/FirmBase.sol";
+import {SafeModule, ISafe} from "../bases/SafeModule.sol";
 import {IRoles, RolesAuth} from "../common/RolesAuth.sol";
 
 import {TimeShiftLib, EncodedTimeShift} from "./TimeShiftLib.sol";
@@ -13,7 +13,6 @@ address constant NATIVE_ASSET = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEE
 uint256 constant NO_PARENT_ID = 0;
 uint256 constant INHERITED_AMOUNT = 0;
 uint40 constant INHERITED_RESET_TIME = 0;
-address constant IMPL_INIT_ADDRESS = address(1);
 
 /**
  * @title Budget
@@ -21,7 +20,7 @@ address constant IMPL_INIT_ADDRESS = address(1);
  * @notice Budgeting module for efficient spending from a Safe using allowance chains
  * to delegate spending authority
  */
-contract Budget is FirmBase, ZodiacModule, RolesAuth {
+contract Budget is FirmBase, SafeModule, RolesAuth {
     string public constant moduleId = "org.firm.budget";
     uint256 public constant moduleVersion = 1;
 
@@ -33,10 +32,10 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
 
     constructor() {
         // Initialize with impossible values in constructor so impl base cannot be used
-        initialize(IAvatar(IMPL_INIT_ADDRESS), IRoles(IMPL_INIT_ADDRESS), IMPL_INIT_ADDRESS);
+        initialize(IMPL_INIT_NOOP_SAFE, IRoles(IMPL_INIT_NOOP_ADDR), IMPL_INIT_NOOP_ADDR);
     }
 
-    function initialize(IAvatar _safe, IRoles _roles, address trustedForwarder_) public {
+    function initialize(ISafe _safe, IRoles _roles, address trustedForwarder_) public {
         __init_firmBase(_safe, trustedForwarder_); // calls SafeAware.__init_setSafe which reverts on reinitialization
         roles = _roles;
     }
@@ -375,10 +374,10 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
 
     function _performTransfer(address token, address to, uint256 amount) internal returns (bool) {
         if (token == NATIVE_ASSET) {
-            return exec(to, amount, hex"", SafeEnums.Operation.Call);
+            return exec(to, amount, hex"", ISafe.Operation.Call);
         } else {
             (bool callSuccess, bytes memory retData) =
-                execAndReturnData(token, 0, abi.encodeCall(IERC20.transfer, (to, amount)), SafeEnums.Operation.Call);
+                execAndReturnData(token, 0, abi.encodeCall(IERC20.transfer, (to, amount)), ISafe.Operation.Call);
 
             return callSuccess && (((retData.length == 32 && abi.decode(retData, (bool))) || retData.length == 0));
         }
@@ -391,7 +390,7 @@ contract Budget is FirmBase, ZodiacModule, RolesAuth {
         bytes memory data = abi.encodeCall(this.__safeContext_performMultiTransfer, (token, tos, amounts));
 
         (bool callSuccess, bytes memory retData) =
-            execAndReturnData(address(_implementation()), 0, data, SafeEnums.Operation.DelegateCall);
+            execAndReturnData(address(_implementation()), 0, data, ISafe.Operation.DelegateCall);
         return callSuccess && retData.length == 32 && abi.decode(retData, (bool));
     }
 

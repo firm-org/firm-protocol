@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import 'forge-std/Test.sol';
 
 import "gnosis-safe/GnosisSafe.sol";
-import {Roles, IRoles, IAvatar, ONLY_ROOT_ROLE, ROOT_ROLE_ID} from "../src/roles/Roles.sol";
+import {Roles, IRoles, ISafe, ONLY_ROOT_ROLE, ROOT_ROLE_ID} from "../src/roles/Roles.sol";
 import {Budget, TimeShiftLib, NO_PARENT_ID, NATIVE_ASSET} from "../src/budget/Budget.sol";
 import {TimeShift} from "../src/budget/TimeShiftLib.sol";
 import {BackdoorModule} from "../src/factory/local-utils/BackdoorModule.sol";
