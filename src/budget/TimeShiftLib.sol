@@ -58,10 +58,12 @@ library TimeShiftLib {
 
         if (unit == TimeUnit.NonRecurrent) {
             // Ensure offset is positive and in the future
-            if (int48(offset) <= int48(uint48(time))) {
+            // (We cast to int48 so we don't overflow for any possible uint40 value)
+            if (int48(offset) > int48(uint48(time))) {
+                return uint40(offset);
+            } else {
                 revert InvalidTimeShift();
             }
-            return uint40(offset);
         }
 
         uint40 realTime = uint40(int40(time) + offset);
