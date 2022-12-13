@@ -21,10 +21,9 @@ function decode(EncodedTimeShift encoded) pure returns (TimeShiftLib.TimeUnit un
     offset = int40(uint40(uint48(encodedValue)));
 }
 
-// Note that this could return false for an invalidly formed inherited time shift
-// (in which the offset is not 0). Since applying the shift will revert, this is no
-// issue as no allowance will be able to be created with this recurrency and this is
-// a more gas efficient way to check for inheritance.
+// Note this is an efficient way to check for inherited time shifts
+// Even if an offset is specified, it will be ignored, but it will
+// no longer be considered an invalid state
 function isInherited(EncodedTimeShift encoded) pure returns (bool) {
     return EncodedTimeShift.unwrap(encoded) < 0x010000000000;
 }
