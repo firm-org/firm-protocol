@@ -424,6 +424,49 @@ abstract contract BudgetTest is FirmTest {
         assertEq(spent, 0);
     }
 
+    function testCreateNonRecurrentAllowance() public returns (uint256 allowanceId, uint40 expiresAt) {
+        expiresAt = 100;
+        vm.warp(0);
+        vm.prank(address(safe));
+        TimeShift memory shift = TimeShift(TimeShiftLib.TimeUnit.NonRecurrent, int40(expiresAt));
+        allowanceId = budget.createAllowance(NO_PARENT_ID, SPENDER, address(token), 10, shift.encode(), "");
+        (,,,,uint40 resetTime,,,) = budget.allowances(allowanceId);
+
+        assertEq(uint256(resetTime), uint256(expiresAt));
+    }
+
+    function testNonRecurrentAllowanceDoesntResetAndExpires() public {
+        (uint256 allowanceId, uint40 expiresAt) = testCreateNonRecurrentAllowance();
+
+        // Payment goes through with no issue at t-1
+        vm.warp(expiresAt - 1);
+        vm.prank(SPENDER);
+        budget.executePayment(allowanceId, RECEIVER, 1, "");
+        
+        // Fails after expiry
+        vm.warp(expiresAt);
+        vm.prank(SPENDER);
+        vm.expectRevert(abi.encodeWithSelector(Budget.DisabledAllowance.selector, allowanceId));
+        budget.executePayment(allowanceId, RECEIVER, 1, "");
+    }
+
+    function testCannotCreateNonRecurrentAllowanceNotInTheFuture() public {
+        uint40 time = 100;
+        vm.warp(time);
+
+        vm.startPrank(address(safe));
+
+        TimeShift memory shift1 = TimeShift(TimeShiftLib.TimeUnit.NonRecurrent, int40(time));
+        vm.expectRevert(abi.encodeWithSelector(TimeShiftLib.InvalidTimeShift.selector));
+        budget.createAllowance(NO_PARENT_ID, SPENDER, address(token), 10, shift1.encode(), "");
+
+        TimeShift memory shift2 = TimeShift(TimeShiftLib.TimeUnit.NonRecurrent, -int40(time));
+        vm.expectRevert(abi.encodeWithSelector(TimeShiftLib.InvalidTimeShift.selector));
+        budget.createAllowance(NO_PARENT_ID, SPENDER, address(token), 10, shift2.encode(), "");
+
+        vm.stopPrank();
+    }
+
     function createDailyAllowance(address spender, uint256 expectedId) public returns (uint256 allowanceId) {
         allowanceId = budget.createAllowance(
             NO_PARENT_ID, spender, address(token), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
