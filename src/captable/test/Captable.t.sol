@@ -5,7 +5,7 @@ import {FirmTest} from "../../common/test/lib/FirmTest.sol";
 import {SafeStub} from "../../common/test/mocks/SafeStub.sol";
 import {SafeAware} from "../../bases/SafeAware.sol";
 import {AddressUint8FlagsLib} from "../../common/AddressUint8FlagsLib.sol";
-import {Roles, ONLY_ROOT_ROLE} from "../../roles/Roles.sol";
+import {Roles, ONLY_ROOT_ROLE_AS_ADMIN} from "../../roles/Roles.sol";
 import {roleFlag} from "../../common/test/mocks/RolesAuthMock.sol";
 
 import {Captable, IBouncer, NO_CONVERSION_FLAG, NO_CONTROLLER} from "../Captable.sol";
@@ -38,7 +38,7 @@ contract BaseCaptableTest is FirmTest {
         vesting = VestingController(createProxy(new VestingController(), abi.encodeCall(VestingController.initialize, (captable, roles, address(0)))));
 
         vm.startPrank(address(safe));
-        uint8 roleId = roles.createRole(ONLY_ROOT_ROLE, "Vesting revoking");
+        uint8 roleId = roles.createRole(ONLY_ROOT_ROLE_AS_ADMIN, "Vesting revoking");
         roles.setRole(VESTING_REVOKER, roleId, true);
         VESTING_REVOKER_ROLE_FLAG = roleFlag(roleId);
         vm.stopPrank();
