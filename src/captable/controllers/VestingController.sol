@@ -7,6 +7,9 @@ import {EquityToken} from "../EquityToken.sol";
 // NOTE: it should also be possible for VestingController to be a global contract
 // that all orgs can just use. Multiple Captables could use the same VestingController
 // if the account state is always scoped to captable -> accounts
+// NOTE 2: As we did with budget modules, it might be better to have a VestingController
+// per organization so that this is a component that can be upgraded by the org.
+// The base account controller should take a lot of inspiration from the BudgetModule
 contract VestingController is AccountController {
     struct VestingParams {
         uint64 startDate;

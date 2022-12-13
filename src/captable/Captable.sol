@@ -121,6 +121,7 @@ contract Captable is FirmBase {
         class.token.mint(account, amount);
     }
 
+    // TODO: Rename to clearly signal that all shares of this class will become controlled for this holder
     function issueControlled(
         address account,
         uint256 classId,
@@ -135,6 +136,12 @@ contract Captable is FirmBase {
         controller.addAccount(account, classId, amount, controllerParams);
     }
 
+    // TODO: We should also allow issuer for the class to forfeit shares
+    // since it controls issuance and it can dilute anyway and it will be
+    // quite common for random things that the safe can take away shares
+    // This only really works if there's a way to freeze the issuance of a class
+    // Also, an issuer could just issue one share and set a controller for the account
+    // which would be an indirect way of doing this anyway
     function controllerForfeit(address account, address to, uint256 classId, uint256 amount) external {
         if (msg.sender != address(controllers[account][classId])) {
             revert UnauthorizedNotController();
@@ -148,7 +155,7 @@ contract Captable is FirmBase {
         Class storage toClass = _getClass(fromClass.convertsIntoClassId);
 
         IAccountController controller = controllers[msg.sender][classId];
-        // converter has a controller for the converting class id
+        // converter has a controller for the origin class id
         if (address(controller) != address(0)) {
             if (!controller.isTransferAllowed(msg.sender, msg.sender, classId, amount)) {
                 revert ConversionBlocked(controller, msg.sender, classId, amount);
@@ -224,6 +231,9 @@ contract Captable is FirmBase {
         return _getClass(classId).ticker;
     }
 
+    // TODO: it would be more gas efficient to just check that the token addr
+    // (or another field) is non-zero, since that would increase the chances
+    // that the slot will be reused in the call leading to gas savings
     function _getClass(uint256 classId) internal view returns (Class storage) {
         if (classId >= classCount) {
             revert UnexistentClass(classId);
