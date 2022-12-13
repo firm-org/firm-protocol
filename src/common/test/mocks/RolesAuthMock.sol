@@ -9,7 +9,7 @@ function roleFlag(uint8 role) pure returns (address) {
 
 contract RolesAuthMock is RolesAuth {
     constructor(IRoles _roles) {
-        roles = _roles;
+        _setRoles(_roles);
     }
 
     function isAuthorized(address _sender, address _authorized) public view returns (bool) {
