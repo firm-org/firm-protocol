@@ -9,7 +9,7 @@ import {ModuleMock} from "src/common/test/mocks/ModuleMock.sol";
 
 import {Budget, TimeShiftLib, NO_PARENT_ID, INHERITED_AMOUNT} from "src/budget/Budget.sol";
 import {TimeShift} from "src/budget/TimeShiftLib.sol";
-import {Roles, IRoles, ISafe, ONLY_ROOT_ROLE, ROOT_ROLE_ID} from "src/roles/Roles.sol";
+import {Roles, IRoles, ISafe, ONLY_ROOT_ROLE_AS_ADMIN, ROOT_ROLE_ID} from "src/roles/Roles.sol";
 import {FirmRelayer} from "src/metatx/FirmRelayer.sol";
 import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsDateTimeLibrary.sol";
 
@@ -79,7 +79,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
         address receiver = account("receiver");
 
         vm.startPrank(address(safe));
-        uint8 roleId = roles.createRole(ONLY_ROOT_ROLE, "Executive");
+        uint8 roleId = roles.createRole(ONLY_ROOT_ROLE_AS_ADMIN, "Executive");
         roles.setRole(spender, roleId, true);
 
         uint256 allowanceId = budget.createAllowance(

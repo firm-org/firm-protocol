@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import {FirmBase, IMPL_INIT_NOOP_SAFE, IMPL_INIT_NOOP_ADDR} from "../bases/FirmBase.sol";
 import {ISafe} from "../bases/SafeAware.sol";
 
-import {IRoles, ROOT_ROLE_ID, ROLE_MANAGER_ROLE_ID, ONLY_ROOT_ROLE, SAFE_OWNER_ROLE_ID} from "./IRoles.sol";
+import {IRoles, ROOT_ROLE_ID, ROLE_MANAGER_ROLE_ID, ONLY_ROOT_ROLE_AS_ADMIN, NO_ROLE_ADMINS, SAFE_OWNER_ROLE_ID} from "./IRoles.sol";
 
 /**
  * @title Roles
@@ -31,6 +31,7 @@ contract Roles is FirmBase, IRoles {
     error UnauthorizedNotAdmin(uint8 roleId);
     error UnexistentRole(uint8 roleId);
     error RoleLimitReached();
+    error InvalidRoleAdmins();
 
     ////////////////////////////////////////////////////////////////////////////////
     // INITIALIZATION
@@ -44,13 +45,13 @@ contract Roles is FirmBase, IRoles {
         // calls SafeAware.__init_setSafe which reverts if already initialized
         __init_firmBase(safe_, trustedForwarder_);
 
-        assert(_createRole(ONLY_ROOT_ROLE, "Root") == ROOT_ROLE_ID);
-        assert(_createRole(ONLY_ROOT_ROLE, "Role Manager") == ROLE_MANAGER_ROLE_ID);
+        assert(_createRole(ONLY_ROOT_ROLE_AS_ADMIN, "Root") == ROOT_ROLE_ID);
+        assert(_createRole(ONLY_ROOT_ROLE_AS_ADMIN, "Role Manager") == ROLE_MANAGER_ROLE_ID);
 
         // Safe given the root role on initialization (which admins for the role can revoke)
         // Addresses with the root role have permission to do anything
         // By assigning just the root role, it also gets the role manager role (and all roles to be created)
-        getUserRoles[address(safe_)] = ONLY_ROOT_ROLE;
+        getUserRoles[address(safe_)] = ONLY_ROOT_ROLE_AS_ADMIN;
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -77,6 +78,11 @@ contract Roles is FirmBase, IRoles {
         if (roleId_ == SAFE_OWNER_ROLE_ID) {
             revert RoleLimitReached();
         }
+
+        if (roleAdmins == NO_ROLE_ADMINS) {
+            revert InvalidRoleAdmins();
+        }
+
         unchecked {
             roleId = uint8(roleId_);
             roleCount++;
@@ -95,6 +101,10 @@ contract Roles is FirmBase, IRoles {
      * @param roleAdmins Bitmap of roles that can perform admin actions on this role
      */
     function setRoleAdmin(uint8 roleId, bytes32 roleAdmins) external {
+        if (roleAdmins == NO_ROLE_ADMINS) {
+            revert InvalidRoleAdmins();
+        }
+
         if (!roleExists(roleId)) {
             revert UnexistentRole(roleId);
         }
@@ -254,7 +264,7 @@ contract Roles is FirmBase, IRoles {
      * @return True if the role has been created
      */
     function roleExists(uint8 roleId) public view returns (bool) {
-        return roleId < roleCount || roleId == SAFE_OWNER_ROLE_ID;
+        return getRoleAdmins[roleId] != NO_ROLE_ADMINS || roleId == SAFE_OWNER_ROLE_ID;
     }
 
     function _isRoleAdmin(address user, bytes32 userRoles, uint8 roleId) internal view returns (bool) {
