@@ -1,11 +1,19 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import "solmate/tokens/ERC20.sol";
 import "openzeppelin/access/Ownable.sol";
+import "openzeppelin/token/ERC20/ERC20.sol";
 
 contract TestnetERC20 is ERC20, Ownable {
-    constructor(string memory name, string memory symbol, uint8 decimals) ERC20(name, symbol, decimals) {}
+    uint8 private immutable _decimals;
+    
+    constructor(string memory name, string memory symbol, uint8 decimals_) ERC20(name, symbol) {
+        _decimals = decimals_;
+    }
+
+    function decimals() public view virtual override returns (uint8) {
+        return _decimals;
+    }
 
     function mint(address to, uint256 amount) external onlyOwner {
         _mint(to, amount);

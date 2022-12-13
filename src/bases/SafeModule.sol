@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.16;
 
-import {IERC165} from "openzeppelin/interfaces/IERC165.sol";
-
 import {FirmBase} from "./FirmBase.sol";
 import {ISafe} from "./ISafe.sol";
 
