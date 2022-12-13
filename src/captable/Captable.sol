@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import {UpgradeableModule} from "../bases/UpgradeableModule.sol";
-import {IAvatar} from "../bases/SafeAware.sol";
+import {FirmBase, IMPL_INIT_NOOP_SAFE, IMPL_INIT_NOOP_ADDR} from "../bases/FirmBase.sol";
+import {ISafe} from "../bases/ISafe.sol";
 
 import {EquityToken, ERC20, ERC20Votes} from "./EquityToken.sol";
 import {IBouncer} from "./bouncers/IBouncer.sol";
@@ -10,9 +10,9 @@ import {IAccountController} from "./controllers/AccountController.sol";
 
 uint32 constant NO_CONVERSION_FLAG = type(uint32).max;
 
-contract Captable is UpgradeableModule {
+contract Captable is FirmBase {
     string public constant moduleId = "org.firm.captable";
-    uint256 public constant moduleVersion = 0;
+    uint256 public constant moduleVersion = 1;
 
     string public name;
 
@@ -44,11 +44,11 @@ contract Captable is UpgradeableModule {
     error IssuingOverAuthorized(uint256 classId);
     error ConvertibleOverAuthorized(uint256 classId);
 
-    constructor(IAvatar safe_, string memory name_, IBouncer globalBouncer_) {
-        initialize(safe_, name_, globalBouncer_);
+    constructor() {
+        initialize(IMPL_INIT_NOOP_SAFE, "", IBouncer(IMPL_INIT_NOOP_ADDR));
     }
 
-    function initialize(IAvatar safe_, string memory name_, IBouncer globalBouncer_) public {
+    function initialize(ISafe safe_, string memory name_, IBouncer globalBouncer_) public {
         __init_setSafe(safe_);
         name = name_;
         // globalControls.bouncer = _globalBouncer;

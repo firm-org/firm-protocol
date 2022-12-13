@@ -2,7 +2,7 @@
 pragma solidity 0.8.16;
 
 import {FirmTest} from "../../common/test/lib/FirmTest.sol";
-import {AvatarStub} from "../../common/test/mocks/AvatarStub.sol";
+import {SafeStub} from "../../common/test/mocks/SafeStub.sol";
 
 import {Captable, IBouncer, NO_CONVERSION_FLAG} from "../Captable.sol";
 import {EquityToken} from "../EquityToken.sol";
@@ -11,13 +11,13 @@ import {DisallowController} from "./mocks/DisallowController.sol";
 
 contract BaseCaptableTest is FirmTest {
     Captable captable;
-    AvatarStub safe = new AvatarStub();
+    SafeStub safe = new SafeStub();
 
     address HOLDER1 = account("Holder #1");
     address HOLDER2 = account("Holder #2");
 
     function setUp() public virtual {
-        captable = new Captable(safe, "TestCo", IBouncer(address(0)));
+        captable = Captable(createProxy(new Captable(), abi.encodeCall(Captable.initialize, (safe, "TestCo", IBouncer(address(0))))));
     }
 
     // votes only count when a delegation is set
