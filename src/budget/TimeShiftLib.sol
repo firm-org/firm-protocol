@@ -21,11 +21,21 @@ function decode(EncodedTimeShift encoded) pure returns (TimeShiftLib.TimeUnit un
     offset = int40(uint40(uint48(encodedValue)));
 }
 
+// Note that this could return false for an invalidly formed inherited time shift
+// (in which the offset is not 0). Since applying the shift will revert, this is no
+// issue as no allowance will be able to be created with this recurrency and this is
+// a more gas efficient way to check for inheritance.
 function isInherited(EncodedTimeShift encoded) pure returns (bool) {
     return EncodedTimeShift.unwrap(encoded) == bytes6(0);
 }
 
-using {decode, isInherited} for EncodedTimeShift global;
+// Note this is an efficient way to check for non-recurrent time shifts
+// Any value lower than 0x070000000000 is a recurrent time shift
+function isNonRecurrent(EncodedTimeShift encoded) pure returns (bool) {
+    return EncodedTimeShift.unwrap(encoded) > 0x070000000000; 
+}
+
+using {decode, isInherited, isNonRecurrent} for EncodedTimeShift global;
 using {encode} for TimeShift global;
 
 library TimeShiftLib {
@@ -38,13 +48,22 @@ library TimeShiftLib {
         Monthly,    // 3
         Quarterly,  // 4
         Semiyearly, // 5
-        Yearly      // 6
+        Yearly,     // 6
+        NonRecurrent
     }
 
     error InvalidTimeShift();
 
     function applyShift(uint40 time, EncodedTimeShift shift) internal pure returns (uint40) {
         (TimeUnit unit, int40 offset) = shift.decode();
+
+        if (unit == TimeUnit.NonRecurrent) {
+            // Ensure offset is positive and in the future
+            if (int48(offset) <= int48(uint48(time))) {
+                revert InvalidTimeShift();
+            }
+            return uint40(offset);
+        }
 
         uint40 realTime = uint40(int40(time) + offset);
         (uint256 y, uint256 m, uint256 d) = realTime.toDate();

@@ -168,7 +168,7 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
             if (token != parentAllowance.token) {
                 revert TokenMismatch(parentAllowance.token, token);
             }
-            // Recurrency can be zero in sub-allowances and is inherited from the parent
+            // Recurrency can be zero in sub-allowances and is `inherited from the parent
             if (!recurrency.isInherited()) {
                 // If recurrency is not inherited, amount cannot be inherited
                 if (amount == INHERITED_AMOUNT) {
@@ -478,8 +478,15 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
             nextResetTime = allowance.nextResetTime;
 
             if (uint40(block.timestamp) >= nextResetTime) {
-                allowanceResets = true;
-                nextResetTime = uint40(block.timestamp).applyShift(allowance.recurrency);
+                EncodedTimeShift recurrency = allowance.recurrency;
+                // For a non-recurrent allowance, after the reset time has passed,
+                // the allowance is disabled and cannot be used anymore
+                if (recurrency.isNonRecurrent()) {
+                    revert DisabledAllowance(allowanceId);
+                } else {
+                    allowanceResets = true;
+                    nextResetTime = uint40(block.timestamp).applyShift(recurrency);
+                }
             }
 
             if (allowanceResets) {
