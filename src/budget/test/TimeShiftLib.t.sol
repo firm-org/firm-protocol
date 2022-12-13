@@ -52,6 +52,22 @@ contract TimeShiftLibShiftTest is FirmTest {
         assertShift(TimeShiftLib.TimeUnit.Yearly, 2022, 1, 31, 2023, 1, 1);
     }
 
+    function testRevertIfUnitIsInherited() public {
+        vm.expectRevert(abi.encodeWithSelector(TimeShiftLib.InvalidTimeShift.selector));
+        uint40(block.timestamp).applyShift(TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode());
+
+        vm.expectRevert(abi.encodeWithSelector(TimeShiftLib.InvalidTimeShift.selector));
+        uint40(block.timestamp).applyShift(TimeShift(TimeShiftLib.TimeUnit.Inherit, 1).encode());
+    }
+
+    function testRevertIfUnitIsNonRecurrent() public {
+        vm.expectRevert(abi.encodeWithSelector(TimeShiftLib.InvalidTimeShift.selector));
+        uint40(block.timestamp).applyShift(TimeShift(TimeShiftLib.TimeUnit.NonRecurrent, 0).encode());
+
+        vm.expectRevert(abi.encodeWithSelector(TimeShiftLib.InvalidTimeShift.selector));
+        uint40(block.timestamp).applyShift(TimeShift(TimeShiftLib.TimeUnit.NonRecurrent, int40(uint40(block.timestamp + 1000))).encode());
+    }
+
     function testOffsets() public {
         TimeShift memory shift = TimeShift(TimeShiftLib.TimeUnit.Monthly, 1 hours);
 
