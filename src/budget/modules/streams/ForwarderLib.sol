@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import {Bytes32AddressLib} from "solmate/utils/Bytes32AddressLib.sol";
-
 library ForwarderLib {
-    using Bytes32AddressLib for bytes32;
-
     type Forwarder is address;
 
     using ForwarderLib for Forwarder;
@@ -18,8 +14,14 @@ library ForwarderLib {
 
     function getForwarder(bytes32 salt, address deployer) internal pure returns (Forwarder) {
         return Forwarder.wrap(
-            keccak256(abi.encodePacked(bytes1(0xff), deployer, salt, keccak256(forwarderCreationCode(deployer))))
-                .fromLast20Bytes()
+            address(uint160(uint256(keccak256(
+                abi.encodePacked(
+                    bytes1(0xff),
+                    deployer,
+                    salt,
+                    keccak256(forwarderCreationCode(deployer))
+                )
+            ))))
         );
     }
 

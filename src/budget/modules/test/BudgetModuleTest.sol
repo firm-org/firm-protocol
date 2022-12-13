@@ -5,7 +5,7 @@ import {FirmTest} from "../../../common/test/lib/FirmTest.sol";
 import {SafeStub} from "../../../common/test/mocks/SafeStub.sol";
 import {RolesStub} from "../../../common/test/mocks/RolesStub.sol";
 import {TimeShift} from "../../../budget/TimeShiftLib.sol";
-import {ERC20Token} from "../../../factory/test/lib/ERC20Token.sol";
+import {TestnetERC20 as ERC20Token} from "../../../testnet/TestnetTokenFaucet.sol";
 
 import "../../Budget.sol";
 import {BudgetModule} from "../BudgetModule.sol";
@@ -14,7 +14,7 @@ abstract contract BudgetModuleTest is FirmTest {
     SafeStub safe;
     RolesStub roles;
     Budget budget;
-    ERC20Token token = new ERC20Token(); // use the same token all the time to mimic using previously used llamapay instances
+    ERC20Token token = new ERC20Token("", "", 0); // use the same token all the time to mimic using previously used llamapay instances
 
     function setUp() public virtual {
         safe = new SafeStub();

@@ -6,8 +6,6 @@ import {SafeAware} from "../SafeAware.sol";
 import "./BasesTest.t.sol";
 
 contract EIP1967UpgradeableTest is BasesTest {
-    using Bytes32AddressLib for bytes32;
-
     ModuleMock moduleTwoImpl = new ModuleMock(MODULE_TWO_FOO);
 
     function setUp() public override {

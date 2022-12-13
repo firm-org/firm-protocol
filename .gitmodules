@@ -1,18 +1,9 @@
-[submodule "lib/ds-test"]
-	path = lib/ds-test
-	url = https://github.com/dapphub/ds-test
-[submodule "lib/zodiac"]
-	path = lib/zodiac
-	url = https://github.com/gnosis/zodiac
 [submodule "lib/zeppelin-solidity"]
 	path = lib/zeppelin-solidity
 	url = https://github.com/openzeppelin/zeppelin-solidity
 [submodule "lib/safe-contracts"]
 	path = lib/safe-contracts
 	url = https://github.com/gnosis/safe-contracts
-[submodule "lib/solmate"]
-	path = lib/solmate
-	url = https://github.com/Rari-Capital/solmate
 [submodule "lib/BokkyPooBahsDateTimeLibrary"]
 	path = lib/BokkyPooBahsDateTimeLibrary
 	url = https://github.com/bokkypoobah/BokkyPooBahsDateTimeLibrary

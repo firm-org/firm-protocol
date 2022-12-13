@@ -19,7 +19,7 @@ import {TestinprodFactory, UpgradeableModuleProxyFactory, LATEST_VERSION} from "
 import {LocalDeploy} from "scripts/LocalDeploy.s.sol";
 import {TestinprodDeploy, DeployBase} from "scripts/TestinprodDeploy.s.sol";
 
-import {ERC20Token} from "./lib/ERC20Token.sol";
+import {TestnetERC20 as ERC20Token} from "../../testnet/TestnetTokenFaucet.sol";
 import {IUSDCMinting} from "./lib/IUSDCMinting.sol";
 
 string constant LLAMAPAYSTREAMS_MODULE_ID = "org.firm.budget.llamapay-streams";
@@ -45,7 +45,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
             usdc.configureMinter(address(this), type(uint256).max);
         } else {
             deployer = new LocalDeploy();
-            token = new ERC20Token();
+            token = new ERC20Token("", "", 6);
         }
 
         (factory, moduleFactory) = deployer.run();
