@@ -4,13 +4,13 @@ pragma solidity 0.8.16;
 import {ERC20, ERC20Votes, ERC20Permit} from "openzeppelin/token/ERC20/extensions/ERC20Votes.sol";
 
 import {Captable} from "./Captable.sol";
+import {IMPL_INIT_NOOP_ADDR} from "../bases/FirmBase.sol";
 
-// NOTE: without a proxy just the vanilla erc20votes costs +1.5m gas
-// TODO: consider whether using proxies is worth it for equity tokens
 contract EquityToken is ERC20Votes {
-    Captable public immutable captable;
-    uint256 public immutable classId;
+    Captable public captable;
+    uint32 public classId;
 
+    error AlreadyInitialized();
     error UnauthorizedNotCaptable();
 
     modifier onlyCaptable() {
@@ -21,7 +21,15 @@ contract EquityToken is ERC20Votes {
         _;
     }
 
-    constructor(Captable captable_, uint256 classId_) ERC20("", "") ERC20Permit("") {
+    constructor() ERC20("", "") ERC20Permit("") {
+        initialize(Captable(IMPL_INIT_NOOP_ADDR), 0);
+    }
+    
+    function initialize(Captable captable_, uint32 classId_) public {
+        if (address(captable) != address(0)) {
+            revert AlreadyInitialized();
+        }
+
         captable = captable_;
         classId = classId_;
     }

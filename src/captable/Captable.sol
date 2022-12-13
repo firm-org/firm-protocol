@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
+import {Clones} from "openzeppelin/proxy/Clones.sol";
+
 import {FirmBase, IMPL_INIT_NOOP_SAFE, IMPL_INIT_NOOP_ADDR} from "../bases/FirmBase.sol";
 import {ISafe} from "../bases/ISafe.sol";
 
@@ -11,8 +13,12 @@ import {IAccountController} from "./controllers/AccountController.sol";
 uint32 constant NO_CONVERSION_FLAG = type(uint32).max;
 
 contract Captable is FirmBase {
+    using Clones for address;
+
     string public constant moduleId = "org.firm.captable";
     uint256 public constant moduleVersion = 1;
+
+    address immutable internal equityTokenImpl;
 
     string public name;
 
@@ -46,6 +52,7 @@ contract Captable is FirmBase {
 
     constructor() {
         initialize(IMPL_INIT_NOOP_SAFE, "", IBouncer(IMPL_INIT_NOOP_ADDR));
+        equityTokenImpl = address(new EquityToken());
     }
 
     function initialize(ISafe safe_, string memory name_, IBouncer globalBouncer_) public {
@@ -86,8 +93,8 @@ contract Captable is FirmBase {
             conversionClass.convertible = newConvertible;
         }
 
-        // Consider using proxies as this is >2m gas
-        token = new EquityToken(this, classId);
+        token = EquityToken(equityTokenImpl.cloneDeterministic(bytes32(classId)));
+        token.initialize(this, uint32(classId));
 
         Class storage class = classes[classId];
         class.token = token;

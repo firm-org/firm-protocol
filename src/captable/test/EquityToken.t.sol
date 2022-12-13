@@ -15,7 +15,4 @@ contract EquityTokenTest is FirmTest {
     }
     */
 
-    function testGasDeploy() public {
-        new EquityToken(Captable(address(0)), 0);
-    }
 }
