@@ -162,6 +162,10 @@ contract RolesTest is FirmTest {
         roles.setRoleAdmin(newRoleId, ONLY_ROOT_ROLE_AS_ADMIN);
     }
 
+    function testCannotChangeRoleAdminToNoAdmin() public {
+        
+    }
+
     function testAdminCanChangeAdminForAdminRole() public {
         bytes32 newRoleAdmin = ONLY_ROOT_ROLE_AS_ADMIN | bytes32(1 << uint256(ROLE_MANAGER_ROLE_ID));
         vm.prank(address(safe));
