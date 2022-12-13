@@ -26,13 +26,13 @@ function decode(EncodedTimeShift encoded) pure returns (TimeShiftLib.TimeUnit un
 // issue as no allowance will be able to be created with this recurrency and this is
 // a more gas efficient way to check for inheritance.
 function isInherited(EncodedTimeShift encoded) pure returns (bool) {
-    return EncodedTimeShift.unwrap(encoded) == bytes6(0);
+    return EncodedTimeShift.unwrap(encoded) < 0x010000000000;
 }
 
 // Note this is an efficient way to check for non-recurrent time shifts
 // Any value lower than 0x070000000000 is a recurrent time shift
 function isNonRecurrent(EncodedTimeShift encoded) pure returns (bool) {
-    return EncodedTimeShift.unwrap(encoded) > 0x070000000000; 
+    return EncodedTimeShift.unwrap(encoded) > 0x06ffffffffff;
 }
 
 using {decode, isInherited, isNonRecurrent} for EncodedTimeShift global;

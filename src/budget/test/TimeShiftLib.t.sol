@@ -126,3 +126,19 @@ contract TimeShiftLibEncodingTest is FirmTest {
         assertEq(offset, inputOffset);
     }
 }
+
+contract TimeShiftLibHelpersTest is FirmTest {
+    using TimeShiftLib for *;
+
+    function testIsInherited() public {
+        assertTrue(TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode().isInherited());
+        assertTrue(TimeShift(TimeShiftLib.TimeUnit.Inherit, 1).encode().isInherited());
+        assertFalse(TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode().isInherited());
+    }
+
+    function testIsNonRecurrent() public {
+        assertTrue(TimeShift(TimeShiftLib.TimeUnit.NonRecurrent, 0).encode().isNonRecurrent());
+        assertTrue(TimeShift(TimeShiftLib.TimeUnit.NonRecurrent, int40(uint40(block.timestamp))).encode().isNonRecurrent());
+        assertFalse(TimeShift(TimeShiftLib.TimeUnit.Yearly, type(int40).max).encode().isNonRecurrent());
+    }
+}

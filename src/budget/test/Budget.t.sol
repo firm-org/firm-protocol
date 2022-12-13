@@ -86,7 +86,7 @@ abstract contract BudgetTest is FirmTest {
         createDailyAllowance(SPENDER, 0);
     }
 
-    function testBadTimeshiftsRevert() public {
+    function testInvalidTimeshiftsRevert() public {
         vm.prank(address(safe));
         vm.expectRevert(abi.encodeWithSelector(TimeShiftLib.InvalidTimeShift.selector));
         budget.createAllowance(
@@ -94,19 +94,13 @@ abstract contract BudgetTest is FirmTest {
         );
     }
 
-    function testMalformedInheritedTimeshiftReverts() public {
-        vm.startPrank(address(safe));
+    function testInheritOffsetValueIsIgnored() public {
+        vm.prank(address(safe));
         uint256 allowanceId = createDailyAllowance(address(safe), 1);
-        // can create suballowance with valid inheritance flag
-        budget.createAllowance(
-            allowanceId, SPENDER, token, 10, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode(), ""
-        );
-        // fails suballowance with valid inheritance flag (not interpreted as inherit as the offset is not 0)
-        vm.expectRevert(abi.encodeWithSelector(TimeShiftLib.InvalidTimeShift.selector));
+        vm.prank(address(safe));
         budget.createAllowance(
             allowanceId, SPENDER, token, 10, TimeShift(TimeShiftLib.TimeUnit.Inherit, 1).encode(), ""
         );
-        vm.stopPrank();
     }
 
     function testInvalidSpenderReverts() public {
