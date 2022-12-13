@@ -210,7 +210,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
         vm.label(address(roles), "RolesProxy");
     }
 
-    function _signPacked(bytes32 hash, uint256 pk) internal returns (bytes memory sig) {
+    function _signPacked(bytes32 hash, uint256 pk) internal pure returns (bytes memory sig) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, hash);
 
         sig = new bytes(65);

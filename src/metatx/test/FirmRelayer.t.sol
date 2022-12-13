@@ -155,7 +155,7 @@ contract FirmRelayerTest is FirmTest {
         assertEq(relayer.getNonce(USER), 0);
     }
 
-    function _signPacked(bytes32 hash, uint256 pk) internal returns (bytes memory sig) {
+    function _signPacked(bytes32 hash, uint256 pk) internal pure returns (bytes memory sig) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, hash);
 
         sig = new bytes(65);
