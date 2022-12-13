@@ -35,9 +35,10 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
         initialize(IMPL_INIT_NOOP_SAFE, IRoles(IMPL_INIT_NOOP_ADDR), IMPL_INIT_NOOP_ADDR);
     }
 
-    function initialize(ISafe _safe, IRoles _roles, address trustedForwarder_) public {
-        __init_firmBase(_safe, trustedForwarder_); // calls SafeAware.__init_setSafe which reverts on reinitialization
-        roles = _roles;
+    function initialize(ISafe safe_, IRoles roles_, address trustedForwarder_) public {
+        // calls SafeAware.__init_setSafe which reverts on reinitialization
+        __init_firmBase(safe_, trustedForwarder_);
+        _setRoles(roles_);
     }
 
     ////////////////////////////////////////////////////////////////////////////////

@@ -6,14 +6,27 @@ import {IRoles} from "../roles/IRoles.sol";
 uint256 constant ROLE_FLAG_MASK = ~uint160(0xFF00);
 
 abstract contract RolesAuth {
-    IRoles public roles;
+    // ROLES_SLOT = keccak256("firm.rolesauth.roles") - 1
+    bytes32 constant internal ROLES_SLOT = 0x7aaf26e54f46558e57a4624b01631a5da30fe5fe9ba2f2500c3aee185f8fb90b;
+
+    function roles() public view returns (IRoles rolesAddr) {
+        assembly {
+            rolesAddr := sload(ROLES_SLOT)
+        }
+    }
+
+    function _setRoles(IRoles roles_) internal {
+        assembly {
+            sstore(ROLES_SLOT, roles_)
+        }
+    }
 
     error UnexistentRole(uint8 roleId);
 
     function _validateAuthorizedAddress(address authorizedAddr) internal view {
         if (_isRoleFlag(authorizedAddr)) {
             uint8 roleId = _roleFromFlag(authorizedAddr);
-            if (!roles.roleExists(roleId)) {
+            if (!roles().roleExists(roleId)) {
                 revert UnexistentRole(roleId);
             }
         }
@@ -21,7 +34,7 @@ abstract contract RolesAuth {
 
     function _isAuthorized(address actor, address authorizedAddr) internal view returns (bool) {
         if (_isRoleFlag(authorizedAddr)) {
-            return roles.hasRole(actor, _roleFromFlag(authorizedAddr));
+            return roles().hasRole(actor, _roleFromFlag(authorizedAddr));
         } else {
             return actor == authorizedAddr;
         }

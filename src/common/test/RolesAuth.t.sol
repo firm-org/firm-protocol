@@ -17,6 +17,11 @@ contract RolesAuthTest is FirmTest {
         rolesAuth = new RolesAuthMock(roles);
     }
 
+    function testRolesIsSaved() public {
+        assertEq(address(rolesAuth.roles()), address(roles));
+        assertUnsStrg(address(rolesAuth), "firm.rolesauth.roles", address(roles));
+    }
+
     function testExplicitAddrIsAuthorized() public {
         assertTrue(rolesAuth.isAuthorized(SOMEONE, SOMEONE));
         assertFalse(rolesAuth.isAuthorized(address(this), SOMEONE));
