@@ -5,7 +5,7 @@ import {FirmTest} from "../../common/test/lib/FirmTest.sol";
 import {RolesStub} from "../../common/test/mocks/RolesStub.sol";
 import {roleFlag} from "../../common/test/mocks/RolesAuthMock.sol";
 import {SafeStub} from "../../common/test/mocks/SafeStub.sol";
-import {ERC20Token} from "../../factory/test/lib/ERC20Token.sol";
+import {TestnetERC20 as ERC20Token} from "../../testnet/TestnetTokenFaucet.sol";
 import {UpgradeableModuleProxyFactory} from "../../factory/UpgradeableModuleProxyFactory.sol";
 
 import {TimeShift, DateTimeLib} from "../../budget/TimeShiftLib.sol";
@@ -486,7 +486,7 @@ contract TokenBudgetTest is BudgetTest {
     function setUp() public override {
         super.setUp();
 
-        ERC20Token token_ = new ERC20Token();
+        ERC20Token token_ = new ERC20Token("", "", 0);
         token_.mint(address(safe), 1e6 ether);
         token = address(token_);
     }

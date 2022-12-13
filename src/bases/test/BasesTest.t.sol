@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import "solmate/utils/Bytes32AddressLib.sol";
-
 import {FirmTest} from "src/common/test/lib/FirmTest.sol";
 import {ModuleMock} from "src/common/test/mocks/ModuleMock.sol";
 import {SafeStub} from "src/common/test/mocks/SafeStub.sol";
@@ -11,8 +9,6 @@ import {UpgradeableModuleProxyFactory} from "src/factory/UpgradeableModuleProxyF
 import {ISafe} from "../ISafe.sol";
 
 contract BasesTest is FirmTest {
-    using Bytes32AddressLib for bytes32;
-
     UpgradeableModuleProxyFactory factory = new UpgradeableModuleProxyFactory();
 
     // Parameter in constructor is saved to an immutable variable 'foo'
