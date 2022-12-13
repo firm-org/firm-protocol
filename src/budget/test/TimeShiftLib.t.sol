@@ -52,6 +52,22 @@ contract TimeShiftLibShiftTest is FirmTest {
         assertShift(TimeShiftLib.TimeUnit.Yearly, 2022, 1, 31, 2023, 1, 1);
     }
 
+    function testRevertIfUnitIsInherited() public {
+        vm.expectRevert(abi.encodeWithSelector(TimeShiftLib.InvalidTimeShift.selector));
+        uint40(block.timestamp).applyShift(TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode());
+
+        vm.expectRevert(abi.encodeWithSelector(TimeShiftLib.InvalidTimeShift.selector));
+        uint40(block.timestamp).applyShift(TimeShift(TimeShiftLib.TimeUnit.Inherit, 1).encode());
+    }
+
+    function testRevertIfUnitIsNonRecurrent() public {
+        vm.expectRevert(abi.encodeWithSelector(TimeShiftLib.InvalidTimeShift.selector));
+        uint40(block.timestamp).applyShift(TimeShift(TimeShiftLib.TimeUnit.NonRecurrent, 0).encode());
+
+        vm.expectRevert(abi.encodeWithSelector(TimeShiftLib.InvalidTimeShift.selector));
+        uint40(block.timestamp).applyShift(TimeShift(TimeShiftLib.TimeUnit.NonRecurrent, int40(uint40(block.timestamp + 1000))).encode());
+    }
+
     function testOffsets() public {
         TimeShift memory shift = TimeShift(TimeShiftLib.TimeUnit.Monthly, 1 hours);
 
@@ -124,5 +140,21 @@ contract TimeShiftLibEncodingTest is FirmTest {
 
         assertEq(uint8(unit), uint8(inputUnit));
         assertEq(offset, inputOffset);
+    }
+}
+
+contract TimeShiftLibHelpersTest is FirmTest {
+    using TimeShiftLib for *;
+
+    function testIsInherited() public {
+        assertTrue(TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode().isInherited());
+        assertTrue(TimeShift(TimeShiftLib.TimeUnit.Inherit, 1).encode().isInherited());
+        assertFalse(TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode().isInherited());
+    }
+
+    function testIsNonRecurrent() public {
+        assertTrue(TimeShift(TimeShiftLib.TimeUnit.NonRecurrent, 0).encode().isNonRecurrent());
+        assertTrue(TimeShift(TimeShiftLib.TimeUnit.NonRecurrent, int40(uint40(block.timestamp))).encode().isNonRecurrent());
+        assertFalse(TimeShift(TimeShiftLib.TimeUnit.Yearly, type(int40).max).encode().isNonRecurrent());
     }
 }
