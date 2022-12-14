@@ -231,13 +231,11 @@ contract Captable is FirmBase {
         return _getClass(classId).ticker;
     }
 
-    // TODO: it would be more gas efficient to just check that the token addr
-    // (or another field) is non-zero, since that would increase the chances
-    // that the slot will be reused in the call leading to gas savings
-    function _getClass(uint256 classId) internal view returns (Class storage) {
-        if (classId >= classCount) {
+    function _getClass(uint256 classId) internal view returns (Class storage class) {
+        class = classes[classId];
+
+        if (address(class.token) == address(0)) {
             revert UnexistentClass(classId);
         }
-        return classes[classId];
     }
 }
