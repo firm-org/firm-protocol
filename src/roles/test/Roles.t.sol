@@ -57,6 +57,12 @@ contract RolesTest is FirmTest {
         roles.createRole(ONLY_ROOT_ROLE_AS_ADMIN, "");
     }
 
+    function testCannotCreateRoleWithNoAdmins() public {
+        vm.prank(address(safe));
+        vm.expectRevert(abi.encodeWithSelector(Roles.InvalidRoleAdmins.selector));
+        roles.createRole(NO_ROLE_ADMINS, "");
+    }
+
     function testSomeoneWithPermissionCanCreateRolesUntilRevoked() public {
         vm.prank(address(safe));
         roles.setRole(SOMEONE, ROLE_MANAGER_ROLE_ID, true);
@@ -163,7 +169,11 @@ contract RolesTest is FirmTest {
     }
 
     function testCannotChangeRoleAdminToNoAdmin() public {
-        
+        vm.startPrank(address(safe));
+        uint8 newRoleId = roles.createRole(ONLY_ROOT_ROLE_AS_ADMIN, "");
+        vm.expectRevert(abi.encodeWithSelector(Roles.InvalidRoleAdmins.selector));
+        roles.setRoleAdmin(newRoleId, NO_ROLE_ADMINS);
+        vm.stopPrank();
     }
 
     function testAdminCanChangeAdminForAdminRole() public {
