@@ -15,12 +15,10 @@ uint32 constant NO_CONVERSION_FLAG = type(uint32).max;
 IAccountController constant NO_CONTROLLER = IAccountController(address(0));
 
 contract Captable is FirmBase, BouncerChecker {
-    using Clones for address;
-
     string public constant moduleId = "org.firm.captable";
     uint256 public constant moduleVersion = 1;
 
-    address immutable internal equityTokenImpl;
+    using Clones for address;
 
     struct Class {
         EquityToken token;
@@ -35,15 +33,17 @@ contract Captable is FirmBase, BouncerChecker {
         mapping(address => bool) isManager;
     }
 
-    string public name;
     mapping(uint256 => Class) public classes;
     uint256 internal classCount;
 
     mapping(address => mapping(uint256 => IAccountController)) public controllers;
 
+    string public name;
+
     // Above this limit, voting power getters that iterate through all tokens become
     // very expensive. See `CaptableClassLimitTest` tests for worst-case benchmarks
     uint32 internal constant CLASSES_LIMIT = 128;
+    address immutable internal equityTokenImpl;
 
     error ClassCreationAboveLimit();
     error UnexistentClass(uint256 classId);
@@ -66,6 +66,20 @@ contract Captable is FirmBase, BouncerChecker {
         name = name_;
     }
 
+    /**
+     * @notice Creates a new class of equity
+     * @dev For gas reasons only 128 classes of equity can be created at the moment
+     * @param className Name of the class (cannot be changed later)
+     * @param ticker Ticker of the class (cannot be changed later)
+     * @param authorized Number of shares authorized for issuance (must be > 0) 
+     *        It has to fit in the authorized amount of the class it converts into
+     * @param convertsIntoClassId ID of the class that holders can convert to (NO_CONVERSION_FLAG if none)
+     * @param votingWeight Voting weight of the class (will be multiplied by balance when checking votes)
+     * @param bouncer Bouncer that will be used to check transfers
+     *        It cannot be zero. For allow all transfers, use `EmbeddedBouncerType.AllowAll` (addrFlag=0x00..0102)
+     * @return classId ID of the newly created class
+     * @return token Token contract of the newly created class
+     */
     function createClass(
         string calldata className,
         string calldata ticker,
@@ -110,13 +124,19 @@ contract Captable is FirmBase, BouncerChecker {
         class.isManager[msg.sender] = true; // safe addr is set as manager for class
     }
 
+    /**
+     * @notice Sets the amount of authorized shares for the class
+     * @dev The amount of authorized shares can only be decreased if the amount of issued shares
+     *      plus the convertible amount doesn't exceed the new authorized amount
+     * @param classId ID of the class
+     * @param newAuthorized New authorized amount
+     */
     function setAuthorized(uint256 classId, uint256 newAuthorized) onlySafe external {
         if (newAuthorized == 0) {
             revert BadInput();
         }
 
         Class storage class = _getClass(classId);
-
         _ensureClassNotFrozen(class, classId);
 
         uint256 oldAuthorized = class.authorized;
@@ -151,6 +171,13 @@ contract Captable is FirmBase, BouncerChecker {
         class.convertible = newConvertible;
     }
 
+    /**
+     * @notice Set bouncer to control transfers of class of shares
+     * @dev Freezing the class will remove the ability to ever change the bouncer again
+     * @param classId ID of the class
+     * @param bouncer Bouncer that will be used to check transfers
+     *        It cannot be zero. For allow all transfers, use `EmbeddedBouncerType.AllowAll` (addrFlag=0x00..0102)
+     */
     function setBouncer(uint256 classId, IBouncer bouncer) onlySafe external {
         if (address(bouncer) == address(0)) {
             revert BadInput();
@@ -163,6 +190,15 @@ contract Captable is FirmBase, BouncerChecker {
         class.bouncer = bouncer;
     }
 
+    /**
+     * @notice Sets whether an address can manage a class of shares (issue and control holder accounts)
+     * @dev Warning: managers can set controllers for accounts, which can be used to transfer shares or remove controllers (e.g. vesting)
+     * @dev Freezing the class will remove the ability to ever change managers, effectively freezing the set
+     *      of accounts that can issue for the class or set controllers           
+     * @param classId ID of the class
+     * @param manager Address of the manager
+     * @param isManager Whether the address is set as a manager
+     */
     function setManager(uint256 classId, address manager, bool isManager) onlySafe external {
         Class storage class = _getClass(classId);
 
@@ -171,6 +207,11 @@ contract Captable is FirmBase, BouncerChecker {
         class.isManager[manager] = isManager;
     }
 
+    /**
+     * @notice Freeze class of shares, preventing further changes to authorized amount, managers or bouncers
+     * @dev Freezing the class is a non-reversible operation
+     * @param classId ID of the class
+     */
     function freeze(uint256 classId) onlySafe external {
         Class storage class = _getClass(classId);
 
@@ -191,6 +232,13 @@ contract Captable is FirmBase, BouncerChecker {
         }
     }
 
+    /**
+     * @notice Issue shares for an account
+     * @dev Can be done by any manager of the class
+     * @param account Address of the account to issue shares for
+     * @param classId ID of the class
+     * @param amount Amount of shares to issue
+     */
     function issue(address account, uint256 classId, uint256 amount) public {
         if (amount == 0) {
             revert BadInput();
@@ -206,6 +254,15 @@ contract Captable is FirmBase, BouncerChecker {
         class.token.mint(account, amount);
     }
 
+    /**
+     * @notice Issue shares for an account and set controller over these shares
+     * @dev Can be done by any manager of the class
+     * @param account Address of the account to issue shares for
+     * @param classId ID of the class
+     * @param amount Amount of shares to issue
+     * @param controller Controller to set for the account in this class
+     * @param controllerParams Parameters to pass to the controller on initialization
+     */
     function issueAndSetController(
         address account,
         uint256 classId,
@@ -224,6 +281,14 @@ contract Captable is FirmBase, BouncerChecker {
         );
     }
 
+    /**
+     * @notice Set controller over shares for an account in a class
+     * @dev Can be done by any manager of the class
+     * @param account Address of the account to set controller for
+     * @param classId ID of the class
+     * @param controller Controller to set for the account in this class
+     * @param controllerParams Parameters to pass to the controller on initialization
+     */
     function setController(
         address account,
         uint256 classId,
@@ -252,6 +317,12 @@ contract Captable is FirmBase, BouncerChecker {
         controller.addAccount(account, classId, amount, controllerParams);
     }
 
+    /**
+     * @notice Function called by the controller to remove itself as controller when it is no longer in use
+     * @dev Can be done by the controller, likely can be triggered by the user in the controller
+     * @param account Address of the account to remove controller for
+     * @param classId ID of the class
+     */
     function controllerDettach(address account, uint256 classId) external {
         // If it was no longer the controller for the account, consider this
         // a no-op, as it might have been the controller in the past and 
@@ -261,6 +332,15 @@ contract Captable is FirmBase, BouncerChecker {
         }
     }
 
+    /**
+     * @notice Forcibly transfer shares from one account to another
+     * @dev Can be done by the controller of an account
+     * @param account Address of the account to transfer shares from
+     * @param to Address of the account to transfer shares to
+     * @param classId ID of the class
+     * @param amount Amount of shares to transfer
+     * @param reason Reason for the transfer
+     */
     function controllerForcedTransfer(address account, address to, uint256 classId, uint256 amount, string calldata reason) external {
         // Controllers use msg.sender directly as they should be contracts that
         // call this one and should never be using metatxs
@@ -271,6 +351,15 @@ contract Captable is FirmBase, BouncerChecker {
         _getClass(classId).token.forcedTransfer(account, to, amount, msg.sender, reason);
     }
 
+    /**
+     * @notice Forcibly transfer shares from one account to another
+     * @dev Can be done by any manager of the class (likely used to bypass the bouncer with authorization of the manager)
+     * @param account Address of the account to transfer shares from
+     * @param to Address of the account to transfer shares to
+     * @param classId ID of the class
+     * @param amount Amount of shares to transfer
+     * @param reason Reason for the transfer
+     */
     function managerForcedTransfer(address account, address to, uint256 classId, uint256 amount, string calldata reason) external {
         Class storage class = _getClass(classId);
 
@@ -279,19 +368,28 @@ contract Captable is FirmBase, BouncerChecker {
         class.token.forcedTransfer(account, to, amount, msg.sender, reason);
     }
 
+    /**
+     * @notice Convert shares from one class to another
+     * @dev Can only be triggered voluntarely by the owner of the shares and can be blocked by the class bouncer
+     * @param classId ID of the class to convert from
+     * @param amount Amount of shares to convert
+     */
     function convert(uint256 classId, uint256 amount) external {
         Class storage fromClass = _getClass(classId);
         Class storage toClass = _getClass(fromClass.convertsIntoClassId);
 
         address sender = _msgSender();
 
+        // if user has a controller for the origin class id, ensure controller allows the transfer
         IAccountController controller = controllers[sender][classId];
-        // if user has a controller for the origin class id
         if (controller != NO_CONTROLLER) {
             if (!controller.isTransferAllowed(sender, sender, classId, amount)) {
                 revert ConversionBlocked(controller, sender, classId, amount);
             }
         }
+
+        // Class conversions cannot be blocked by class bouncer, as token
+        // ownership doesn't change (always goes from sender to sender)
 
         fromClass.authorized -= amount;
         toClass.convertible -= amount;
@@ -300,9 +398,13 @@ contract Captable is FirmBase, BouncerChecker {
         toClass.token.mint(sender, amount);
     }
 
-    // Reverts if transfer isn't allowed so that the revert reason can bubble up
-    // If a state update is necessary, we could return a flag from this function
-    // and commit that state after tokens are transferred in a separate call?
+    /**
+     * @notice Function called by EquityToken to check whether a transfer can go through
+     * @param from Address of the account transferring shares
+     * @param to Address of the account receiving shares
+     * @param classId ID of the class
+     * @param amount Amount of shares to transfer
+     */
     function ensureTransferIsAllowed(address from, address to, uint256 classId, uint256 amount) external view {
         Class storage class = _getClass(classId);
 
