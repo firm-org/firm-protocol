@@ -63,6 +63,8 @@ abstract contract BouncerChecker {
                 }
             }
             return false;
+        } else {
+            return false;
         }
     }
 }

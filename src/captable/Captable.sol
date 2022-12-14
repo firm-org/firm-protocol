@@ -52,6 +52,7 @@ contract Captable is FirmBase, BouncerChecker {
     error UnauthorizedNotController();
     error IssuedOverAuthorized(uint256 classId);
     error ConvertibleOverAuthorized(uint256 classId);
+    error UnauthorizedForClass(uint256 classId);
 
     constructor() {
         initialize(IMPL_INIT_NOOP_SAFE, "");
@@ -140,6 +141,20 @@ contract Captable is FirmBase, BouncerChecker {
         }
 
         class.convertible = newConvertible;
+    }
+
+    function setBouncer(uint256 classId, IBouncer bouncer) external {
+        Class storage class = _getClass(classId);
+
+        _ensureAuthorizedForClass(class, classId);
+
+        class.bouncer = bouncer;
+    }
+
+    function _ensureAuthorizedForClass(Class storage class, uint256 classId) internal view {
+        if (!class.isManager[_msgSender()] || class.isFrozen) {
+            revert UnauthorizedForClass(classId);
+        }
     }
 
     function issue(address account, uint256 classId, uint256 amount) public {

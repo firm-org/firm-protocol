@@ -11,6 +11,7 @@ import {EquityToken} from "../EquityToken.sol";
 import {EmbeddedBouncerType, EMBEDDED_BOUNCER_FLAG_TYPE} from "../BouncerChecker.sol";
 import {VestingController} from "../controllers/VestingController.sol";
 import {DisallowController} from "./mocks/DisallowController.sol";
+import {OddBouncer} from "./mocks/OddBouncer.sol";
 
 contract BaseCaptableTest is FirmTest {
     using AddressUint8FlagsLib for *;
@@ -18,7 +19,7 @@ contract BaseCaptableTest is FirmTest {
     Captable captable;
     SafeStub safe = new SafeStub();
 
-    IBouncer ALLOW_ALL_BOUNCER = IBouncer(uint8(EmbeddedBouncerType.AllowAll).toFlag(EMBEDDED_BOUNCER_FLAG_TYPE));
+    IBouncer ALLOW_ALL_BOUNCER = embeddedBouncer(EmbeddedBouncerType.AllowAll);
 
     address HOLDER1 = account("Holder #1");
     address HOLDER2 = account("Holder #2");
@@ -33,6 +34,10 @@ contract BaseCaptableTest is FirmTest {
         token.delegate(HOLDER1);
         vm.prank(HOLDER2);
         token.delegate(HOLDER2);
+    }
+
+    function embeddedBouncer(EmbeddedBouncerType bouncerType) internal pure returns (IBouncer) {
+        return IBouncer(uint8(bouncerType).toFlag(EMBEDDED_BOUNCER_FLAG_TYPE));
     }
 }
 
@@ -460,5 +465,134 @@ contract CaptableClassLimit2Test is BaseCaptableTest {
         vm.roll(transfersLimit);
         // look for a checkpoint close to the worst case in the binary search
         assertEq(captable.getPastTotalSupply(transfersLimit - 2), transfersLimit - 1);
+    }
+}
+
+contract CaptableBouncersTest is BaseCaptableTest {
+    using AddressUint8FlagsLib for *;
+
+    uint256 classId;
+    EquityToken token;
+
+    uint256 initialHolder1Balance = 100;
+
+    function setUp() public override {
+        super.setUp();
+
+        // Create a class with AllowAll as the initial bouncer
+        vm.prank(address(safe));
+        (classId, token) = captable.createClass("", "", 1000, NO_CONVERSION_FLAG, 1, ALLOW_ALL_BOUNCER);
+
+        // Issue some tokens to HOLDER1
+        vm.prank(address(safe));
+        captable.issue(HOLDER1, classId, initialHolder1Balance);
+    }
+
+    function testAllowAllBouncer() public {
+        // No need to set the bouncer, it was as allow all initially
+        vm.prank(HOLDER1);
+        token.transfer(HOLDER2, 10);
+        assertEq(token.balanceOf(HOLDER1), initialHolder1Balance - 10);
+        assertEq(token.balanceOf(HOLDER2), 10);
+
+        vm.prank(HOLDER2);
+        token.transfer(HOLDER1, 5);
+        assertEq(token.balanceOf(HOLDER1), initialHolder1Balance - 5);
+        assertEq(token.balanceOf(HOLDER2), 5);
+    }
+
+    function testDenyAllBouncer() public {
+        IBouncer bouncer = embeddedBouncer(EmbeddedBouncerType.DenyAll);
+        vm.prank(address(safe));
+        captable.setBouncer(classId, bouncer);
+
+        // HOLDER1 can't transfer
+        vm.prank(HOLDER1);
+        vm.expectRevert(abi.encodeWithSelector(Captable.TransferBlocked.selector, bouncer, HOLDER1, HOLDER2, classId, 10));
+        token.transfer(HOLDER2, 10);
+
+        // Even if HOLDER2 transfers to HOLDER1 who is already a holder
+        vm.prank(address(safe));
+        captable.issue(HOLDER2, classId, 1);
+        vm.prank(HOLDER2);
+        vm.expectRevert(abi.encodeWithSelector(Captable.TransferBlocked.selector, bouncer, HOLDER2, HOLDER1, classId, 1));
+        token.transfer(HOLDER1, 1);
+    }
+
+    function testClassHoldersOnlyBouncer() public {
+        IBouncer bouncer = embeddedBouncer(EmbeddedBouncerType.AllowTransferToClassHolder);
+        vm.prank(address(safe));
+        captable.setBouncer(classId, bouncer);
+
+        // HOLDER1 can't transfer to HOLDER2 as it is not a holder of the class
+        vm.prank(HOLDER1);
+        vm.expectRevert(abi.encodeWithSelector(Captable.TransferBlocked.selector, bouncer, HOLDER1, HOLDER2, classId, 10));
+        token.transfer(HOLDER2, 10);
+
+        // If we make HOLDER2 a holder, it can now receive from HOLDER1
+        vm.prank(address(safe));
+        captable.issue(HOLDER2, classId, 1);
+
+        vm.prank(HOLDER1);
+        token.transfer(HOLDER2, 1);
+
+        assertEq(token.balanceOf(HOLDER2), 2);
+    }
+
+    function testHoldersOnlyBouncer() public {
+        IBouncer bouncer = embeddedBouncer(EmbeddedBouncerType.AllowTransferToAllHolders);
+        vm.prank(address(safe));
+        captable.setBouncer(classId, bouncer);
+
+        // HOLDER1 can't transfer to HOLDER2 as it is not a holder of any class
+        vm.prank(HOLDER1);
+        vm.expectRevert(abi.encodeWithSelector(Captable.TransferBlocked.selector, bouncer, HOLDER1, HOLDER2, classId, 10));
+        token.transfer(HOLDER2, 10);
+
+        // We create a new class and make HOLDER2 a holder of that class so it can receive shares of the first class
+        vm.prank(address(safe));
+        (uint256 classId2,) = captable.createClass("", "", 1000, NO_CONVERSION_FLAG, 1, ALLOW_ALL_BOUNCER);
+        vm.prank(address(safe));
+        captable.issue(HOLDER2, classId2, 1);
+
+        vm.prank(HOLDER1);
+        token.transfer(HOLDER2, 1);
+        assertEq(token.balanceOf(HOLDER2), 1);
+    }
+
+    function testFailsOnNonExistentEmbeddedBouncer() public {
+        IBouncer badBouncer = IBouncer(uint8(100).toFlag(EMBEDDED_BOUNCER_FLAG_TYPE));
+        vm.prank(address(safe));
+        captable.setBouncer(classId, badBouncer);
+
+        vm.prank(HOLDER1);
+        vm.expectRevert();
+        token.transfer(HOLDER2, 10);
+    }
+
+    function testFailsOnBadFlagForEmbeddedBouncer() public {
+        IBouncer badBouncer = IBouncer(uint8(EmbeddedBouncerType.AllowAll).toFlag(0x10));
+        vm.prank(address(safe));
+        captable.setBouncer(classId, badBouncer);
+
+        vm.prank(HOLDER1);
+        vm.expectRevert("EvmError: Revert");
+        token.transfer(HOLDER2, 10);
+    }
+
+    function testCustomBouncer() public {
+        IBouncer bouncer = new OddBouncer();
+        vm.prank(address(safe));
+        captable.setBouncer(classId, bouncer);
+
+        // Bouncer allows transferring 1 because it is odd
+        vm.prank(HOLDER1);
+        token.transfer(HOLDER2, 1);
+        assertEq(token.balanceOf(HOLDER2), 1);
+
+        // Bouncer doesn't allow transferring 2 because it is even
+        vm.prank(HOLDER1);
+        vm.expectRevert(abi.encodeWithSelector(Captable.TransferBlocked.selector, bouncer, HOLDER1, HOLDER2, classId, 2));
+        token.transfer(HOLDER2, 2);
     }
 }
