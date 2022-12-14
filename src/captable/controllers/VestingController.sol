@@ -1,25 +1,24 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
+import {IRoles, RolesAuth} from "../../common/RolesAuth.sol";
+
 import {AccountController, Captable} from "./AccountController.sol";
 import {EquityToken} from "../EquityToken.sol";
 
-// NOTE: it should also be possible for VestingController to be a global contract
-// that all orgs can just use. Multiple Captables could use the same VestingController
-// if the account state is always scoped to captable -> accounts
-// NOTE 2: As we did with budget modules, it might be better to have a VestingController
-// per organization so that this is a component that can be upgraded by the org.
-// The base account controller should take a lot of inspiration from the BudgetModule
-contract VestingController is AccountController {
+contract VestingController is AccountController, RolesAuth {
+    string public constant moduleId = "org.firm.captable.vesting";
+    uint256 public constant moduleVersion = 1;
+
     struct VestingParams {
-        uint64 startDate;
-        uint64 cliffDate;
-        uint64 endDate;
+        uint40 startDate;
+        uint40 cliffDate;
+        uint40 endDate;
+        address revoker;
     }
-    // address admin; // make a configuration param who/what role can cancel the vesting
 
     struct Account {
-        uint256 classId;
+        uint32 classId;
         uint256 amount;
         VestingParams params;
     }
@@ -27,13 +26,11 @@ contract VestingController is AccountController {
     mapping(address => Account) public accounts;
 
     error InvalidVestingParameters();
+    error UnauthorizedRevoker();
 
-    constructor(Captable captable_) {
-        initialize(captable_);
-    }
-
-    function initialize(Captable captable_) public {
-        __init_setCaptable(captable_);
+    function initialize(Captable captable_, IRoles _roles, address trustedForwarder_) public {
+        initialize(captable_, trustedForwarder_);
+        _setRoles(_roles);
     }
 
     function addAccount(address owner, uint256 classId, uint256 amount, bytes calldata extraParams)
@@ -47,23 +44,24 @@ contract VestingController is AccountController {
             revert InvalidVestingParameters();
         }
 
+        _validateAuthorizedAddress(params.revoker);
+
         Account storage account = accounts[owner];
         if (account.amount > 0) {
             revert AccountAlreadyExists();
         }
 
-        account.classId = classId;
+        account.classId = uint32(classId);
         account.amount = amount;
         account.params = params;
     }
 
-    function revokeVesting(address owner, uint64 effectiveDate) external {
-        address safe = address(captable().safe());
-        if (msg.sender != safe) {
-            revert UnauthorizedNotSafe();
-        }
-
+    function revokeVesting(address owner, uint40 effectiveDate) external {
         Account storage account = accounts[owner];
+
+        if (!_isAuthorized(_msgSender(), account.params.revoker)) {
+            revert UnauthorizedRevoker();
+        }
 
         if (account.amount == 0) {
             revert AccountDoesntExist();
@@ -73,7 +71,7 @@ contract VestingController is AccountController {
         uint256 unvestedAmount = calculateLockedAmount(account.amount, account.params, effectiveDate);
         uint256 ownerBalance = captable().balanceOf(owner, account.classId);
         uint256 forfeitAmount = ownerBalance > unvestedAmount ? unvestedAmount : ownerBalance;
-        captable().controllerForfeit(owner, safe, account.classId, forfeitAmount);
+        captable().controllerForfeit(owner, address(safe()), account.classId, forfeitAmount);
 
         delete accounts[owner];
     }

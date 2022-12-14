@@ -5,6 +5,8 @@ import {FirmTest} from "../../common/test/lib/FirmTest.sol";
 import {SafeStub} from "../../common/test/mocks/SafeStub.sol";
 import {SafeAware} from "../../bases/SafeAware.sol";
 import {AddressUint8FlagsLib} from "../../common/AddressUint8FlagsLib.sol";
+import {Roles, ONLY_ROOT_ROLE} from "../../roles/Roles.sol";
+import {roleFlag} from "../../common/test/mocks/RolesAuthMock.sol";
 
 import {Captable, IBouncer, NO_CONVERSION_FLAG} from "../Captable.sol";
 import {EquityToken} from "../EquityToken.sol";
@@ -17,6 +19,8 @@ contract BaseCaptableTest is FirmTest {
     using AddressUint8FlagsLib for *;
 
     Captable captable;
+    VestingController vesting;
+    Roles roles;
     SafeStub safe = new SafeStub();
 
     IBouncer ALLOW_ALL_BOUNCER = embeddedBouncer(EmbeddedBouncerType.AllowAll);
@@ -24,9 +28,20 @@ contract BaseCaptableTest is FirmTest {
     address HOLDER1 = account("Holder #1");
     address HOLDER2 = account("Holder #2");
     address ISSUER = account("Issuer");
+    address VESTING_REVOKER = account("Vesting Revoker");
+
+    address VESTING_REVOKER_ROLE_FLAG;
 
     function setUp() public virtual {
         captable = Captable(createProxy(new Captable(), abi.encodeCall(Captable.initialize, (safe, "TestCo"))));
+        roles = Roles(createProxy(new Roles(), abi.encodeCall(Roles.initialize, (safe, address(0)))));
+        vesting = VestingController(createProxy(new VestingController(), abi.encodeCall(VestingController.initialize, (captable, roles, address(0)))));
+
+        vm.startPrank(address(safe));
+        uint8 roleId = roles.createRole(ONLY_ROOT_ROLE, "Vesting revoking");
+        roles.setRole(VESTING_REVOKER, roleId, true);
+        VESTING_REVOKER_ROLE_FLAG = roleFlag(roleId);
+        vm.stopPrank();
     }
 
     // votes only count when a delegation is set
@@ -185,20 +200,19 @@ contract CaptableOneClassTest is BaseCaptableTest {
     function testCanIssueWithVesting() public {
         uint256 amount = INITIAL_AUTHORIZED;
 
-        VestingController vestingController = new VestingController(captable);
         VestingController.VestingParams memory vestingParams;
         vestingParams.startDate = 100;
         vestingParams.cliffDate = 120;
         vestingParams.endDate = 200;
 
         vm.prank(ISSUER);
-        captable.issueControlled(HOLDER1, classId, amount, vestingController, abi.encode(vestingParams));
+        captable.issueControlled(HOLDER1, classId, amount, vesting, abi.encode(vestingParams));
         assertEq(token.balanceOf(HOLDER1), amount);
 
         vm.startPrank(HOLDER1);
         vm.warp(vestingParams.startDate - 1);
         vm.expectRevert(
-            abi.encodeWithSelector(Captable.TransferBlocked.selector, vestingController, HOLDER1, HOLDER2, classId, 1)
+            abi.encodeWithSelector(Captable.TransferBlocked.selector, vesting, HOLDER1, HOLDER2, classId, 1)
         );
         token.transfer(HOLDER2, 1);
 
@@ -214,19 +228,19 @@ contract CaptableOneClassTest is BaseCaptableTest {
     function testCanRevokeVesting() public {
         uint256 amount = 100;
 
-        VestingController vestingController = new VestingController(captable);
         VestingController.VestingParams memory vestingParams;
         vestingParams.startDate = 100;
         vestingParams.cliffDate = 100;
         vestingParams.endDate = 200;
+        vestingParams.revoker = VESTING_REVOKER_ROLE_FLAG;
 
         vm.prank(ISSUER);
-        captable.issueControlled(HOLDER1, classId, amount, vestingController, abi.encode(vestingParams));
+        captable.issueControlled(HOLDER1, classId, amount, vesting, abi.encode(vestingParams));
         assertEq(token.balanceOf(HOLDER1), amount);
 
         vm.warp(150);
-        vm.prank(address(safe));
-        vestingController.revokeVesting(HOLDER1, 150);
+        vm.prank(address(VESTING_REVOKER));
+        vesting.revokeVesting(HOLDER1, 150);
 
         assertEq(token.balanceOf(HOLDER1), amount / 2);
         assertEq(token.balanceOf(address(safe)), amount / 2);
@@ -262,19 +276,19 @@ contract CaptableFrozenTest is BaseCaptableTest {
     function testCanIssueAndRevokeVesting() public {
         uint256 amount = 100;
 
-        VestingController vestingController = new VestingController(captable);
         VestingController.VestingParams memory vestingParams;
         vestingParams.startDate = 100;
         vestingParams.cliffDate = 100;
         vestingParams.endDate = 200;
+        vestingParams.revoker = VESTING_REVOKER_ROLE_FLAG;
 
         vm.prank(ISSUER);
-        captable.issueControlled(HOLDER1, classId, amount, vestingController, abi.encode(vestingParams));
+        captable.issueControlled(HOLDER1, classId, amount, vesting, abi.encode(vestingParams));
         assertEq(token.balanceOf(HOLDER1), amount);
 
         vm.warp(150);
-        vm.prank(address(safe));
-        vestingController.revokeVesting(HOLDER1, 150);
+        vm.prank(address(safe)); // safe also has role as root role holder
+        vesting.revokeVesting(HOLDER1, 150);
 
         assertEq(token.balanceOf(HOLDER1), amount / 2);
         assertEq(token.balanceOf(address(safe)), amount / 2);

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.16;
 
+import {FirmBase, ISafe, IMPL_INIT_NOOP_ADDR, IMPL_INIT_NOOP_SAFE} from "../../bases/FirmBase.sol";
+
 import {Captable} from "../Captable.sol";
 import {IBouncer} from "../bouncers/IBouncer.sol";
 
@@ -8,16 +10,23 @@ abstract contract IAccountController is IBouncer {
     function addAccount(address owner, uint256 classId, uint256 amount, bytes calldata extraParams) external virtual;
 }
 
-abstract contract AccountController is IAccountController {
+abstract contract AccountController is FirmBase, IAccountController {
     // CAPTABLE_SLOT = keccak256("firm.accountcontroller.captable") - 1
     bytes32 internal constant CAPTABLE_SLOT = 0xff0072f9b8f3624c7501bc21bf62fd5a141de3e4b1703f9e7f919a1ff011f4e6;
 
-    error CaptableAddressZero();
-    error AlreadyInitialized();
-    error UnauthorizedNotCaptable();
-    error UnauthorizedNotSafe();
-    error AccountAlreadyExists();
-    error AccountDoesntExist();
+    constructor() {
+        initialize(Captable(IMPL_INIT_NOOP_ADDR), IMPL_INIT_NOOP_ADDR);
+    }
+
+    function initialize(Captable captable_, address trustedForwarder_) public {
+        ISafe safe = address(captable_) != IMPL_INIT_NOOP_ADDR ? captable_.safe() : IMPL_INIT_NOOP_SAFE;
+
+        // Will revert if reinitialized
+        __init_firmBase(safe, trustedForwarder_);
+        assembly {
+            sstore(CAPTABLE_SLOT, captable_)
+        }
+    }
 
     function captable() public view returns (Captable _captable) {
         assembly {
@@ -25,21 +34,12 @@ abstract contract AccountController is IAccountController {
         }
     }
 
-    function __init_setCaptable(Captable captable_) internal {
-        if (address(captable_) == address(0)) {
-            revert CaptableAddressZero();
-        }
-
-        if (address(captable()) != address(0)) {
-            revert AlreadyInitialized();
-        }
-
-        assembly {
-            sstore(CAPTABLE_SLOT, captable_)
-        }
-    }
+    error UnauthorizedNotCaptable();
+    error AccountAlreadyExists();
+    error AccountDoesntExist();
 
     modifier onlyCaptable() {
+        // We use msg.sender directly here because Captable will never do meta-txs into this contract
         if (msg.sender != address(captable())) {
             revert UnauthorizedNotCaptable();
         }
