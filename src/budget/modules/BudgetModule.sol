@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import {Budget} from "../Budget.sol";
 import {FirmBase, ISafe, IMPL_INIT_NOOP_ADDR, IMPL_INIT_NOOP_SAFE} from "../../bases/FirmBase.sol";
+
+import {Budget} from "../Budget.sol";
 
 abstract contract BudgetModule is FirmBase {
     // BUDGET_SLOT = keccak256("firm.budgetmodule.budget") - 1
