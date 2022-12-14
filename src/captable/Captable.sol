@@ -7,12 +7,13 @@ import {FirmBase, IMPL_INIT_NOOP_SAFE, IMPL_INIT_NOOP_ADDR} from "../bases/FirmB
 import {ISafe} from "../bases/ISafe.sol";
 
 import {EquityToken, ERC20, ERC20Votes} from "./EquityToken.sol";
+import {BouncerChecker} from "./BouncerChecker.sol";
 import {IBouncer} from "./bouncers/IBouncer.sol";
 import {IAccountController} from "./controllers/AccountController.sol";
 
 uint32 constant NO_CONVERSION_FLAG = type(uint32).max;
 
-contract Captable is FirmBase {
+contract Captable is FirmBase, BouncerChecker {
     using Clones for address;
 
     string public constant moduleId = "org.firm.captable";
@@ -35,7 +36,7 @@ contract Captable is FirmBase {
 
     string public name;
     mapping(uint256 => Class) public classes;
-    uint256 public classCount;
+    uint256 internal classCount;
 
     mapping(address => mapping(uint256 => IAccountController)) controllers;
 
@@ -74,6 +75,9 @@ contract Captable is FirmBase {
         onlySafe
         returns (uint256 classId, EquityToken token)
     {
+        if (authorized == 0 || address(bouncer) == address(0)) {
+            revert BadInput();
+        }
         unchecked {
             if ((classId = classCount++) >= CLASSES_LIMIT) {
                 revert ClassCreationAboveLimit();
@@ -208,16 +212,24 @@ contract Captable is FirmBase {
     function ensureTransferIsAllowed(address from, address to, uint256 classId, uint256 amount) external view {
         Class storage class = _getClass(classId);
 
-        // NOTE: adopting bouncers from initial iteration
+        // First, ensure the class bouncer allows the transfer
+        if (!bouncerAllowsTransfer(class.bouncer, from, to, classId, amount)) {
+            revert TransferBlocked(class.bouncer, from, to, classId, amount);
+        }
 
+        // Then, if the holder has a controller for their shares in this class, check that
+        // it allows the transfer
         IAccountController controller = controllers[from][classId];
-
         // from has a controller for this class id
         if (address(controller) != address(0)) {
             if (!controller.isTransferAllowed(from, to, classId, amount)) {
                 revert TransferBlocked(controller, from, to, classId, amount);
             }
         }
+    }
+
+    function numberOfClasses() public view override returns (uint256) {
+        return classCount;
     }
 
     function authorizedFor(uint256 classId) external view returns (uint256) {
@@ -232,7 +244,7 @@ contract Captable is FirmBase {
         return class.token.totalSupply();
     }
 
-    function balanceOf(address account, uint256 classId) public view returns (uint256) {
+    function balanceOf(address account, uint256 classId) public view override returns (uint256) {
         return _getClass(classId).token.balanceOf(account);
     }
 

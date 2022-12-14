@@ -4,20 +4,21 @@ pragma solidity 0.8.16;
 import {FirmTest} from "../../common/test/lib/FirmTest.sol";
 import {SafeStub} from "../../common/test/mocks/SafeStub.sol";
 import {SafeAware} from "../../bases/SafeAware.sol";
+import {AddressUint8FlagsLib} from "../../common/AddressUint8FlagsLib.sol";
 
 import {Captable, IBouncer, NO_CONVERSION_FLAG} from "../Captable.sol";
 import {EquityToken} from "../EquityToken.sol";
-import {EmbeddedBouncersLib} from "../bouncers/EmbeddedBouncers.sol";
+import {EmbeddedBouncerType, EMBEDDED_BOUNCER_FLAG_TYPE} from "../BouncerChecker.sol";
 import {VestingController} from "../controllers/VestingController.sol";
 import {DisallowController} from "./mocks/DisallowController.sol";
 
 contract BaseCaptableTest is FirmTest {
-    using EmbeddedBouncersLib for *;
+    using AddressUint8FlagsLib for *;
 
     Captable captable;
     SafeStub safe = new SafeStub();
 
-    IBouncer ALLOW_ALL_BOUNCER = EmbeddedBouncersLib.BouncerType.AllowAll.addrFlag();
+    IBouncer ALLOW_ALL_BOUNCER = IBouncer(uint8(EmbeddedBouncerType.AllowAll).toFlag(EMBEDDED_BOUNCER_FLAG_TYPE));
 
     address HOLDER1 = account("Holder #1");
     address HOLDER2 = account("Holder #2");
@@ -41,7 +42,7 @@ contract CaptableInitTest is BaseCaptableTest {
         assertEq(captable.name(), "TestCo");
         // TODO: asserteq global controls
 
-        assertEq(captable.classCount(), 0);
+        assertEq(captable.numberOfClasses(), 0);
 
         bytes memory unexistentError = abi.encodeWithSelector(Captable.UnexistentClass.selector, 0);
         vm.expectRevert(unexistentError);
@@ -86,13 +87,13 @@ contract CaptableInitTest is BaseCaptableTest {
 
         for (uint256 i = 0; i < CLASSES_LIMIT; i++) {
             vm.prank(address(safe));
-            captable.createClass("", "", 0, NO_CONVERSION_FLAG, 0, ALLOW_ALL_BOUNCER);
+            captable.createClass("", "", 1, NO_CONVERSION_FLAG, 0, ALLOW_ALL_BOUNCER);
         }
-        assertEq(captable.classCount(), CLASSES_LIMIT);
+        assertEq(captable.numberOfClasses(), CLASSES_LIMIT);
 
         vm.prank(address(safe));
         vm.expectRevert(abi.encodeWithSelector(Captable.ClassCreationAboveLimit.selector));
-        captable.createClass("", "", 0, NO_CONVERSION_FLAG, 0, ALLOW_ALL_BOUNCER);
+        captable.createClass("", "", 1, NO_CONVERSION_FLAG, 0, ALLOW_ALL_BOUNCER);
     }
 }
 
