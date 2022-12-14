@@ -113,7 +113,7 @@ contract Captable is FirmBase, BouncerChecker {
         if (newAuthorized == 0) {
             revert BadInput();
         }
-        
+
         Class storage class = _getClass(classId);
 
         _ensureClassNotFrozen(class, classId);
@@ -205,52 +205,89 @@ contract Captable is FirmBase, BouncerChecker {
         class.token.mint(account, amount);
     }
 
-    // TODO: Rename to clearly signal that all shares of this class will become controlled for this holder
-    function issueControlled(
+    function issueAndSetController(
         address account,
         uint256 classId,
         uint256 amount,
         IAccountController controller,
         bytes calldata controllerParams
-    )
-        external
-    {
+    ) external {
+        // `issue` verifies that the class exists and sender is manager on classId
         issue(account, classId, amount);
+        _setController(
+            account,
+            classId,
+            amount,
+            controller,
+            controllerParams
+        );
+    }
+
+    function setController(
+        address account,
+        uint256 classId,
+        IAccountController controller,
+        bytes calldata controllerParams
+    ) external {
+        Class storage class = _getClass(classId);
+        _ensureSenderIsManager(class, classId);
+        _setController(
+            account,
+            classId,
+            class.token.balanceOf(account),
+            controller,
+            controllerParams
+        );
+    }
+
+    function _setController(
+        address account,
+        uint256 classId,
+        uint256 amount,
+        IAccountController controller,
+        bytes calldata controllerParams
+    ) internal {
         controllers[account][classId] = controller;
         controller.addAccount(account, classId, amount, controllerParams);
     }
 
-    // TODO: We should also allow issuer for the class to forfeit shares
-    // since it controls issuance and it can dilute anyway and it will be
-    // quite common for random things that the safe can take away shares
-    // This only really works if there's a way to freeze the issuance of a class
-    // Also, an issuer could just issue one share and set a controller for the account
-    // which would be an indirect way of doing this anyway
-    function controllerForfeit(address account, address to, uint256 classId, uint256 amount) external {
+    function controllerForcedTransfer(address account, address to, uint256 classId, uint256 amount, string calldata reason) external {
+        // Controllers use msg.sender directly as they should be contracts that
+        // call this one and should never be using metatxs
         if (msg.sender != address(controllers[account][classId])) {
             revert UnauthorizedNotController();
         }
 
-        _getClass(classId).token.forfeit(account, to, amount);
+        _getClass(classId).token.forcedTransfer(account, to, amount, msg.sender, reason);
+    }
+
+    function managerForcedTransfer(address account, address to, uint256 classId, uint256 amount, string calldata reason) external {
+        Class storage class = _getClass(classId);
+
+        _ensureSenderIsManager(class, classId);
+
+        class.token.forcedTransfer(account, to, amount, msg.sender, reason);
     }
 
     function convert(uint256 classId, uint256 amount) external {
         Class storage fromClass = _getClass(classId);
         Class storage toClass = _getClass(fromClass.convertsIntoClassId);
 
-        IAccountController controller = controllers[msg.sender][classId];
-        // converter has a controller for the origin class id
+        address sender = _msgSender();
+
+        IAccountController controller = controllers[sender][classId];
+        // if user has a controller for the origin class id
         if (address(controller) != address(0)) {
-            if (!controller.isTransferAllowed(msg.sender, msg.sender, classId, amount)) {
-                revert ConversionBlocked(controller, msg.sender, classId, amount);
+            if (!controller.isTransferAllowed(sender, sender, classId, amount)) {
+                revert ConversionBlocked(controller, sender, classId, amount);
             }
         }
 
         fromClass.authorized -= amount;
         toClass.convertible -= amount;
 
-        fromClass.token.burn(msg.sender, amount);
-        toClass.token.mint(msg.sender, amount);
+        fromClass.token.burn(sender, amount);
+        toClass.token.mint(sender, amount);
     }
 
     // Reverts if transfer isn't allowed so that the revert reason can bubble up

@@ -67,11 +67,17 @@ contract VestingController is AccountController, RolesAuth {
             revert AccountDoesntExist();
         }
 
-        // TODO: add hard limit for how much in the past can the effective date be
+        // TODO: add hard limit for how much in the past can the effective date be?
         uint256 unvestedAmount = calculateLockedAmount(account.amount, account.params, effectiveDate);
         uint256 ownerBalance = captable().balanceOf(owner, account.classId);
-        uint256 forfeitAmount = ownerBalance > unvestedAmount ? unvestedAmount : ownerBalance;
-        captable().controllerForfeit(owner, address(safe()), account.classId, forfeitAmount);
+        uint256 forcedTransferAmount = ownerBalance > unvestedAmount ? unvestedAmount : ownerBalance;
+        captable().controllerForcedTransfer(
+            owner,
+            address(safe()),
+            account.classId,
+            forcedTransferAmount,
+            "Vesting revoked"
+        );
 
         delete accounts[owner];
     }

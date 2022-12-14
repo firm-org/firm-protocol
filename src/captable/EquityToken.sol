@@ -10,6 +10,8 @@ contract EquityToken is ERC20Votes {
     Captable public captable;
     uint32 public classId;
 
+    event ForcedTransfer(address indexed from, address indexed to, uint256 amount, address actor, string reason);
+
     error AlreadyInitialized();
     error UnauthorizedNotCaptable();
 
@@ -42,9 +44,15 @@ contract EquityToken is ERC20Votes {
         _burn(account, amount);
     }
 
-    function forfeit(address from, address to, uint256 amount) external onlyCaptable {
+    function forcedTransfer(
+        address from,
+        address to,
+        uint256 amount,
+        address actor,
+        string calldata reason
+    ) external onlyCaptable {
         _transfer(from, to, amount);
-        // TODO: emit event since Forfeit is otherwise undetectable from observing events
+        emit ForcedTransfer(from, to, amount, actor, reason);
     }
 
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal override {

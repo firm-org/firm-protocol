@@ -171,6 +171,12 @@ contract CaptableOneClassTest is BaseCaptableTest {
         captable.issue(HOLDER1, classId, 1);
     }
 
+    function testCantIssueZeroShares() public {
+        vm.prank(ISSUER);
+        vm.expectRevert(abi.encodeWithSelector(Captable.BadInput.selector));
+        captable.issue(HOLDER1, classId, 0);
+    }
+
     function testCanChangeAuthorized() public {
         uint256 newAuthorized = INITIAL_AUTHORIZED + 1000;
         vm.prank(address(safe));
@@ -206,7 +212,7 @@ contract CaptableOneClassTest is BaseCaptableTest {
         vestingParams.endDate = 200;
 
         vm.prank(ISSUER);
-        captable.issueControlled(HOLDER1, classId, amount, vesting, abi.encode(vestingParams));
+        captable.issueAndSetController(HOLDER1, classId, amount, vesting, abi.encode(vestingParams));
         assertEq(token.balanceOf(HOLDER1), amount);
 
         vm.startPrank(HOLDER1);
@@ -235,7 +241,7 @@ contract CaptableOneClassTest is BaseCaptableTest {
         vestingParams.revoker = VESTING_REVOKER_ROLE_FLAG;
 
         vm.prank(ISSUER);
-        captable.issueControlled(HOLDER1, classId, amount, vesting, abi.encode(vestingParams));
+        captable.issueAndSetController(HOLDER1, classId, amount, vesting, abi.encode(vestingParams));
         assertEq(token.balanceOf(HOLDER1), amount);
 
         vm.warp(150);
@@ -283,7 +289,7 @@ contract CaptableFrozenTest is BaseCaptableTest {
         vestingParams.revoker = VESTING_REVOKER_ROLE_FLAG;
 
         vm.prank(ISSUER);
-        captable.issueControlled(HOLDER1, classId, amount, vesting, abi.encode(vestingParams));
+        captable.issueAndSetController(HOLDER1, classId, amount, vesting, abi.encode(vestingParams));
         assertEq(token.balanceOf(HOLDER1), amount);
 
         vm.warp(150);
@@ -501,7 +507,7 @@ contract CaptableMulticlassTest is BaseCaptableTest {
 
         // This rogue controller starts controlling all of HOLDER2's classId2 shares
         vm.prank(ISSUER);
-        captable.issueControlled(HOLDER2, classId2, 1, controller, "");
+        captable.issueAndSetController(HOLDER2, classId2, 1, controller, "");
 
         vm.prank(HOLDER2);
         vm.expectRevert(abi.encodeWithSelector(Captable.ConversionBlocked.selector, controller, HOLDER2, classId2, 1));
