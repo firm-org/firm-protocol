@@ -566,7 +566,7 @@ contract CaptableBouncersTest is BaseCaptableTest {
         captable.setBouncer(classId, badBouncer);
 
         vm.prank(HOLDER1);
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSignature("Error(string)", "Conversion into non-existent enum type"));
         token.transfer(HOLDER2, 10);
     }
 
