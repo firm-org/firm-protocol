@@ -5,9 +5,10 @@ import {AddressUint8FlagsLib} from "./AddressUint8FlagsLib.sol";
 
 import {IRoles} from "../roles/IRoles.sol";
 
+uint8 constant ROLES_FLAG_TYPE = 0x01;
+
 abstract contract RolesAuth {
     using AddressUint8FlagsLib for address;
-    uint8 internal constant ROLES_FLAG_TYPE = 0x01;
 
     // ROLES_SLOT = keccak256("firm.rolesauth.roles") - 1
     bytes32 internal constant ROLES_SLOT = 0x7aaf26e54f46558e57a4624b01631a5da30fe5fe9ba2f2500c3aee185f8fb90b;

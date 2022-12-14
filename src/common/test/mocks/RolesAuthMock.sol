@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import "../../RolesAuth.sol";
 
 function roleFlag(uint8 role) pure returns (address) {
-    return address(uint160(uint256(role) << 8) + 1);
+    return AddressUint8FlagsLib.toFlag(role, ROLES_FLAG_TYPE);
 }
 
 contract RolesAuthMock is RolesAuth {

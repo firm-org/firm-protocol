@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity 0.8.16;
 
+import {AddressUint8FlagsLib} from "../../common/AddressUint8FlagsLib.sol";
+
 import {IBouncer} from "./IBouncer.sol";
 
 library EmbeddedBouncersLib {

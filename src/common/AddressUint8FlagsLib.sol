@@ -20,4 +20,8 @@ library AddressUint8FlagsLib {
     function flagValue(address addr) internal pure returns (uint8) {
         return uint8(uint160(addr) >> 8);
     }
+
+    function toFlag(uint8 value, uint8 flagType) internal pure returns (address) {
+        return address(uint160(uint256(flagType) << 8) + value);
+    }
 }
