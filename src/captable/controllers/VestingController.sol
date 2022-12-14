@@ -34,6 +34,17 @@ contract VestingController is AccountController, RolesAuth {
         _setRoles(_roles);
     }
 
+    ////////////////////////////////////////////////////////////////////////////////
+    // ACCOUNT CONTROLLER INTERFACE
+    ////////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * @notice Function called by Captable to add a new account with vesting
+     * @param owner Address of the account owner
+     * @param classId Class ID of the account
+     * @param amount Amount of tokens being vested
+     * @param extraParams Vesting parameters
+     */
     function addAccount(address owner, uint256 classId, uint256 amount, bytes calldata extraParams)
         external
         override
@@ -56,6 +67,40 @@ contract VestingController is AccountController, RolesAuth {
         account.params = params;
     }
 
+    /**
+     * @notice Function called by Captable to check whether a transfer is allowed depending on vesting state
+     * @param from Address of the account owner
+     * @param classId Class ID of the account
+     * @param amount Amount of tokens being transferred
+     */
+    function isTransferAllowed(address from, address, uint256 classId, uint256 amount) external view returns (bool) {
+        Account storage account = accounts[from][classId];
+
+        if (account.amount == 0) {
+            revert AccountDoesntExist();
+        }
+
+        uint256 lockedAmount = calculateLockedAmount(account.amount, account.params, block.timestamp);
+
+        if (lockedAmount > 0) {
+            uint256 afterBalance = captable().balanceOf(from, classId) - amount;
+
+            return afterBalance >= lockedAmount;
+        }
+
+        return true;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // VESTING MANAGEMENT
+    ////////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * @notice Revoke vesting for an account, transferring unvested tokens to Safe
+     * @param owner Address of the account owner
+     * @param classId Class ID of the account
+     * @param effectiveDate Date from which the vesting is revoked
+     */
     function revokeVesting(address owner, uint256 classId, uint40 effectiveDate) external {
         Account storage account = accounts[owner][classId];
 
@@ -86,6 +131,13 @@ contract VestingController is AccountController, RolesAuth {
         _cleanup(owner, classId);
     }
 
+    /**
+     * @notice Cleanup vesting account after it has been fully vested
+     * @dev Can be called by anyone, will result in gas savings for owner as controller will not be
+     *      called from now on
+     * @param owner Address of the account owner
+     * @param classId Class ID of the account
+     */
     function cleanupFullyVested(address owner, uint256 classId) external {
         Account storage account = accounts[owner][classId];
 
@@ -104,24 +156,6 @@ contract VestingController is AccountController, RolesAuth {
     function _cleanup(address owner, uint256 classId) internal {
         captable().controllerDettach(owner, classId);
         delete accounts[owner][classId];
-    }
-
-    function isTransferAllowed(address from, address, uint256 classId, uint256 amount) external view returns (bool) {
-        Account storage account = accounts[from][classId];
-
-        if (account.amount == 0) {
-            revert AccountDoesntExist();
-        }
-
-        uint256 lockedAmount = calculateLockedAmount(account.amount, account.params, block.timestamp);
-
-        if (lockedAmount > 0) {
-            uint256 afterBalance = captable().balanceOf(from, classId) - amount;
-
-            return afterBalance >= lockedAmount;
-        }
-
-        return true;
     }
 
     function calculateLockedAmount(uint256 amount, VestingParams memory params, uint256 time)
