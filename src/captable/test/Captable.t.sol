@@ -101,6 +101,18 @@ contract CaptableInitTest is BaseCaptableTest {
         vm.expectRevert(abi.encodeWithSelector(Captable.ClassCreationAboveLimit.selector));
         captable.createClass("", "", 1, NO_CONVERSION_FLAG, 0, ALLOW_ALL_BOUNCER);
     }
+
+    function testCantCreateClassWithZeroAuthorized() public {
+        vm.prank(address(safe));
+        vm.expectRevert(abi.encodeWithSelector(Captable.BadInput.selector));
+        captable.createClass("", "", 0, NO_CONVERSION_FLAG, 0, ALLOW_ALL_BOUNCER);
+    }
+
+    function testCantCreateClassWithZeroAddressBouncer() public {
+        vm.prank(address(safe));
+        vm.expectRevert(abi.encodeWithSelector(Captable.BadInput.selector));
+        captable.createClass("", "", 1, NO_CONVERSION_FLAG, 0, IBouncer(address(0)));
+    }
 }
 
 contract CaptableOneClassTest is BaseCaptableTest {
@@ -154,6 +166,12 @@ contract CaptableOneClassTest is BaseCaptableTest {
     function testCantChangeAuthorizedIfNotSafe() public {
         vm.expectRevert(abi.encodeWithSelector(SafeAware.UnauthorizedNotSafe.selector));
         captable.setAuthorized(classId, INITIAL_AUTHORIZED + 1);
+    }
+
+    function testCantChangeAuthorizedToZero() public {
+        vm.prank(address(safe));
+        vm.expectRevert(abi.encodeWithSelector(Captable.BadInput.selector));
+        captable.setAuthorized(classId, 0);
     }
 
     function testCantChangeAuthorizedBelowIssued() public {
@@ -705,5 +723,17 @@ contract CaptableBouncersTest is BaseCaptableTest {
         vm.prank(HOLDER1);
         vm.expectRevert(abi.encodeWithSelector(Captable.TransferBlocked.selector, bouncer, HOLDER1, HOLDER2, classId, 2));
         token.transfer(HOLDER2, 2);
+    }
+
+    function testCantSetBouncerIfNotSafe() public {
+        vm.prank(HOLDER1);
+        vm.expectRevert(abi.encodeWithSelector(SafeAware.UnauthorizedNotSafe.selector));
+        captable.setBouncer(classId, embeddedBouncer(EmbeddedBouncerType.DenyAll));
+    }
+
+    function testCantSetBouncerToZeroAddr() public {
+        vm.prank(address(safe));
+        vm.expectRevert(abi.encodeWithSelector(Captable.BadInput.selector));
+        captable.setBouncer(classId, IBouncer(address(0)));
     }
 }
