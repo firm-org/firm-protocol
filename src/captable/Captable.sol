@@ -47,12 +47,13 @@ contract Captable is FirmBase, BouncerChecker {
     error ClassCreationAboveLimit();
     error UnexistentClass(uint256 classId);
     error BadInput();
+    error FrozenClass(uint256 classId);
     error TransferBlocked(IBouncer bouncer, address from, address to, uint256 classId, uint256 amount);
     error ConversionBlocked(IAccountController controller, address account, uint256 classId, uint256 amount);
     error UnauthorizedNotController();
     error IssuedOverAuthorized(uint256 classId);
     error ConvertibleOverAuthorized(uint256 classId);
-    error UnauthorizedForClass(uint256 classId);
+    error UnauthorizedNotManager(uint256 classId);
 
     constructor() {
         initialize(IMPL_INIT_NOOP_SAFE, "");
@@ -108,16 +109,22 @@ contract Captable is FirmBase, BouncerChecker {
         class.isManager[msg.sender] = true; // safe addr is set as manager for class
     }
 
-    // TODO: when class is frozen, don't allow to change authorized manually
     function setAuthorized(uint256 classId, uint256 newAuthorized) onlySafe external {
+        if (newAuthorized == 0) {
+            revert BadInput();
+        }
+        
         Class storage class = _getClass(classId);
+
+        _ensureClassNotFrozen(class, classId);
+
         uint256 oldAuthorized = class.authorized;
         bool isDecreasing = newAuthorized < oldAuthorized;
 
         // When decreasing the authorized amount, make sure that the issued amount
         // plus the convertible amount doesn't exceed the new authorized amount
         if (isDecreasing) {
-            if (issuedFor(class) + class.convertible > newAuthorized) {
+            if (_issuedFor(class) + class.convertible > newAuthorized) {
                 revert IssuedOverAuthorized(classId);
             }
         }
@@ -136,24 +143,50 @@ contract Captable is FirmBase, BouncerChecker {
         uint256 newConvertible = isIncrease ? class.convertible + amount : class.convertible - amount;
 
         // Ensure that there's enough authorized space for the new convertible if we are increasing
-        if (isIncrease && issuedFor(class) + newConvertible > class.authorized) {
+        if (isIncrease && _issuedFor(class) + newConvertible > class.authorized) {
             revert ConvertibleOverAuthorized(classId);
         }
 
         class.convertible = newConvertible;
     }
 
-    function setBouncer(uint256 classId, IBouncer bouncer) external {
+    function setBouncer(uint256 classId, IBouncer bouncer) onlySafe external {
+        if (address(bouncer) == address(0)) {
+            revert BadInput();
+        }
+
         Class storage class = _getClass(classId);
 
-        _ensureAuthorizedForClass(class, classId);
+        _ensureClassNotFrozen(class, classId);
 
         class.bouncer = bouncer;
     }
 
-    function _ensureAuthorizedForClass(Class storage class, uint256 classId) internal view {
-        if (!class.isManager[_msgSender()] || class.isFrozen) {
-            revert UnauthorizedForClass(classId);
+    function setManager(uint256 classId, address manager, bool isManager) onlySafe external {
+        Class storage class = _getClass(classId);
+
+        _ensureClassNotFrozen(class, classId);
+
+        class.isManager[manager] = isManager;
+    }
+
+    function freeze(uint256 classId) onlySafe external {
+        Class storage class = _getClass(classId);
+
+        _ensureClassNotFrozen(class, classId);
+
+        class.isFrozen = true;
+    }
+
+    function _ensureClassNotFrozen(Class storage class, uint256 classId) internal view {
+        if (class.isFrozen) {
+            revert FrozenClass(classId);
+        }
+    }
+
+    function _ensureSenderIsManager(Class storage class, uint256 classId) internal view {
+        if (!class.isManager[_msgSender()]) {
+            revert UnauthorizedNotManager(classId);
         }
     }
 
@@ -162,11 +195,10 @@ contract Captable is FirmBase, BouncerChecker {
             revert BadInput();
         }
 
-        // TODO: issue access control
-
         Class storage class = _getClass(classId);
+        _ensureSenderIsManager(class, classId);
 
-        if (issuedFor(class) + class.convertible + amount > class.authorized) {
+        if (_issuedFor(class) + class.convertible + amount > class.authorized) {
             revert IssuedOverAuthorized(classId);
         }
 
@@ -252,10 +284,10 @@ contract Captable is FirmBase, BouncerChecker {
     }
 
     function issuedFor(uint256 classId) external view returns (uint256) {
-        return issuedFor(_getClass(classId));
+        return _issuedFor(_getClass(classId));
     }
 
-    function issuedFor(Class storage class) internal view returns (uint256) {
+    function _issuedFor(Class storage class) internal view returns (uint256) {
         return class.token.totalSupply();
     }
 
