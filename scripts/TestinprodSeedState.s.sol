@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import 'forge-std/Test.sol';
 
 import "gnosis-safe/GnosisSafe.sol";
-import {Roles, IRoles, ISafe, ONLY_ROOT_ROLE, ROOT_ROLE_ID} from "../src/roles/Roles.sol";
+import {Roles, IRoles, ISafe, ONLY_ROOT_ROLE_AS_ADMIN, ROOT_ROLE_ID} from "../src/roles/Roles.sol";
 import {Budget, TimeShiftLib, NO_PARENT_ID, NATIVE_ASSET} from "../src/budget/Budget.sol";
 import {TimeShift} from "../src/budget/TimeShiftLib.sol";
 import {BackdoorModule} from "../src/factory/local-utils/BackdoorModule.sol";
@@ -61,9 +61,9 @@ contract TestinprodSeedState is Test {
 
         // create some roles
         uint8[] memory roleIds = new uint8[](3);
-        roleIds[0] = rolesBackdoor.createRole(ONLY_ROOT_ROLE, "Executive role");
-        roleIds[1] = rolesBackdoor.createRole(ONLY_ROOT_ROLE | bytes32(1 << roleIds[0]), "Team member role");
-        roleIds[2] = rolesBackdoor.createRole(ONLY_ROOT_ROLE | bytes32(1 << roleIds[0]), "Dev role");
+        roleIds[0] = rolesBackdoor.createRole(ONLY_ROOT_ROLE_AS_ADMIN, "Executive role");
+        roleIds[1] = rolesBackdoor.createRole(ONLY_ROOT_ROLE_AS_ADMIN | bytes32(1 << roleIds[0]), "Team member role");
+        roleIds[2] = rolesBackdoor.createRole(ONLY_ROOT_ROLE_AS_ADMIN | bytes32(1 << roleIds[0]), "Dev role");
 
         uint8[] memory noRevokingRoles = new uint8[](0);
 
