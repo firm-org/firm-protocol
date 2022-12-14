@@ -93,7 +93,9 @@ contract Captable is FirmBase {
             conversionClass.convertible = newConvertible;
         }
 
-        token = EquityToken(equityTokenImpl.cloneDeterministic(bytes32(classId)));
+        // Deploys token with a non-upgradeable EIP-1967 token
+        // Doesn't use create2 since the salt would just be the classId and this account's nonce is just as good
+        token = EquityToken(equityTokenImpl.clone());
         token.initialize(this, uint32(classId));
 
         Class storage class = classes[classId];
