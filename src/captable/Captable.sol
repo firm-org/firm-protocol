@@ -39,7 +39,7 @@ contract Captable is FirmBase, BouncerChecker {
     mapping(uint256 => Class) public classes;
     uint256 internal classCount;
 
-    mapping(address => mapping(uint256 => IAccountController)) controllers;
+    mapping(address => mapping(uint256 => IAccountController)) public controllers;
 
     // Above this limit, voting power getters that iterate through all tokens become
     // very expensive. See `CaptableClassLimitTest` tests for worst-case benchmarks

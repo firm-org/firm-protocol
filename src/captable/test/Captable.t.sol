@@ -8,7 +8,7 @@ import {AddressUint8FlagsLib} from "../../common/AddressUint8FlagsLib.sol";
 import {Roles, ONLY_ROOT_ROLE} from "../../roles/Roles.sol";
 import {roleFlag} from "../../common/test/mocks/RolesAuthMock.sol";
 
-import {Captable, IBouncer, NO_CONVERSION_FLAG} from "../Captable.sol";
+import {Captable, IBouncer, NO_CONVERSION_FLAG, NO_CONTROLLER} from "../Captable.sol";
 import {EquityToken} from "../EquityToken.sol";
 import {EmbeddedBouncerType, EMBEDDED_BOUNCER_FLAG_TYPE} from "../BouncerChecker.sol";
 import {VestingController} from "../controllers/VestingController.sol";
@@ -243,13 +243,16 @@ contract CaptableOneClassTest is BaseCaptableTest {
         vm.prank(ISSUER);
         captable.issueAndSetController(HOLDER1, classId, amount, vesting, abi.encode(vestingParams));
         assertEq(token.balanceOf(HOLDER1), amount);
+        assertEq(address(captable.controllers(HOLDER1, classId)), address(vesting));
 
         vm.warp(150);
         vm.prank(address(VESTING_REVOKER));
-        vesting.revokeVesting(HOLDER1, 150);
+        vesting.revokeVesting(HOLDER1, classId, 150);
 
         assertEq(token.balanceOf(HOLDER1), amount / 2);
         assertEq(token.balanceOf(address(safe)), amount / 2);
+
+        assertEq(address(captable.controllers(HOLDER1, classId)), address(NO_CONTROLLER));
     }
 }
 
@@ -294,7 +297,7 @@ contract CaptableFrozenTest is BaseCaptableTest {
 
         vm.warp(150);
         vm.prank(address(safe)); // safe also has role as root role holder
-        vesting.revokeVesting(HOLDER1, 150);
+        vesting.revokeVesting(HOLDER1, classId, 150);
 
         assertEq(token.balanceOf(HOLDER1), amount / 2);
         assertEq(token.balanceOf(address(safe)), amount / 2);

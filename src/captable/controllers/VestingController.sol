@@ -18,12 +18,12 @@ contract VestingController is AccountController, RolesAuth {
     }
 
     struct Account {
-        uint32 classId;
         uint256 amount;
         VestingParams params;
     }
 
-    mapping(address => Account) public accounts;
+    // owner -> classId -> Account
+    mapping(address => mapping (uint256 => Account)) public accounts;
 
     error InvalidVestingParameters();
     error UnauthorizedRevoker();
@@ -47,18 +47,17 @@ contract VestingController is AccountController, RolesAuth {
 
         _validateAuthorizedAddress(params.revoker);
 
-        Account storage account = accounts[owner];
+        Account storage account = accounts[owner][classId];
         if (account.amount > 0) {
             revert AccountAlreadyExists();
         }
 
-        account.classId = uint32(classId);
         account.amount = amount;
         account.params = params;
     }
 
-    function revokeVesting(address owner, uint40 effectiveDate) external {
-        Account storage account = accounts[owner];
+    function revokeVesting(address owner, uint256 classId, uint40 effectiveDate) external {
+        Account storage account = accounts[owner][classId];
 
         if (!_isAuthorized(_msgSender(), account.params.revoker)) {
             revert UnauthorizedRevoker();
@@ -74,41 +73,41 @@ contract VestingController is AccountController, RolesAuth {
             revert InvalidVestingState();
         }
 
-        uint256 ownerBalance = captable().balanceOf(owner, account.classId);
+        uint256 ownerBalance = captable().balanceOf(owner, classId);
         uint256 forcedTransferAmount = ownerBalance > unvestedAmount ? unvestedAmount : ownerBalance;
 
         captable().controllerForcedTransfer(
             owner,
             address(safe()),
-            account.classId,
+            classId,
             forcedTransferAmount,
             "Vesting revoked"
         );
-        _cleanup(owner, account.classId);
+        _cleanup(owner, classId);
     }
 
-    function cleanupFullyVested(address owner) external {
-        Account storage account = accounts[owner];
+    function cleanupFullyVested(address owner, uint256 classId) external {
+        Account storage account = accounts[owner][classId];
 
         if (account.amount == 0) {
             revert AccountDoesntExist();
         }
-        
+
         uint256 lockedAmount = calculateLockedAmount(account.amount, account.params, block.timestamp);
         if (lockedAmount > 0) {
             revert InvalidVestingState();
         }
 
-        _cleanup(owner, account.classId);
+        _cleanup(owner, classId);
     }
 
     function _cleanup(address owner, uint256 classId) internal {
         captable().controllerDettach(owner, classId);
-        delete accounts[owner];
+        delete accounts[owner][classId];
     }
 
     function isTransferAllowed(address from, address, uint256 classId, uint256 amount) external view returns (bool) {
-        Account storage account = accounts[from];
+        Account storage account = accounts[from][classId];
 
         if (account.amount == 0) {
             revert AccountDoesntExist();
