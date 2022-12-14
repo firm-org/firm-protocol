@@ -3,6 +3,7 @@ pragma solidity 0.8.16;
 
 import {FirmTest} from "../../common/test/lib/FirmTest.sol";
 import {SafeStub} from "../../common/test/mocks/SafeStub.sol";
+import {SafeAware} from "../../bases/SafeAware.sol";
 
 import {Captable, IBouncer, NO_CONVERSION_FLAG} from "../Captable.sol";
 import {EquityToken} from "../EquityToken.sol";
@@ -17,7 +18,7 @@ contract BaseCaptableTest is FirmTest {
     address HOLDER2 = account("Holder #2");
 
     function setUp() public virtual {
-        captable = Captable(createProxy(new Captable(), abi.encodeCall(Captable.initialize, (safe, "TestCo", IBouncer(address(0))))));
+        captable = Captable(createProxy(new Captable(), abi.encodeCall(Captable.initialize, (safe, "TestCo"))));
     }
 
     // votes only count when a delegation is set
@@ -111,8 +112,28 @@ contract CaptableOneClassTest is BaseCaptableTest {
     }
 
     function testCantIssueAboveAuthorized() public {
-        vm.expectRevert(abi.encodeWithSelector(Captable.IssuingOverAuthorized.selector, classId));
+        vm.expectRevert(abi.encodeWithSelector(Captable.IssuedOverAuthorized.selector, classId));
         captable.issue(HOLDER1, classId, INITIAL_AUTHORIZED + 1);
+    }
+
+    function testCanChangeAuthorized() public {
+        uint256 newAuthorized = INITIAL_AUTHORIZED + 1000;
+        vm.prank(address(safe));
+        captable.setAuthorized(classId, newAuthorized);
+        assertEq(captable.authorizedFor(classId), newAuthorized);
+    }
+
+    function testCantChangeAuthorizedIfNotSafe() public {
+        vm.expectRevert(abi.encodeWithSelector(SafeAware.UnauthorizedNotSafe.selector));
+        captable.setAuthorized(classId, INITIAL_AUTHORIZED + 1);
+    }
+
+    function testCantChangeAuthorizedBelowIssued() public {
+        vm.prank(address(safe));
+        captable.issue(HOLDER1, classId, INITIAL_AUTHORIZED);
+        vm.prank(address(safe));
+        vm.expectRevert(abi.encodeWithSelector(Captable.IssuedOverAuthorized.selector, classId));
+        captable.setAuthorized(classId, INITIAL_AUTHORIZED - 1);
     }
 
     function testCanIssueWithVesting() public {
@@ -168,10 +189,12 @@ contract CaptableMulticlassTest is BaseCaptableTest {
     uint256 classId1;
     EquityToken token1;
     uint64 weight1 = 1;
+    uint256 authorized1 = 2000;
 
     uint256 classId2;
     EquityToken token2;
     uint64 weight2 = 5;
+    uint256 authorized2 = 1000;
 
     uint256 holder1InitialBalance1 = 100;
     uint256 holder1InitialBalance2 = 100;
@@ -183,15 +206,42 @@ contract CaptableMulticlassTest is BaseCaptableTest {
         super.setUp();
 
         vm.prank(address(safe));
-        (classId1, token1) = captable.createClass("Common", "TST-A", 2000, NO_CONVERSION_FLAG, weight1);
+        (classId1, token1) = captable.createClass("Common", "TST-A", authorized1, NO_CONVERSION_FLAG, weight1);
         vm.prank(address(safe));
-        (classId2, token2) = captable.createClass("Founder", "TST-B", 1000, uint32(classId1), weight2);
+        (classId2, token2) = captable.createClass("Founder", "TST-B", authorized2, uint32(classId1), weight2);
 
         _selfDelegateHolders(token1);
         _selfDelegateHolders(token2);
 
         vm.roll(2); // set block number to 2
         _issueInitialShares();
+    }
+
+    function testInitialState() public {
+        (   ,
+            uint64 votingWeight1,
+            uint32 convertsIntoClassId1,
+            uint256 _authorized1,
+            uint256 convertible1,
+            ,
+        ) = captable.classes(classId1);
+        (  ,
+            uint64 votingWeight2,
+            uint32 convertsIntoClassId2,
+            uint256 _authorized2,
+            uint256 convertible2,
+            ,
+        ) = captable.classes(classId2);
+
+        assertEq(votingWeight1, weight1);
+        assertEq(convertsIntoClassId1, NO_CONVERSION_FLAG);
+        assertEq(_authorized1, authorized1);
+        assertEq(convertible1, authorized2);
+
+        assertEq(votingWeight2, weight2);
+        assertEq(convertsIntoClassId2, classId1);
+        assertEq(_authorized2, authorized2);
+        assertEq(convertible2, 0);
     }
 
     function testVotingWeights() public {
@@ -247,6 +297,50 @@ contract CaptableMulticlassTest is BaseCaptableTest {
         vm.prank(address(safe));
         vm.expectRevert(abi.encodeWithSelector(Captable.ConvertibleOverAuthorized.selector, classId2));
         captable.createClass("", "", 1000, uint32(classId2), 1);
+    }
+
+    function testChangingAuthorizedUpdatesConvertibleToLimit() public returns (uint256 newAuthorized1, uint256 newAuthorized2) {
+        // authorize to the limit
+        newAuthorized2 = holder1InitialBalance2 + holder2InitialBalance2;
+        newAuthorized1 = newAuthorized2 + holder1InitialBalance1 + holder2InitialBalance1;
+        vm.prank(address(safe));
+        captable.setAuthorized(classId2, newAuthorized2);
+        vm.prank(address(safe));
+        captable.setAuthorized(classId1, newAuthorized1);
+        (,,,uint256 _authorized1, uint256 convertible1,,) = captable.classes(classId1);
+        (,,,uint256 _authorized2, uint256 convertible2,,) = captable.classes(classId2);
+
+        assertEq(_authorized1, newAuthorized1);
+        assertEq(_authorized2, newAuthorized2);
+        assertEq(convertible1, newAuthorized2);
+        assertEq(convertible2, 0);
+    }
+
+    function testWhenOnConvertibleLimitCantAuthorizeLessOnConverting() public {
+        (uint256 newAuthorized1,) = testChangingAuthorizedUpdatesConvertibleToLimit();
+        vm.prank(address(safe));
+        vm.expectRevert(abi.encodeWithSelector(Captable.IssuedOverAuthorized.selector, classId1));
+        captable.setAuthorized(classId1, newAuthorized1 - 1);
+    }
+
+    function testWhenOnConvertibleLimitCantAuthorizeMoreOnConverter() public {
+        (,uint256 newAuthorized2) = testChangingAuthorizedUpdatesConvertibleToLimit();
+        vm.prank(address(safe));
+        vm.expectRevert(abi.encodeWithSelector(Captable.ConvertibleOverAuthorized.selector, classId1));
+        captable.setAuthorized(classId2, newAuthorized2 + 1);
+    }
+
+    function testWhenOnConvertibleLimitCantIssueMore() public {
+        testChangingAuthorizedUpdatesConvertibleToLimit();
+        vm.prank(address(safe));
+        vm.expectRevert(abi.encodeWithSelector(Captable.IssuedOverAuthorized.selector, classId1));
+        captable.issue(HOLDER1, classId1, 1);
+    }
+
+    function testCantChangeAuthorizedIfNotEnoughOnConvertingClass() public {
+        vm.prank(address(safe));
+        vm.expectRevert(abi.encodeWithSelector(Captable.ConvertibleOverAuthorized.selector, classId1));
+        captable.setAuthorized(classId2, authorized1);
     }
 
     function testCantConvertIfControllerDisallows() public {

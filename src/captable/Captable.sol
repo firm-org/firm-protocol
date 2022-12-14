@@ -20,8 +20,6 @@ contract Captable is FirmBase {
 
     address immutable internal equityTokenImpl;
 
-    string public name;
-
     struct Class {
         EquityToken token;
         uint64 votingWeight;
@@ -32,6 +30,7 @@ contract Captable is FirmBase {
         string ticker;
     }
 
+    string public name;
     mapping(uint256 => Class) public classes;
     uint256 public classCount;
 
@@ -47,19 +46,17 @@ contract Captable is FirmBase {
     error TransferBlocked(IBouncer bouncer, address from, address to, uint256 classId, uint256 amount);
     error ConversionBlocked(IAccountController controller, address account, uint256 classId, uint256 amount);
     error UnauthorizedNotController();
-    error IssuingOverAuthorized(uint256 classId);
+    error IssuedOverAuthorized(uint256 classId);
     error ConvertibleOverAuthorized(uint256 classId);
 
     constructor() {
-        initialize(IMPL_INIT_NOOP_SAFE, "", IBouncer(IMPL_INIT_NOOP_ADDR));
+        initialize(IMPL_INIT_NOOP_SAFE, "");
         equityTokenImpl = address(new EquityToken());
     }
 
-    function initialize(ISafe safe_, string memory name_, IBouncer globalBouncer_) public {
+    function initialize(ISafe safe_, string memory name_) public {
         __init_setSafe(safe_);
         name = name_;
-        // globalControls.bouncer = _globalBouncer;
-        // globalControls.canIssue[address(_safe)] = true;
     }
 
     function createClass(
@@ -81,16 +78,9 @@ contract Captable is FirmBase {
 
         // When creating the first class, unless convertsIntoClassId == NO_CONVERSION_FLAG,
         // this will implicitly revert, since there's no convertsIntoClassId for which
-        // _getClass() won't revert
+        // _getClass() won't revert (_getClass() is called within _changeConvertibleAmount())
         if (convertsIntoClassId != NO_CONVERSION_FLAG) {
-            Class storage conversionClass = _getClass(convertsIntoClassId);
-            uint256 newConvertible = conversionClass.convertible + authorized;
-
-            if (conversionClass.token.totalSupply() + newConvertible > conversionClass.authorized) {
-                revert ConvertibleOverAuthorized(convertsIntoClassId);
-            }
-
-            conversionClass.convertible = newConvertible;
+            _changeConvertibleAmount(convertsIntoClassId, authorized, true);
         }
 
         // Deploys token with a non-upgradeable EIP-1967 token
@@ -107,6 +97,41 @@ contract Captable is FirmBase {
         class.convertsIntoClassId = convertsIntoClassId;
     }
 
+    // TODO: when class is frozen, don't allow to change authorized manually
+    function setAuthorized(uint256 classId, uint256 newAuthorized) onlySafe external {
+        Class storage class = _getClass(classId);
+        uint256 oldAuthorized = class.authorized;
+        bool isDecreasing = newAuthorized < oldAuthorized;
+
+        // When decreasing the authorized amount, make sure that the issued amount
+        // plus the convertible amount doesn't exceed the new authorized amount
+        if (isDecreasing) {
+            if (issuedFor(class) + class.convertible > newAuthorized) {
+                revert IssuedOverAuthorized(classId);
+            }
+        }
+
+        // If the class converts into another class, update the convertible amount of that class
+        if (class.convertsIntoClassId != NO_CONVERSION_FLAG) {
+            uint256 delta = isDecreasing ? oldAuthorized - newAuthorized : newAuthorized - oldAuthorized;
+            _changeConvertibleAmount(class.convertsIntoClassId, delta, !isDecreasing);
+        }
+
+        class.authorized = newAuthorized;
+    }
+
+    function _changeConvertibleAmount(uint256 classId, uint256 amount, bool isIncrease) internal {
+        Class storage class = _getClass(classId);
+        uint256 newConvertible = isIncrease ? class.convertible + amount : class.convertible - amount;
+
+        // Ensure that there's enough authorized space for the new convertible if we are increasing
+        if (isIncrease && issuedFor(class) + newConvertible > class.authorized) {
+            revert ConvertibleOverAuthorized(classId);
+        }
+
+        class.convertible = newConvertible;
+    }
+
     function issue(address account, uint256 classId, uint256 amount) public {
         if (amount == 0) {
             revert BadInput();
@@ -116,8 +141,8 @@ contract Captable is FirmBase {
 
         Class storage class = _getClass(classId);
 
-        if (class.token.totalSupply() + class.convertible + amount > class.authorized) {
-            revert IssuingOverAuthorized(classId);
+        if (issuedFor(class) + class.convertible + amount > class.authorized) {
+            revert IssuedOverAuthorized(classId);
         }
 
         class.token.mint(account, amount);
@@ -187,6 +212,18 @@ contract Captable is FirmBase {
                 revert TransferBlocked(controller, from, to, classId, amount);
             }
         }
+    }
+
+    function authorizedFor(uint256 classId) external view returns (uint256) {
+        return _getClass(classId).authorized;
+    }
+
+    function issuedFor(uint256 classId) external view returns (uint256) {
+        return issuedFor(_getClass(classId));
+    }
+
+    function issuedFor(Class storage class) internal view returns (uint256) {
+        return class.token.totalSupply();
     }
 
     function balanceOf(address account, uint256 classId) public view returns (uint256) {
