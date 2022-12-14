@@ -12,6 +12,7 @@ import {IBouncer} from "./bouncers/IBouncer.sol";
 import {IAccountController} from "./controllers/AccountController.sol";
 
 uint32 constant NO_CONVERSION_FLAG = type(uint32).max;
+IAccountController constant NO_CONTROLLER = IAccountController(address(0));
 
 contract Captable is FirmBase, BouncerChecker {
     using Clones for address;
@@ -251,6 +252,15 @@ contract Captable is FirmBase, BouncerChecker {
         controller.addAccount(account, classId, amount, controllerParams);
     }
 
+    function controllerDettach(address account, uint256 classId) external {
+        // If it was no longer the controller for the account, consider this
+        // a no-op, as it might have been the controller in the past and 
+        // removed by a class manager (controller had no way to know it was removed)
+        if (msg.sender == address(controllers[account][classId])) {
+            controllers[account][classId] = NO_CONTROLLER;
+        }
+    }
+
     function controllerForcedTransfer(address account, address to, uint256 classId, uint256 amount, string calldata reason) external {
         // Controllers use msg.sender directly as they should be contracts that
         // call this one and should never be using metatxs
@@ -277,7 +287,7 @@ contract Captable is FirmBase, BouncerChecker {
 
         IAccountController controller = controllers[sender][classId];
         // if user has a controller for the origin class id
-        if (address(controller) != address(0)) {
+        if (controller != NO_CONTROLLER) {
             if (!controller.isTransferAllowed(sender, sender, classId, amount)) {
                 revert ConversionBlocked(controller, sender, classId, amount);
             }

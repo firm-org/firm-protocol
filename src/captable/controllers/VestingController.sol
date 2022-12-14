@@ -27,6 +27,7 @@ contract VestingController is AccountController, RolesAuth {
 
     error InvalidVestingParameters();
     error UnauthorizedRevoker();
+    error InvalidVestingState();
 
     function initialize(Captable captable_, IRoles _roles, address trustedForwarder_) public {
         initialize(captable_, trustedForwarder_);
@@ -69,8 +70,13 @@ contract VestingController is AccountController, RolesAuth {
 
         // TODO: add hard limit for how much in the past can the effective date be?
         uint256 unvestedAmount = calculateLockedAmount(account.amount, account.params, effectiveDate);
+        if (unvestedAmount == 0) {
+            revert InvalidVestingState();
+        }
+
         uint256 ownerBalance = captable().balanceOf(owner, account.classId);
         uint256 forcedTransferAmount = ownerBalance > unvestedAmount ? unvestedAmount : ownerBalance;
+
         captable().controllerForcedTransfer(
             owner,
             address(safe()),
@@ -78,7 +84,26 @@ contract VestingController is AccountController, RolesAuth {
             forcedTransferAmount,
             "Vesting revoked"
         );
+        _cleanup(owner, account.classId);
+    }
 
+    function cleanupFullyVested(address owner) external {
+        Account storage account = accounts[owner];
+
+        if (account.amount == 0) {
+            revert AccountDoesntExist();
+        }
+        
+        uint256 lockedAmount = calculateLockedAmount(account.amount, account.params, block.timestamp);
+        if (lockedAmount > 0) {
+            revert InvalidVestingState();
+        }
+
+        _cleanup(owner, account.classId);
+    }
+
+    function _cleanup(address owner, uint256 classId) internal {
+        captable().controllerDettach(owner, classId);
         delete accounts[owner];
     }
 
