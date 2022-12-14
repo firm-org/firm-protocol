@@ -28,6 +28,9 @@ contract Captable is FirmBase {
         uint256 convertible;
         string name;
         string ticker;
+        IBouncer bouncer;
+        bool isFrozen;
+        mapping(address => bool) isManager;
     }
 
     string public name;
@@ -64,7 +67,8 @@ contract Captable is FirmBase {
         string calldata ticker,
         uint256 authorized,
         uint32 convertsIntoClassId,
-        uint64 votingWeight
+        uint64 votingWeight,
+        IBouncer bouncer
     )
         external
         onlySafe
@@ -95,6 +99,8 @@ contract Captable is FirmBase {
         class.name = className;
         class.ticker = ticker;
         class.convertsIntoClassId = convertsIntoClassId;
+        class.bouncer = bouncer;
+        class.isManager[msg.sender] = true; // safe addr is set as manager for class
     }
 
     // TODO: when class is frozen, don't allow to change authorized manually

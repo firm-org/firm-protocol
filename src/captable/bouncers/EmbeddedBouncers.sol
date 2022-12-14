@@ -5,8 +5,8 @@ import {IBouncer} from "./IBouncer.sol";
 
 library EmbeddedBouncersLib {
     enum BouncerType {
-        AllowAll,
         DenyAll,
+        AllowAll,
         AllowClassHolders,
         AllowAllHolders,
         NotEmbedded
@@ -27,8 +27,8 @@ library EmbeddedBouncersLib {
         return BouncerType(uint8(typeId));
     }
 
-    // NOTE: `addr` is unused in production code, here for testing purposes
-    function addrFlag(BouncerType bType) internal pure returns (address addr) {
-        return address(bytes20(bytes32(uint256(uint8(bType)) << 248)));
+    // NOTE: `addrFlag` is unused in production code, here for testing purposes
+    function addrFlag(BouncerType bType) internal pure returns (IBouncer) {
+        return IBouncer(address(bytes20(bytes32(uint256(uint8(bType)) << 248))));
     }
 }
