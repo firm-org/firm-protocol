@@ -35,6 +35,7 @@ contract LlamaPayStreams is BudgetModule {
     error InvalidPrepayBuffer(uint256 allowanceId);
     error StreamsNotConfigured(uint256 allowanceId);
     error UnsupportedTokenDecimals();
+    error ApproveFailed(uint256 allowanceId);
 
     constructor(LlamaPayFactory llamaPayFactory_) {
         // NOTE: This immutable value is set in the constructor of the implementation contract
@@ -282,7 +283,12 @@ contract LlamaPayStreams is BudgetModule {
         }
 
         forwarder = ForwarderLib.create(_forwarderSalt(allowanceId, IERC20(token)));
-        forwarder.forwardChecked(address(token), abi.encodeCall(IERC20.approve, (streamer_, type(uint256).max)));
+        bytes memory retData = forwarder.forwardChecked(address(token), abi.encodeCall(IERC20.approve, (streamer_, type(uint256).max)));
+        if (retData.length > 0) {
+            if (retData.length != 32 || abi.decode(retData, (bool)) == false) {
+                revert ApproveFailed(allowanceId);
+            }
+        }
     }
 
     function streamerForToken(IERC20 token) public view returns (LlamaPay) {
