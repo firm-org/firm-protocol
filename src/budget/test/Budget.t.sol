@@ -66,6 +66,43 @@ abstract contract BudgetTest is FirmTest {
         assertFalse(isDisabled);
     }
 
+    function testNotOwnerCannotCreateTopLevelAllowance() public {
+        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, 0));
+        createDailyAllowance(SPENDER, 0);
+    }
+
+    function testCantCreateAllowanceWithZeroToken() public {
+        vm.prank(address(safe));
+        vm.expectRevert(abi.encodeWithSelector(Budget.BadInput.selector));
+        budget.createAllowance(
+            NO_PARENT_ID, SPENDER, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
+        );
+    }
+
+    function testCantCreateAllowanceWithZeroSpender() public {
+        vm.prank(address(safe));
+        vm.expectRevert(abi.encodeWithSelector(Budget.BadInput.selector));
+        budget.createAllowance(
+            NO_PARENT_ID, address(0), token, 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
+        );
+    }
+
+    function testCantCreateAllowanceWithInvalidTimeshift() public {
+        vm.prank(address(safe));
+        vm.expectRevert(abi.encodeWithSelector(TimeShiftLib.InvalidTimeShift.selector));
+        budget.createAllowance(
+            NO_PARENT_ID, SPENDER, token, 10, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode(), ""
+        );
+    }
+
+    function testCantCreateAllowanceWithZeroAmountWithoutParent() public {
+        vm.prank(address(safe));
+        vm.expectRevert(abi.encodeWithSelector(Budget.InheritedAmountNotAllowed.selector));
+        budget.createAllowance(
+            NO_PARENT_ID, SPENDER, token, 0, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
+        );
+    }
+
     function testUpdateAllowanceParams() public {
         uint256 allowanceId = testCreateAllowance();
 
@@ -106,35 +143,6 @@ abstract contract BudgetTest is FirmTest {
         vm.prank(address(SPENDER));
         vm.expectRevert(abi.encodeWithSelector(Budget.InheritedAmountNotAllowed.selector));
         budget.setAllowanceAmount(childAllowanceId, 0);
-    }
-
-    function testNotOwnerCannotCreateTopLevelAllowance() public {
-        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, 0));
-        createDailyAllowance(SPENDER, 0);
-    }
-
-    function testCantCreateAllowanceWithZeroToken() public {
-        vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Budget.BadInput.selector));
-        budget.createAllowance(
-            NO_PARENT_ID, SPENDER, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
-        );
-    }
-
-    function testCantCreateAllowanceWithZeroSpender() public {
-        vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Budget.BadInput.selector));
-        budget.createAllowance(
-            NO_PARENT_ID, address(0), token, 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
-        );
-    }
-
-    function testCantCreateAllowanceWithInvalidTimeshift() public {
-        vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(TimeShiftLib.InvalidTimeShift.selector));
-        budget.createAllowance(
-            NO_PARENT_ID, SPENDER, token, 10, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode(), ""
-        );
     }
 
     function testInheritOffsetValueIsIgnored() public {
@@ -224,6 +232,49 @@ abstract contract BudgetTest is FirmTest {
         assertExecutePayment(SPENDER, secondAllowanceId, RECEIVER, 7, initialTime + 2 days);
     }
 
+    function testCantExecutePaymentWithZeroAmount() public {
+        uint256 allowanceId = testCreateAllowance();
+        vm.prank(SPENDER);
+        vm.expectRevert(abi.encodeWithSelector(Budget.ZeroAmountPayment.selector));
+        budget.executePayment(allowanceId, RECEIVER, 0, "");
+    }
+
+    function testCantExecuteMultiPaymentWithZeroAmount() public {
+        uint256 allowanceId = testCreateAllowance();
+        (address[] memory tos, uint256[] memory amounts) = _generateMultiPaymentArrays(2, RECEIVER, 3);
+        amounts[1] = 0;
+
+        vm.prank(SPENDER);
+        vm.expectRevert(abi.encodeWithSelector(Budget.ZeroAmountPayment.selector));
+        budget.executeMultiPayment(allowanceId, tos, amounts, "");
+    }
+
+    function testCantExecutePaymentsWithoutEnoughBalanceOnSafe() public {
+        uint256 amount = 5;
+        uint256 balance = amount - 1;
+
+        // Get safe balance right below amount
+        if (token == NATIVE_ASSET) {
+            vm.deal(address(safe), balance);
+        } else {
+            uint256 safeBalance = ERC20Token(token).balanceOf(address(safe));
+            vm.prank(address(safe));
+            ERC20Token(token).transfer(address(SOMEONE_ELSE), safeBalance - balance);
+        }
+
+        // For single payments
+        uint256 allowanceId = testCreateAllowance();
+        vm.prank(SPENDER);
+        vm.expectRevert(abi.encodeWithSelector(Budget.PaymentExecutionFailed.selector, allowanceId, token, RECEIVER, amount));
+        budget.executePayment(allowanceId, RECEIVER, amount, "");
+
+        // For multipayment, it fails on second payment
+        (address[] memory tos, uint256[] memory amounts) = _generateMultiPaymentArrays(2, RECEIVER, 3);
+        vm.prank(SPENDER);
+        vm.expectRevert(abi.encodeWithSelector(Budget.PaymentExecutionFailed.selector, allowanceId, token, address(0), 6));
+        budget.executeMultiPayment(allowanceId, tos, amounts, "");
+    }
+
     function testCreateSuballowance() public returns (uint256 topLevelAllowance, uint256 subAllowance) {
         uint40 initialTime = uint40(DateTimeLib.timestampFromDateTime(2022, 1, 1, 0, 0, 0));
         vm.warp(initialTime);
@@ -284,6 +335,34 @@ abstract contract BudgetTest is FirmTest {
         );
 
         assertExecutePayment(SOMEONE_ELSE, subAllowance, RECEIVER, 5, initialTime + 1 days);
+    }
+
+    function testCantCreateSuballowanceIfNotSpender() public {
+        uint256 allowanceId = testCreateAllowance();
+        vm.prank(address(safe)); // safe is not a spender and cant create subs
+        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, allowanceId));
+        budget.createAllowance(
+            allowanceId, SOMEONE_ELSE, token, 5, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
+        );
+    }
+
+    function testCantCreateSuballowanceWithDifferentToken() public {
+        uint256 allowanceId = testCreateAllowance();
+        address differentToken = address(1);
+        vm.prank(SPENDER);
+        vm.expectRevert(abi.encodeWithSelector(Budget.TokenMismatch.selector, token, differentToken));
+        budget.createAllowance(
+            allowanceId, SOMEONE_ELSE, differentToken, 5, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
+        );
+    }
+
+    function testSuballowanceCantInheritAmountIfRecurrencyIsNotInherited() public {
+        uint256 allowanceId = testCreateAllowance();
+        vm.prank(SPENDER);
+        vm.expectRevert(abi.encodeWithSelector(Budget.InheritedAmountNotAllowed.selector));
+        budget.createAllowance(
+            allowanceId, SOMEONE_ELSE, token, INHERITED_AMOUNT, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
+        );
     }
 
     function testAllowanceChain() public {
@@ -467,6 +546,28 @@ abstract contract BudgetTest is FirmTest {
         assertEq(spent, 0);
     }
 
+    function testCantSendWrongNativeValueInDebits() public {
+        vm.prank(address(safe));
+        uint256 allowanceId = 1;
+        createDailyAllowance(SPENDER, allowanceId);
+        
+        vm.prank(SPENDER);
+        budget.executePayment(allowanceId, RECEIVER, 10, "");
+
+        if (token == NATIVE_ASSET) {
+            vm.prank(RECEIVER);
+            vm.expectRevert(abi.encodeWithSelector(Budget.NativeValueMismatch.selector));
+            budget.debitAllowance{ value: 6 }(allowanceId, 5, "");
+        } else {
+            vm.startPrank(RECEIVER);
+            ERC20Token(token).approve(address(budget), 5);
+            vm.expectRevert(abi.encodeWithSelector(Budget.NativeValueMismatch.selector));
+            vm.deal(RECEIVER, 5);
+            budget.debitAllowance{ value: 5 }(allowanceId, 5, "");
+            vm.stopPrank();
+        }
+    }
+
     function testCreateNonRecurrentAllowance() public returns (uint256 allowanceId, uint40 expiresAt) {
         expiresAt = 100;
         vm.warp(0);
@@ -508,6 +609,11 @@ abstract contract BudgetTest is FirmTest {
         budget.createAllowance(NO_PARENT_ID, SPENDER, address(token), 10, shift2.encode(), "");
 
         vm.stopPrank();
+    }
+
+    function testCantCallSafeCallbackDirectly() public {
+        vm.expectRevert(abi.encodeWithSelector(Budget.BadExecutionContext.selector));
+        budget.__safeContext_performMultiTransfer(token, new address[](0), new uint256[](0));
     }
 
     function createDailyAllowance(address spender, uint256 expectedId) public returns (uint256 allowanceId) {
