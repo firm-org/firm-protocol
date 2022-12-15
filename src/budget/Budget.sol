@@ -2,6 +2,7 @@
 pragma solidity 0.8.16;
 
 import {IERC20} from "openzeppelin/interfaces/IERC20.sol";
+import {SafeERC20} from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
 import {FirmBase, IMPL_INIT_NOOP_ADDR, IMPL_INIT_NOOP_SAFE} from "../bases/FirmBase.sol";
 import {SafeModule, ISafe} from "../bases/SafeModule.sol";
@@ -25,25 +26,7 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
     uint256 public constant moduleVersion = 1;
 
     using TimeShiftLib for uint40;
-
-    ////////////////////////////////////////////////////////////////////////////////
-    // INITIALIZATION
-    ////////////////////////////////////////////////////////////////////////////////
-
-    constructor() {
-        // Initialize with impossible values in constructor so impl base cannot be used
-        initialize(IMPL_INIT_NOOP_SAFE, IRoles(IMPL_INIT_NOOP_ADDR), IMPL_INIT_NOOP_ADDR);
-    }
-
-    function initialize(ISafe safe_, IRoles roles_, address trustedForwarder_) public {
-        // calls SafeAware.__init_setSafe which reverts on reinitialization
-        __init_firmBase(safe_, trustedForwarder_);
-        _setRoles(roles_);
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////
-    // ALLOWANCE MANAGEMENT
-    ////////////////////////////////////////////////////////////////////////////////
+    using SafeERC20 for IERC20;
 
     struct Allowance {
         uint256 parentId;
@@ -112,6 +95,21 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
     error Overbudget(uint256 allowanceId, uint256 amount, uint256 remainingBudget);
     error PaymentExecutionFailed(uint256 allowanceId, address token, address to, uint256 amount);
     error NativeValueMismatch();
+
+    constructor() {
+        // Initialize with impossible values in constructor so impl base cannot be used
+        initialize(IMPL_INIT_NOOP_SAFE, IRoles(IMPL_INIT_NOOP_ADDR), IMPL_INIT_NOOP_ADDR);
+    }
+
+    function initialize(ISafe safe_, IRoles roles_, address trustedForwarder_) public {
+        // calls SafeAware.__init_setSafe which reverts on reinitialization
+        __init_firmBase(safe_, trustedForwarder_);
+        _setRoles(roles_);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // ALLOWANCE MANAGEMENT
+    ////////////////////////////////////////////////////////////////////////////////
 
     /**
      * @notice Creates a new allowance giving permission to spend funds from the Safe to a given address or addresses with a certain role
@@ -257,6 +255,10 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
         emit AllowanceNameChanged(allowanceId, name);
     }
 
+    ////////////////////////////////////////////////////////////////////////////////
+    // PAYMENT EXECUTION
+    ////////////////////////////////////////////////////////////////////////////////
+
     /**
      * @notice Executes a payment from an allowance
      * @param allowanceId ID of the allowance from which the payment is made
@@ -358,8 +360,7 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
                 revert NativeValueMismatch();
             }
 
-            // TODO: do we need to make this 'safe'?
-            IERC20(allowance.token).transferFrom(actor, address(safe()), amount);
+            IERC20(allowance.token).safeTransferFrom(actor, address(safe()), amount);
         } else {
             if (msg.value != amount) {
                 revert NativeValueMismatch();
