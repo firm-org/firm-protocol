@@ -173,4 +173,11 @@ contract UpgradeableModuleProxyDeployTest is FirmTest {
             "org.firm.test-target", 1, abi.encodeCall(TargetBase.init, (ISafe(SAFE))), nonce
         );
     }
+
+    function testCannotInitializeWithZeroSafe() public {
+        vm.expectRevert(abi.encodeWithSelector(UpgradeableModuleProxyFactory.FailedInitialization.selector));
+        factory.deployUpgradeableModule(
+            "org.firm.test-target", 1, abi.encodeCall(TargetBase.init, (ISafe(payable(address(0))))), 1
+        );
+    }
 }
