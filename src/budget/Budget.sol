@@ -133,6 +133,10 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
     ) public returns (uint256 allowanceId) {
         uint40 nextResetTime;
 
+        if (spender == address(0) || token == address(0)) {
+            revert BadInput();
+        }
+
         if (parentAllowanceId == NO_PARENT_ID) {
             // Top-level allowances can only be created by the Safe
             if (_msgSender() != address(safe())) {
@@ -237,6 +241,10 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
      * @param spender New spender account for the allowance
      */
     function setAllowanceSpender(uint256 allowanceId, address spender) external {
+         if (spender == address(0)) {
+            revert BadInput();
+        }
+
         _validateAuthorizedAddress(spender);
 
         Allowance storage allowance = _getAllowanceAndValidateAdmin(allowanceId);
@@ -439,12 +447,12 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
         }
     }
 
-    function _getAllowance(uint256 allowanceId) internal view returns (Allowance storage) {
-        if (allowanceId == NO_PARENT_ID || allowanceId > allowancesCount) {
+    function _getAllowance(uint256 allowanceId) internal view returns (Allowance storage allowance) {
+        allowance = allowances[allowanceId];
+
+        if (allowance.spender == address(0)) {
             revert UnexistentAllowance(allowanceId);
         }
-
-        return allowances[allowanceId];
     }
 
     function isAdminOnAllowance(uint256 allowanceId, address actor) public view returns (bool) {
