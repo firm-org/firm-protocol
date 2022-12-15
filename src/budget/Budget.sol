@@ -26,25 +26,6 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
 
     using TimeShiftLib for uint40;
 
-    ////////////////////////////////////////////////////////////////////////////////
-    // INITIALIZATION
-    ////////////////////////////////////////////////////////////////////////////////
-
-    constructor() {
-        // Initialize with impossible values in constructor so impl base cannot be used
-        initialize(IMPL_INIT_NOOP_SAFE, IRoles(IMPL_INIT_NOOP_ADDR), IMPL_INIT_NOOP_ADDR);
-    }
-
-    function initialize(ISafe safe_, IRoles roles_, address trustedForwarder_) public {
-        // calls SafeAware.__init_setSafe which reverts on reinitialization
-        __init_firmBase(safe_, trustedForwarder_);
-        _setRoles(roles_);
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////
-    // ALLOWANCE MANAGEMENT
-    ////////////////////////////////////////////////////////////////////////////////
-
     struct Allowance {
         uint256 parentId;
         uint256 amount;
@@ -112,6 +93,21 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
     error Overbudget(uint256 allowanceId, uint256 amount, uint256 remainingBudget);
     error PaymentExecutionFailed(uint256 allowanceId, address token, address to, uint256 amount);
     error NativeValueMismatch();
+
+    constructor() {
+        // Initialize with impossible values in constructor so impl base cannot be used
+        initialize(IMPL_INIT_NOOP_SAFE, IRoles(IMPL_INIT_NOOP_ADDR), IMPL_INIT_NOOP_ADDR);
+    }
+
+    function initialize(ISafe safe_, IRoles roles_, address trustedForwarder_) public {
+        // calls SafeAware.__init_setSafe which reverts on reinitialization
+        __init_firmBase(safe_, trustedForwarder_);
+        _setRoles(roles_);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // ALLOWANCE MANAGEMENT
+    ////////////////////////////////////////////////////////////////////////////////
 
     /**
      * @notice Creates a new allowance giving permission to spend funds from the Safe to a given address or addresses with a certain role
@@ -256,6 +252,10 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
         _getAllowanceAndValidateAdmin(allowanceId);
         emit AllowanceNameChanged(allowanceId, name);
     }
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // PAYMENT EXECUTION
+    ////////////////////////////////////////////////////////////////////////////////
 
     /**
      * @notice Executes a payment from an allowance
