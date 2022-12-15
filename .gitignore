@@ -13,3 +13,5 @@ broadcast/
 # npm/yarn locks
 npm.lock
 yarn.lock
+
+lcov.info
