@@ -2,6 +2,7 @@
 pragma solidity 0.8.16;
 
 import {IERC20} from "openzeppelin/interfaces/IERC20.sol";
+import {SafeERC20} from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
 import {FirmBase, IMPL_INIT_NOOP_ADDR, IMPL_INIT_NOOP_SAFE} from "../bases/FirmBase.sol";
 import {SafeModule, ISafe} from "../bases/SafeModule.sol";
@@ -25,6 +26,7 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
     uint256 public constant moduleVersion = 1;
 
     using TimeShiftLib for uint40;
+    using SafeERC20 for IERC20;
 
     struct Allowance {
         uint256 parentId;
@@ -358,8 +360,7 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
                 revert NativeValueMismatch();
             }
 
-            // TODO: do we need to make this 'safe'?
-            IERC20(allowance.token).transferFrom(actor, address(safe()), amount);
+            IERC20(allowance.token).safeTransferFrom(actor, address(safe()), amount);
         } else {
             if (msg.value != amount) {
                 revert NativeValueMismatch();
