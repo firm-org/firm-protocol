@@ -136,7 +136,7 @@ contract Roles is FirmBase, IRoles {
      * @param roleId ID of the role
      * @param name New name for the role
      */
-    function changeRoleName(uint8 roleId, string memory name) external {
+    function setRoleName(uint8 roleId, string memory name) external {
         if (!roleExists(roleId)) {
             revert UnexistentRole(roleId);
         }
