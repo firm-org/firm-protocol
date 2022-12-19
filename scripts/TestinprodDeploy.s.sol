@@ -8,9 +8,14 @@ import {GnosisSafeProxyFactory} from "gnosis-safe/proxies/GnosisSafeProxyFactory
 
 import {TestinprodFactory, UpgradeableModuleProxyFactory} from "src/factory/TestinprodFactory.sol";
 import {FirmRelayer} from "src/metatx/FirmRelayer.sol";
+
 import {Roles} from "src/roles/Roles.sol";
+
 import {Budget} from "src/budget/Budget.sol";
 import {LlamaPayStreams, LlamaPayFactory} from "src/budget/modules/streams/LlamaPayStreams.sol";
+
+import {Captable} from "src/captable/Captable.sol";
+import {VestingController} from "src/captable/controllers/VestingController.sol";
 
 abstract contract DeployBase is Test {
     function baseContracts() internal virtual returns (address safeProxyFactory, address safeImpl, address llamaPayFactory);
@@ -24,6 +29,8 @@ abstract contract DeployBase is Test {
         moduleFactory.register(new Roles());
         moduleFactory.register(new Budget());
         moduleFactory.register(new LlamaPayStreams(LlamaPayFactory(llamaPayFactory)));
+        moduleFactory.register(new Captable());
+        moduleFactory.register(new VestingController());
         
         factory = new TestinprodFactory(
             GnosisSafeProxyFactory(safeProxyFactory),
