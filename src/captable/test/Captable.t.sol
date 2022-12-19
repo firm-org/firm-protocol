@@ -33,7 +33,7 @@ contract BaseCaptableTest is FirmTest {
     address VESTING_REVOKER_ROLE_FLAG;
 
     function setUp() public virtual {
-        captable = Captable(createProxy(new Captable(), abi.encodeCall(Captable.initialize, (safe, "TestCo"))));
+        captable = Captable(createProxy(new Captable(), abi.encodeCall(Captable.initialize, ("TestCo", safe, address(0)))));
         roles = Roles(createProxy(new Roles(), abi.encodeCall(Roles.initialize, (safe, address(0)))));
         vesting = VestingController(createProxy(new VestingController(), abi.encodeCall(VestingController.initialize, (captable, roles, address(0)))));
 
@@ -59,9 +59,11 @@ contract BaseCaptableTest is FirmTest {
 
 contract CaptableInitTest is BaseCaptableTest {
     function testInitialState() public {
+        // Create a new one to ensure proper coverage of initialize()
+        captable = Captable(createProxy(new Captable(), abi.encodeCall(Captable.initialize, ("TestCo1", safe, address(0)))));
+
         assertEq(address(captable.safe()), address(safe));
-        assertEq(captable.name(), "TestCo");
-        // TODO: asserteq global controls
+        assertEq(captable.name(), "TestCo1");
 
         assertEq(captable.numberOfClasses(), 0);
 
@@ -70,6 +72,11 @@ contract CaptableInitTest is BaseCaptableTest {
         captable.nameFor(0);
         vm.expectRevert(unexistentError);
         captable.tickerFor(0);
+    }
+
+    function testCannotReinit() public {
+        vm.expectRevert(abi.encodeWithSelector(SafeAware.AlreadyInitialized.selector));
+        captable.initialize("", safe, address(1));
     }
 
     function testCreateClass() public {
@@ -155,6 +162,8 @@ contract CaptableOneClassTest is BaseCaptableTest {
         vm.prank(HOLDER1);
         token.transfer(HOLDER2, 1);
         assertEq(token.balanceOf(HOLDER2), 1);
+
+        assertEq(captable.issuedFor(classId), amount);
     }
 
     function testCantIssueAboveAuthorized() public {
@@ -213,6 +222,27 @@ contract CaptableOneClassTest is BaseCaptableTest {
 
         vm.prank(ISSUER);
         captable.issueAndSetController(HOLDER1, classId, amount, vesting, abi.encode(vestingParams));
+        
+        assertVesting(amount, vestingParams);
+    }
+
+    function testManagerCanRetroactivelyAddVesting() public {
+        uint256 amount = INITIAL_AUTHORIZED;
+
+        VestingController.VestingParams memory vestingParams;
+        vestingParams.startDate = 100;
+        vestingParams.cliffDate = 120;
+        vestingParams.endDate = 200;
+
+        vm.startPrank(ISSUER);
+        captable.issue(HOLDER1, classId, amount);
+        captable.setController(HOLDER1, classId, vesting, abi.encode(vestingParams));
+        vm.stopPrank();
+
+        assertVesting(amount, vestingParams);
+    }
+
+    function assertVesting(uint256 amount, VestingController.VestingParams memory vestingParams) internal {
         assertEq(token.balanceOf(HOLDER1), amount);
 
         vm.startPrank(HOLDER1);
@@ -253,6 +283,44 @@ contract CaptableOneClassTest is BaseCaptableTest {
         assertEq(token.balanceOf(address(safe)), amount / 2);
 
         assertEq(address(captable.controllers(HOLDER1, classId)), address(NO_CONTROLLER));
+    }
+
+    function testNonManagerCannotAddController() public {
+        vm.expectRevert(abi.encodeWithSelector(Captable.UnauthorizedNotManager.selector, classId));
+        captable.setController(HOLDER1, classId, vesting, "");
+    }
+
+    function testNonControllerCannotForceTransfer() public {
+        vm.expectRevert(abi.encodeWithSelector(Captable.UnauthorizedNotController.selector, classId));
+        captable.controllerForcedTransfer(HOLDER1, HOLDER2, classId, 1, "");
+    }
+
+    function testManagerCanForceTransfer() public {
+        vm.prank(ISSUER);
+        captable.issue(HOLDER1, classId, 100);
+        assertEq(token.balanceOf(HOLDER1), 100);
+
+        vm.prank(ISSUER);
+        captable.managerForcedTransfer(HOLDER1, HOLDER2, classId, 1, "");
+        assertEq(token.balanceOf(HOLDER1), 99);
+        assertEq(token.balanceOf(HOLDER2), 1);
+    }
+
+    function testNonManagerCannotForceTransfer() public {
+        vm.expectRevert(abi.encodeWithSelector(Captable.UnauthorizedNotManager.selector, classId));
+        captable.managerForcedTransfer(HOLDER1, HOLDER2, classId, 1, "");
+    }
+
+    function testSafeCanFreeze() public {
+        vm.prank(address(safe));
+        captable.freeze(classId);
+        (,,,,,,,, bool isFrozen) = captable.classes(classId);
+        assertTrue(isFrozen);
+    }
+
+    function testNonSafeCannotFreeze() public {
+        vm.expectRevert(abi.encodeWithSelector(SafeAware.UnauthorizedNotSafe.selector));
+        captable.freeze(classId);
     }
 }
 

@@ -51,18 +51,19 @@ contract Captable is FirmBase, BouncerChecker {
     error FrozenClass(uint256 classId);
     error TransferBlocked(IBouncer bouncer, address from, address to, uint256 classId, uint256 amount);
     error ConversionBlocked(IAccountController controller, address account, uint256 classId, uint256 amount);
-    error UnauthorizedNotController();
+    error UnauthorizedNotController(uint256 classId);
     error IssuedOverAuthorized(uint256 classId);
     error ConvertibleOverAuthorized(uint256 classId);
     error UnauthorizedNotManager(uint256 classId);
 
     constructor() {
-        initialize(IMPL_INIT_NOOP_SAFE, "");
+        initialize("", IMPL_INIT_NOOP_SAFE, IMPL_INIT_NOOP_ADDR);
         equityTokenImpl = address(new EquityToken());
     }
 
-    function initialize(ISafe safe_, string memory name_) public {
-        __init_setSafe(safe_);
+    function initialize(string memory name_, ISafe safe_, address trustedForwarder_) public {
+        // calls SafeAware.__init_setSafe which reverts on reinitialization
+        __init_firmBase(safe_, trustedForwarder_);
         name = name_;
     }
 
@@ -345,7 +346,7 @@ contract Captable is FirmBase, BouncerChecker {
         // Controllers use msg.sender directly as they should be contracts that
         // call this one and should never be using metatxs
         if (msg.sender != address(controllers[account][classId])) {
-            revert UnauthorizedNotController();
+            revert UnauthorizedNotController(classId);
         }
 
         _getClass(classId).token.forcedTransfer(account, to, amount, msg.sender, reason);

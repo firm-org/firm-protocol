@@ -112,7 +112,7 @@ contract RolesTest is FirmTest {
         roles.setRole(SOMEONE_ELSE, roleId, true);
     }
 
-    function testCanSetMultipleRoles() public {
+    function testCanSetAndRevokeMultipleRoles() public {
         vm.startPrank(address(safe));
         uint8 roleOne = roles.createRole(ONLY_ROOT_ROLE_AS_ADMIN, ""); // Admin for role one is ROOT_ROLE_ID
         uint8 roleTwo = roles.createRole(ONLY_ROOT_ROLE_AS_ADMIN | bytes32(1 << uint256(roleOne)), ""); // Admin for role 2 is ROOT_ROLE_ID and roleOne
@@ -134,6 +134,12 @@ contract RolesTest is FirmTest {
 
         assertTrue(roles.hasRole(SOMEONE_ELSE, roleTwo));
         assertFalse(roles.isRoleAdmin(SOMEONE_ELSE, roleTwo));
+
+        vm.prank(address(safe));
+        roles.setRoles(SOMEONE, new uint8[](0), rolesSomeone);
+
+        assertFalse(roles.hasRole(SOMEONE, roleOne));
+        assertFalse(roles.hasRole(SOMEONE, roleTwo));
     }
 
     function testCanChangeRoleAdmin() public {
@@ -166,6 +172,17 @@ contract RolesTest is FirmTest {
         vm.prank(SOMEONE);
         vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNoRole.selector, ROLE_MANAGER_ROLE_ID));
         roles.setRoleAdmin(newRoleId, ONLY_ROOT_ROLE_AS_ADMIN);
+    }
+
+    function testCannotChangeRoleNameWithoutRolesManagerRole() public {
+        vm.startPrank(address(safe));
+        uint8 newRoleId = roles.createRole(ONLY_ROOT_ROLE_AS_ADMIN, "");
+        roles.setRole(SOMEONE, newRoleId, true);
+        vm.stopPrank();
+
+        vm.prank(SOMEONE);
+        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNoRole.selector, ROLE_MANAGER_ROLE_ID));
+        roles.setRoleName(newRoleId, "Some name");
     }
 
     function testCannotChangeRoleAdminToNoAdmin() public {
@@ -220,7 +237,7 @@ contract RolesTest is FirmTest {
         uint8 unexistentRoleId = 100;
         vm.startPrank(address(safe));
         vm.expectRevert(abi.encodeWithSelector(Roles.UnexistentRole.selector, unexistentRoleId));
-        roles.changeRoleName(unexistentRoleId, "new name");
+        roles.setRoleName(unexistentRoleId, "new name");
     }
 
     function testSafeOwnerHasRole() public {
@@ -276,6 +293,6 @@ contract RolesTest is FirmTest {
         vm.prank(address(safe));
         vm.expectEmit(true, true, true, false);
         emit RoleNameChanged(SAFE_OWNER_ROLE_ID, "new name", address(safe));
-        roles.changeRoleName(SAFE_OWNER_ROLE_ID, "new name");
+        roles.setRoleName(SAFE_OWNER_ROLE_ID, "new name");
     }
 }

@@ -186,6 +186,32 @@ contract LlamaPayStreamsTest is BudgetModuleTest {
         streams.cancelStream(allowanceId, RECEIVER, amountPerSec);
     }
 
+    function testCantSetPrepayBufferToZero() public {
+        testCreateStream();
+        vm.expectRevert(abi.encodeWithSelector(LlamaPayStreams.InvalidPrepayBuffer.selector, allowanceId));
+        vm.prank(address(safe));
+        streams.setPrepayBuffer(allowanceId, 0);
+    }
+
+    function testCantRebalanceIfNoStreamsHaveBeenCreated() public {
+        vm.prank(address(safe));
+        streams.configure(allowanceId, 60 days);
+        vm.expectRevert(abi.encodeWithSelector(LlamaPayStreams.NoStreamsToRebalance.selector, allowanceId));
+        streams.rebalance(allowanceId);
+    }
+
+    function testCantRebalanceIfStreamsHaventBeenConfigured() public {
+        vm.expectRevert(abi.encodeWithSelector(LlamaPayStreams.StreamsNotConfigured.selector, allowanceId));
+        streams.rebalance(allowanceId);
+    }
+
+    function testCantConfigureStreamsAgain() public {
+        testCreateStream();
+        vm.prank(address(safe));
+        vm.expectRevert(abi.encodeWithSelector(LlamaPayStreams.StreamsAlreadyConfigured.selector, allowanceId));
+        streams.configure(allowanceId, 60 days);
+    }
+
     function assertBalance(address who, uint256 expectedBalance, uint256 maxDelta) internal {
         assertApproxEqAbs(token.balanceOf(who), expectedBalance * 10 ** token.decimals(), maxDelta);
     }

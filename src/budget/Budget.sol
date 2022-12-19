@@ -328,6 +328,10 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
 
         uint256 totalAmount = 0;
         for (uint256 i = 0; i < count;) {
+            if (amounts[i] == 0) {
+                revert ZeroAmountPayment();
+            }
+
             totalAmount += amounts[i];
 
             unchecked {

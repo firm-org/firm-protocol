@@ -43,6 +43,17 @@ contract FirmRelayerTest is FirmTest {
         assertEq(relayer.getNonce(USER), 1);
     }
 
+    function testCanRelayEmptyCall() public {
+        FirmRelayer.RelayRequest memory request;
+
+        request.from = USER;
+        request.nonce = relayer.getNonce(USER);
+        relayer.relay(request, _signPacked(relayer.requestTypedDataHash(request), USER_PK));
+
+        assertEq(target.lastSender(), address(0));
+        assertEq(relayer.getNonce(USER), request.nonce + 1);
+    }
+
     function testRelayNonceIncreases() public {
         testBasicRelay();
 
