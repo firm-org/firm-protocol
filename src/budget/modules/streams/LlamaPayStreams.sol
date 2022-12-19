@@ -31,7 +31,7 @@ contract LlamaPayStreams is BudgetModule {
     event DepositRebalanced(uint256 indexed allowanceId, bool isDeposit, uint256 amount, address sender);
 
     error StreamsAlreadyConfigured(uint256 allowanceId);
-    error NoStreamsYet(uint256 allowanceId);
+    error NoStreamsToRebalance(uint256 allowanceId);
     error InvalidPrepayBuffer(uint256 allowanceId);
     error StreamsNotConfigured(uint256 allowanceId);
     error UnsupportedTokenDecimals();
@@ -201,7 +201,7 @@ contract LlamaPayStreams is BudgetModule {
             (uint40 lastUpdate, uint216 paidPerSec) = streamer.payers(forwarder.addr());
 
             if (lastUpdate == 0) {
-                revert NoStreamsYet(allowanceId);
+                revert NoStreamsToRebalance(allowanceId);
             }
 
             existingBalance = streamer.balances(forwarder.addr());
