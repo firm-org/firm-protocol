@@ -14,5 +14,4 @@ contract EquityTokenTest is FirmTest {
         captable = new Captable();
     }
     */
-
 }

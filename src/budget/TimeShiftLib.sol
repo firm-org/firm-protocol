@@ -42,12 +42,12 @@ library TimeShiftLib {
 
     enum TimeUnit {
         Inherit,
-        Daily,      // 1
-        Weekly,     // 2
-        Monthly,    // 3
-        Quarterly,  // 4
+        Daily, // 1
+        Weekly, // 2
+        Monthly, // 3
+        Quarterly, // 4
         Semiyearly, // 5
-        Yearly,     // 6
+        Yearly, // 6
         NonRecurrent
     }
 

@@ -23,7 +23,7 @@ contract VestingController is AccountController, RolesAuth {
     }
 
     // owner -> classId -> Account
-    mapping(address => mapping (uint256 => Account)) public accounts;
+    mapping(address => mapping(uint256 => Account)) public accounts;
 
     event VestingCreated(address indexed owner, uint256 indexed classId, uint256 amount, VestingParams params);
     event VestingRevoked(address indexed owner, uint256 indexed classId, uint256 unvestedAmount, uint40 effectiveDate);
@@ -128,13 +128,7 @@ contract VestingController is AccountController, RolesAuth {
 
         emit VestingRevoked(owner, classId, unvestedAmount, effectiveDate);
 
-        captable().controllerForcedTransfer(
-            owner,
-            address(safe()),
-            classId,
-            forcedTransferAmount,
-            "Vesting revoked"
-        );
+        captable().controllerForcedTransfer(owner, address(safe()), classId, forcedTransferAmount, "Vesting revoked");
         _cleanup(owner, classId);
     }
 

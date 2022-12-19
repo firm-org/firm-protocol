@@ -283,7 +283,8 @@ contract LlamaPayStreams is BudgetModule {
         }
 
         forwarder = ForwarderLib.create(_forwarderSalt(allowanceId, IERC20(token)));
-        bytes memory retData = forwarder.forwardChecked(address(token), abi.encodeCall(IERC20.approve, (streamer_, type(uint256).max)));
+        bytes memory retData =
+            forwarder.forwardChecked(address(token), abi.encodeCall(IERC20.approve, (streamer_, type(uint256).max)));
         if (retData.length > 0) {
             if (retData.length != 32 || abi.decode(retData, (bool)) == false) {
                 revert ApproveFailed(allowanceId);

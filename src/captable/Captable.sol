@@ -43,7 +43,7 @@ contract Captable is FirmBase, BouncerChecker {
     // Above this limit, voting power getters that iterate through all tokens become
     // very expensive. See `CaptableClassLimitTest` tests for worst-case benchmarks
     uint32 internal constant CLASSES_LIMIT = 128;
-    address immutable internal equityTokenImpl;
+    address internal immutable equityTokenImpl;
 
     event ClassCreated(
         uint256 indexed classId,
@@ -63,7 +63,9 @@ contract Captable is FirmBase, BouncerChecker {
     event Issued(address indexed to, uint256 indexed classId, uint256 amount, address indexed actor);
     event Converted(address indexed account, uint256 indexed fromClassId, uint256 toClassId, uint256 amount);
     event ControllerSet(address indexed account, uint256 indexed classId, IAccountController indexed controller);
-    event ForcedTransfer(address indexed from, address indexed to, uint256 classId, uint256 amount, address actor, string reason);
+    event ForcedTransfer(
+        address indexed from, address indexed to, uint256 classId, uint256 amount, address actor, string reason
+    );
 
     error ClassCreationAboveLimit();
     error UnexistentClass(uint256 classId);
@@ -92,7 +94,7 @@ contract Captable is FirmBase, BouncerChecker {
      * @dev For gas reasons only 128 classes of equity can be created at the moment
      * @param className Name of the class (cannot be changed later)
      * @param ticker Ticker of the class (cannot be changed later)
-     * @param authorized Number of shares authorized for issuance (must be > 0) 
+     * @param authorized Number of shares authorized for issuance (must be > 0)
      *        It has to fit in the authorized amount of the class it converts into
      * @param convertsIntoClassId ID of the class that holders can convert to (NO_CONVERSION_FLAG if none)
      * @param votingWeight Voting weight of the class (will be multiplied by balance when checking votes)
@@ -108,11 +110,7 @@ contract Captable is FirmBase, BouncerChecker {
         uint32 convertsIntoClassId,
         uint64 votingWeight,
         IBouncer bouncer
-    )
-        external
-        onlySafe
-        returns (uint256 classId, EquityToken token)
-    {
+    ) external onlySafe returns (uint256 classId, EquityToken token) {
         if (authorized == 0 || address(bouncer) == address(0)) {
             revert BadInput();
         }
@@ -155,7 +153,7 @@ contract Captable is FirmBase, BouncerChecker {
      * @param classId ID of the class
      * @param newAuthorized New authorized amount
      */
-    function setAuthorized(uint256 classId, uint256 newAuthorized) onlySafe external {
+    function setAuthorized(uint256 classId, uint256 newAuthorized) external onlySafe {
         if (newAuthorized == 0) {
             revert BadInput();
         }
@@ -206,7 +204,7 @@ contract Captable is FirmBase, BouncerChecker {
      * @param bouncer Bouncer that will be used to check transfers
      *        It cannot be zero. For allow all transfers, use `EmbeddedBouncerType.AllowAll` (addrFlag=0x00..0102)
      */
-    function setBouncer(uint256 classId, IBouncer bouncer) onlySafe external {
+    function setBouncer(uint256 classId, IBouncer bouncer) external onlySafe {
         if (address(bouncer) == address(0)) {
             revert BadInput();
         }
@@ -224,12 +222,12 @@ contract Captable is FirmBase, BouncerChecker {
      * @notice Sets whether an address can manage a class of shares (issue and control holder accounts)
      * @dev Warning: managers can set controllers for accounts, which can be used to transfer shares or remove controllers (e.g. vesting)
      * @dev Freezing the class will remove the ability to ever change managers, effectively freezing the set
-     *      of accounts that can issue for the class or set controllers           
+     *      of accounts that can issue for the class or set controllers
      * @param classId ID of the class
      * @param manager Address of the manager
      * @param isManager Whether the address is set as a manager
      */
-    function setManager(uint256 classId, address manager, bool isManager) onlySafe external {
+    function setManager(uint256 classId, address manager, bool isManager) external onlySafe {
         Class storage class = _getClass(classId);
 
         _ensureClassNotFrozen(class, classId);
@@ -244,7 +242,7 @@ contract Captable is FirmBase, BouncerChecker {
      * @dev Freezing the class is a non-reversible operation
      * @param classId ID of the class
      */
-    function freeze(uint256 classId) onlySafe external {
+    function freeze(uint256 classId) external onlySafe {
         Class storage class = _getClass(classId);
 
         _ensureClassNotFrozen(class, classId);
@@ -308,13 +306,7 @@ contract Captable is FirmBase, BouncerChecker {
     ) external {
         // `issue` verifies that the class exists and sender is manager on classId
         issue(account, classId, amount);
-        _setController(
-            account,
-            classId,
-            amount,
-            controller,
-            controllerParams
-        );
+        _setController(account, classId, amount, controller, controllerParams);
     }
 
     /**
@@ -333,13 +325,7 @@ contract Captable is FirmBase, BouncerChecker {
     ) external {
         Class storage class = _getClass(classId);
         _ensureSenderIsManager(class, classId);
-        _setController(
-            account,
-            classId,
-            class.token.balanceOf(account),
-            controller,
-            controllerParams
-        );
+        _setController(account, classId, class.token.balanceOf(account), controller, controllerParams);
     }
 
     function _setController(
@@ -363,7 +349,7 @@ contract Captable is FirmBase, BouncerChecker {
      */
     function controllerDettach(address account, uint256 classId) external {
         // If it was no longer the controller for the account, consider this
-        // a no-op, as it might have been the controller in the past and 
+        // a no-op, as it might have been the controller in the past and
         // removed by a class manager (controller had no way to know it was removed)
         if (msg.sender == address(controllers[account][classId])) {
             controllers[account][classId] = NO_CONTROLLER;
@@ -380,7 +366,13 @@ contract Captable is FirmBase, BouncerChecker {
      * @param amount Amount of shares to transfer
      * @param reason Reason for the transfer
      */
-    function controllerForcedTransfer(address account, address to, uint256 classId, uint256 amount, string calldata reason) external {
+    function controllerForcedTransfer(
+        address account,
+        address to,
+        uint256 classId,
+        uint256 amount,
+        string calldata reason
+    ) external {
         // Controllers use msg.sender directly as they should be contracts that
         // call this one and should never be using metatxs
         if (msg.sender != address(controllers[account][classId])) {
@@ -401,7 +393,9 @@ contract Captable is FirmBase, BouncerChecker {
      * @param amount Amount of shares to transfer
      * @param reason Reason for the transfer
      */
-    function managerForcedTransfer(address account, address to, uint256 classId, uint256 amount, string calldata reason) external {
+    function managerForcedTransfer(address account, address to, uint256 classId, uint256 amount, string calldata reason)
+        external
+    {
         Class storage class = _getClass(classId);
 
         _ensureSenderIsManager(class, classId);

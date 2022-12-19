@@ -98,9 +98,7 @@ abstract contract BudgetTest is FirmTest {
     function testCantCreateAllowanceWithZeroAmountWithoutParent() public {
         vm.prank(address(safe));
         vm.expectRevert(abi.encodeWithSelector(Budget.InheritedAmountNotAllowed.selector));
-        budget.createAllowance(
-            NO_PARENT_ID, SPENDER, token, 0, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
-        );
+        budget.createAllowance(NO_PARENT_ID, SPENDER, token, 0, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), "");
     }
 
     function testUpdateAllowanceParams() public {
@@ -265,13 +263,17 @@ abstract contract BudgetTest is FirmTest {
         // For single payments
         uint256 allowanceId = testCreateAllowance();
         vm.prank(SPENDER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.PaymentExecutionFailed.selector, allowanceId, token, RECEIVER, amount));
+        vm.expectRevert(
+            abi.encodeWithSelector(Budget.PaymentExecutionFailed.selector, allowanceId, token, RECEIVER, amount)
+        );
         budget.executePayment(allowanceId, RECEIVER, amount, "");
 
         // For multipayment, it fails on second payment
         (address[] memory tos, uint256[] memory amounts) = _generateMultiPaymentArrays(2, RECEIVER, 3);
         vm.prank(SPENDER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.PaymentExecutionFailed.selector, allowanceId, token, address(0), 6));
+        vm.expectRevert(
+            abi.encodeWithSelector(Budget.PaymentExecutionFailed.selector, allowanceId, token, address(0), 6)
+        );
         budget.executeMultiPayment(allowanceId, tos, amounts, "");
     }
 
@@ -550,20 +552,20 @@ abstract contract BudgetTest is FirmTest {
         vm.prank(address(safe));
         uint256 allowanceId = 1;
         createDailyAllowance(SPENDER, allowanceId);
-        
+
         vm.prank(SPENDER);
         budget.executePayment(allowanceId, RECEIVER, 10, "");
 
         if (token == NATIVE_ASSET) {
             vm.prank(RECEIVER);
             vm.expectRevert(abi.encodeWithSelector(Budget.NativeValueMismatch.selector));
-            budget.debitAllowance{ value: 6 }(allowanceId, 5, "");
+            budget.debitAllowance{value: 6}(allowanceId, 5, "");
         } else {
             vm.startPrank(RECEIVER);
             ERC20Token(token).approve(address(budget), 5);
             vm.expectRevert(abi.encodeWithSelector(Budget.NativeValueMismatch.selector));
             vm.deal(RECEIVER, 5);
-            budget.debitAllowance{ value: 5 }(allowanceId, 5, "");
+            budget.debitAllowance{value: 5}(allowanceId, 5, "");
             vm.stopPrank();
         }
     }
@@ -574,7 +576,7 @@ abstract contract BudgetTest is FirmTest {
         vm.prank(address(safe));
         TimeShift memory shift = TimeShift(TimeShiftLib.TimeUnit.NonRecurrent, int40(expiresAt));
         allowanceId = budget.createAllowance(NO_PARENT_ID, SPENDER, address(token), 10, shift.encode(), "");
-        (,,,,uint40 resetTime,,,) = budget.allowances(allowanceId);
+        (,,,, uint40 resetTime,,,) = budget.allowances(allowanceId);
 
         assertEq(uint256(resetTime), uint256(expiresAt));
     }
@@ -586,7 +588,7 @@ abstract contract BudgetTest is FirmTest {
         vm.warp(expiresAt - 1);
         vm.prank(SPENDER);
         budget.executePayment(allowanceId, RECEIVER, 1, "");
-        
+
         // Fails after expiry
         vm.warp(expiresAt);
         vm.prank(SPENDER);

@@ -74,13 +74,14 @@ contract ForwarderLibTest is FirmTest {
         testCreateForwarder();
 
         vm.expectRevert(ForwarderLib.ForwarderAlreadyDeployed.selector);
-        lib.create{ gas: 1e6 }(SALT);
+        lib.create{gas: 1e6}(SALT);
     }
-    
-    function testHitsTarget() public returns (ForwarderLib.Forwarder forwarder)  {
+
+    function testHitsTarget() public returns (ForwarderLib.Forwarder forwarder) {
         forwarder = testCreateForwarder();
 
-        (bool ok, bytes memory ret) = lib.forward(forwarder, address(target), abi.encodeWithSelector(target.hit.selector));
+        (bool ok, bytes memory ret) =
+            lib.forward(forwarder, address(target), abi.encodeWithSelector(target.hit.selector));
 
         assertTrue(ok);
         assertTrue(target.hasHitOnce(forwarder.addr()));

@@ -7,9 +7,7 @@ contract DisallowController is AccountController {
     string public constant moduleId = "org.firm.captable-mocks.disallow";
     uint256 public constant moduleVersion = 1;
 
-    function addAccount(address owner, uint256 classId, uint256 amount, bytes calldata extraParams) external override {
-
-    }
+    function addAccount(address owner, uint256 classId, uint256 amount, bytes calldata extraParams) external override {}
 
     function isTransferAllowed(address, address, uint256, uint256) external pure returns (bool) {
         return false;

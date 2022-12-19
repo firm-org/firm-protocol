@@ -21,7 +21,8 @@ abstract contract SafeModule is FirmBase {
      */
     function exec(address to, uint256 value, bytes memory data, ISafe.Operation operation)
         internal
-        returns (bool success) {
+        returns (bool success)
+    {
         return safe().execTransactionFromModule(to, value, data, operation);
     }
 

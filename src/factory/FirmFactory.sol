@@ -94,12 +94,18 @@ contract FirmFactory {
         GnosisSafe safe = GnosisSafe(payable(address(this)));
         Roles roles = Roles(
             moduleFactory.deployUpgradeableModule(
-                ROLES_MODULE_ID, LATEST_VERSION, abi.encodeCall(Roles.initialize, (ISafe(payable(safe)), address(relayer))), 1
+                ROLES_MODULE_ID,
+                LATEST_VERSION,
+                abi.encodeCall(Roles.initialize, (ISafe(payable(safe)), address(relayer))),
+                1
             )
         );
         Budget budget = Budget(
             moduleFactory.deployUpgradeableModule(
-                BUDGET_MODULE_ID, LATEST_VERSION, abi.encodeCall(Budget.initialize, (ISafe(payable(safe)), roles, address(relayer))), 1
+                BUDGET_MODULE_ID,
+                LATEST_VERSION,
+                abi.encodeCall(Budget.initialize, (ISafe(payable(safe)), roles, address(relayer))),
+                1
             )
         );
 
