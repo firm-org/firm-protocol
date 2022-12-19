@@ -33,7 +33,7 @@ contract BaseCaptableTest is FirmTest {
     address VESTING_REVOKER_ROLE_FLAG;
 
     function setUp() public virtual {
-        captable = Captable(createProxy(new Captable(), abi.encodeCall(Captable.initialize, (safe, "TestCo"))));
+        captable = Captable(createProxy(new Captable(), abi.encodeCall(Captable.initialize, ("TestCo", safe, address(0)))));
         roles = Roles(createProxy(new Roles(), abi.encodeCall(Roles.initialize, (safe, address(0)))));
         vesting = VestingController(createProxy(new VestingController(), abi.encodeCall(VestingController.initialize, (captable, roles, address(0)))));
 
@@ -61,7 +61,6 @@ contract CaptableInitTest is BaseCaptableTest {
     function testInitialState() public {
         assertEq(address(captable.safe()), address(safe));
         assertEq(captable.name(), "TestCo");
-        // TODO: asserteq global controls
 
         assertEq(captable.numberOfClasses(), 0);
 
@@ -70,6 +69,11 @@ contract CaptableInitTest is BaseCaptableTest {
         captable.nameFor(0);
         vm.expectRevert(unexistentError);
         captable.tickerFor(0);
+    }
+
+    function testCannotReinit() public {
+        vm.expectRevert(abi.encodeWithSelector(SafeAware.AlreadyInitialized.selector));
+        captable.initialize("", safe, address(1));
     }
 
     function testCreateClass() public {

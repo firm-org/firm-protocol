@@ -57,12 +57,13 @@ contract Captable is FirmBase, BouncerChecker {
     error UnauthorizedNotManager(uint256 classId);
 
     constructor() {
-        initialize(IMPL_INIT_NOOP_SAFE, "");
+        initialize("", IMPL_INIT_NOOP_SAFE, IMPL_INIT_NOOP_ADDR);
         equityTokenImpl = address(new EquityToken());
     }
 
-    function initialize(ISafe safe_, string memory name_) public {
-        __init_setSafe(safe_);
+    function initialize(string memory name_, ISafe safe_, address trustedForwarder_) public {
+        // calls SafeAware.__init_setSafe which reverts on reinitialization
+        __init_firmBase(safe_, trustedForwarder_);
         name = name_;
     }
 
