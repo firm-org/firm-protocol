@@ -45,6 +45,26 @@ contract Captable is FirmBase, BouncerChecker {
     uint32 internal constant CLASSES_LIMIT = 128;
     address immutable internal equityTokenImpl;
 
+    event ClassCreated(
+        uint256 indexed classId,
+        EquityToken indexed token,
+        string name,
+        string ticker,
+        uint256 authorized,
+        uint32 convertsIntoClassId,
+        uint64 votingWeight,
+        IBouncer indexed bouncer
+    );
+    event AuthorizedChanged(uint256 indexed classId, uint256 authorized);
+    event ConvertibleChanged(uint256 indexed classId, uint256 convertible);
+    event ClassManagerSet(uint256 indexed classId, address indexed manager, bool isManager);
+    event ClassFrozen(uint256 indexed classId);
+    event BouncerChanged(uint256 indexed classId, IBouncer indexed bouncer);
+    event Issued(address indexed to, uint256 indexed classId, uint256 amount, address indexed actor);
+    event Converted(address indexed account, uint256 indexed fromClassId, uint256 toClassId, uint256 amount);
+    event ControllerSet(address indexed account, uint256 indexed classId, IAccountController indexed controller);
+    event ForcedTransfer(address indexed from, address indexed to, uint256 classId, uint256 amount, address actor, string reason);
+
     error ClassCreationAboveLimit();
     error UnexistentClass(uint256 classId);
     error BadInput();
@@ -122,7 +142,10 @@ contract Captable is FirmBase, BouncerChecker {
         class.ticker = ticker;
         class.convertsIntoClassId = convertsIntoClassId;
         class.bouncer = bouncer;
-        class.isManager[msg.sender] = true; // safe addr is set as manager for class
+        class.isManager[msg.sender] = true; // safe addr is set as manager for class (use msg.sender directly as no metatxs here)
+
+        emit ClassCreated(classId, token, className, ticker, authorized, convertsIntoClassId, votingWeight, bouncer);
+        emit ClassManagerSet(classId, msg.sender, true);
     }
 
     /**
@@ -158,6 +181,8 @@ contract Captable is FirmBase, BouncerChecker {
         }
 
         class.authorized = newAuthorized;
+
+        emit AuthorizedChanged(classId, newAuthorized);
     }
 
     function _changeConvertibleAmount(uint256 classId, uint256 amount, bool isIncrease) internal {
@@ -170,6 +195,8 @@ contract Captable is FirmBase, BouncerChecker {
         }
 
         class.convertible = newConvertible;
+
+        emit ConvertibleChanged(classId, newConvertible);
     }
 
     /**
@@ -189,6 +216,8 @@ contract Captable is FirmBase, BouncerChecker {
         _ensureClassNotFrozen(class, classId);
 
         class.bouncer = bouncer;
+
+        emit BouncerChanged(classId, bouncer);
     }
 
     /**
@@ -206,6 +235,8 @@ contract Captable is FirmBase, BouncerChecker {
         _ensureClassNotFrozen(class, classId);
 
         class.isManager[manager] = isManager;
+
+        emit ClassManagerSet(classId, manager, isManager);
     }
 
     /**
@@ -219,6 +250,8 @@ contract Captable is FirmBase, BouncerChecker {
         _ensureClassNotFrozen(class, classId);
 
         class.isFrozen = true;
+
+        emit ClassFrozen(classId);
     }
 
     function _ensureClassNotFrozen(Class storage class, uint256 classId) internal view {
@@ -253,6 +286,8 @@ contract Captable is FirmBase, BouncerChecker {
         }
 
         class.token.mint(account, amount);
+
+        emit Issued(account, classId, amount, _msgSender());
     }
 
     /**
@@ -316,6 +351,8 @@ contract Captable is FirmBase, BouncerChecker {
     ) internal {
         controllers[account][classId] = controller;
         controller.addAccount(account, classId, amount, controllerParams);
+
+        emit ControllerSet(account, classId, controller);
     }
 
     /**
@@ -330,6 +367,7 @@ contract Captable is FirmBase, BouncerChecker {
         // removed by a class manager (controller had no way to know it was removed)
         if (msg.sender == address(controllers[account][classId])) {
             controllers[account][classId] = NO_CONTROLLER;
+            emit ControllerSet(account, classId, NO_CONTROLLER);
         }
     }
 
@@ -349,7 +387,9 @@ contract Captable is FirmBase, BouncerChecker {
             revert UnauthorizedNotController(classId);
         }
 
-        _getClass(classId).token.forcedTransfer(account, to, amount, msg.sender, reason);
+        _getClass(classId).token.forcedTransfer(account, to, amount);
+
+        emit ForcedTransfer(account, to, classId, amount, msg.sender, reason);
     }
 
     /**
@@ -366,26 +406,29 @@ contract Captable is FirmBase, BouncerChecker {
 
         _ensureSenderIsManager(class, classId);
 
-        class.token.forcedTransfer(account, to, amount, msg.sender, reason);
+        class.token.forcedTransfer(account, to, amount);
+
+        emit ForcedTransfer(account, to, classId, amount, _msgSender(), reason);
     }
 
     /**
      * @notice Convert shares from one class to another
      * @dev Can only be triggered voluntarely by the owner of the shares and can be blocked by the class bouncer
-     * @param classId ID of the class to convert from
+     * @param fromClassId ID of the class to convert from
      * @param amount Amount of shares to convert
      */
-    function convert(uint256 classId, uint256 amount) external {
-        Class storage fromClass = _getClass(classId);
-        Class storage toClass = _getClass(fromClass.convertsIntoClassId);
+    function convert(uint256 fromClassId, uint256 amount) external {
+        Class storage fromClass = _getClass(fromClassId);
+        uint256 toClassId = fromClass.convertsIntoClassId;
+        Class storage toClass = _getClass(toClassId);
 
         address sender = _msgSender();
 
         // if user has a controller for the origin class id, ensure controller allows the transfer
-        IAccountController controller = controllers[sender][classId];
+        IAccountController controller = controllers[sender][fromClassId];
         if (controller != NO_CONTROLLER) {
-            if (!controller.isTransferAllowed(sender, sender, classId, amount)) {
-                revert ConversionBlocked(controller, sender, classId, amount);
+            if (!controller.isTransferAllowed(sender, sender, fromClassId, amount)) {
+                revert ConversionBlocked(controller, sender, fromClassId, amount);
             }
         }
 
@@ -397,6 +440,8 @@ contract Captable is FirmBase, BouncerChecker {
 
         fromClass.token.burn(sender, amount);
         toClass.token.mint(sender, amount);
+
+        emit Converted(sender, fromClassId, toClassId, amount);
     }
 
     /**
