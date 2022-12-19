@@ -4,7 +4,14 @@ pragma solidity 0.8.16;
 import {FirmBase, IMPL_INIT_NOOP_SAFE, IMPL_INIT_NOOP_ADDR} from "../bases/FirmBase.sol";
 import {ISafe} from "../bases/SafeAware.sol";
 
-import {IRoles, ROOT_ROLE_ID, ROLE_MANAGER_ROLE_ID, ONLY_ROOT_ROLE_AS_ADMIN, NO_ROLE_ADMINS, SAFE_OWNER_ROLE_ID} from "./IRoles.sol";
+import {
+    IRoles,
+    ROOT_ROLE_ID,
+    ROLE_MANAGER_ROLE_ID,
+    ONLY_ROOT_ROLE_AS_ADMIN,
+    NO_ROLE_ADMINS,
+    SAFE_OWNER_ROLE_ID
+} from "./IRoles.sol";
 
 /**
  * @title Roles
@@ -253,9 +260,7 @@ contract Roles is FirmBase, IRoles {
      * @return True if the user has admin rights over the role
      */
     function isRoleAdmin(address user, uint8 roleId) public view returns (bool) {
-        return roleId < SAFE_OWNER_ROLE_ID
-            ? _isRoleAdmin(user, getUserRoles[user], roleId)
-            : false;
+        return roleId < SAFE_OWNER_ROLE_ID ? _isRoleAdmin(user, getUserRoles[user], roleId) : false;
     }
 
     /**
@@ -269,8 +274,7 @@ contract Roles is FirmBase, IRoles {
 
     function _isRoleAdmin(address user, bytes32 userRoles, uint8 roleId) internal view returns (bool) {
         bytes32 roleAdmins = getRoleAdmins[roleId];
-        return
-            (userRoles & roleAdmins) != 0
+        return (userRoles & roleAdmins) != 0
             || (_hasRootRole(userRoles) && roleExists(roleId) && roleId != ROOT_ROLE_ID)
             || (uint256(roleAdmins >> SAFE_OWNER_ROLE_ID) & 1 != 0 && safe().isOwner(user));
     }

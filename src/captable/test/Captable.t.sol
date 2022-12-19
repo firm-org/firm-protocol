@@ -33,9 +33,14 @@ contract BaseCaptableTest is FirmTest {
     address VESTING_REVOKER_ROLE_FLAG;
 
     function setUp() public virtual {
-        captable = Captable(createProxy(new Captable(), abi.encodeCall(Captable.initialize, ("TestCo", safe, address(0)))));
+        captable =
+            Captable(createProxy(new Captable(), abi.encodeCall(Captable.initialize, ("TestCo", safe, address(0)))));
         roles = Roles(createProxy(new Roles(), abi.encodeCall(Roles.initialize, (safe, address(0)))));
-        vesting = VestingController(createProxy(new VestingController(), abi.encodeCall(VestingController.initialize, (captable, roles, address(0)))));
+        vesting = VestingController(
+            createProxy(
+                new VestingController(), abi.encodeCall(VestingController.initialize, (captable, roles, address(0)))
+            )
+        );
 
         vm.startPrank(address(safe));
         uint8 roleId = roles.createRole(ONLY_ROOT_ROLE_AS_ADMIN, "Vesting revoking");
@@ -60,7 +65,8 @@ contract BaseCaptableTest is FirmTest {
 contract CaptableInitTest is BaseCaptableTest {
     function testInitialState() public {
         // Create a new one to ensure proper coverage of initialize()
-        captable = Captable(createProxy(new Captable(), abi.encodeCall(Captable.initialize, ("TestCo1", safe, address(0)))));
+        captable =
+            Captable(createProxy(new Captable(), abi.encodeCall(Captable.initialize, ("TestCo1", safe, address(0)))));
 
         assertEq(address(captable.safe()), address(safe));
         assertEq(captable.name(), "TestCo1");
@@ -81,7 +87,8 @@ contract CaptableInitTest is BaseCaptableTest {
 
     function testCreateClass() public {
         vm.prank(address(safe));
-        (uint256 id, EquityToken token) = captable.createClass("Common", "TST-A", 100, NO_CONVERSION_FLAG, 1, ALLOW_ALL_BOUNCER);
+        (uint256 id, EquityToken token) =
+            captable.createClass("Common", "TST-A", 100, NO_CONVERSION_FLAG, 1, ALLOW_ALL_BOUNCER);
         assertEq(id, 0);
 
         assertEq(token.name(), "TestCo: Common");
@@ -143,11 +150,12 @@ contract CaptableOneClassTest is BaseCaptableTest {
 
     uint256 constant INITIAL_AUTHORIZED = 10000;
 
-    function setUp() public override virtual {
+    function setUp() public virtual override {
         super.setUp();
 
         vm.startPrank(address(safe));
-        (classId, token) = captable.createClass("Common", "TST-A", INITIAL_AUTHORIZED, NO_CONVERSION_FLAG, 1, ALLOW_ALL_BOUNCER);
+        (classId, token) =
+            captable.createClass("Common", "TST-A", INITIAL_AUTHORIZED, NO_CONVERSION_FLAG, 1, ALLOW_ALL_BOUNCER);
         captable.setManager(classId, ISSUER, true);
         vm.stopPrank();
     }
@@ -222,7 +230,7 @@ contract CaptableOneClassTest is BaseCaptableTest {
 
         vm.prank(ISSUER);
         captable.issueAndSetController(HOLDER1, classId, amount, vesting, abi.encode(vestingParams));
-        
+
         assertVesting(amount, vestingParams);
     }
 
@@ -333,12 +341,13 @@ contract CaptableFrozenTest is BaseCaptableTest {
         super.setUp();
 
         vm.startPrank(address(safe));
-        (classId, token) = captable.createClass("Common", "TST-A", INITIAL_AUTHORIZED, NO_CONVERSION_FLAG, 1, ALLOW_ALL_BOUNCER);
+        (classId, token) =
+            captable.createClass("Common", "TST-A", INITIAL_AUTHORIZED, NO_CONVERSION_FLAG, 1, ALLOW_ALL_BOUNCER);
         captable.setManager(classId, ISSUER, true);
         captable.freeze(classId);
         vm.stopPrank();
     }
-    
+
     // Functionality that still works post class freeze
 
     function testCanIssueAndTransfer() public {
@@ -434,8 +443,10 @@ contract CaptableMulticlassTest is BaseCaptableTest {
         super.setUp();
 
         vm.startPrank(address(safe));
-        (classId1, token1) = captable.createClass("Common", "TST-A", authorized1, NO_CONVERSION_FLAG, weight1, ALLOW_ALL_BOUNCER);
-        (classId2, token2) = captable.createClass("Founder", "TST-B", authorized2, uint32(classId1), weight2, ALLOW_ALL_BOUNCER);
+        (classId1, token1) =
+            captable.createClass("Common", "TST-A", authorized1, NO_CONVERSION_FLAG, weight1, ALLOW_ALL_BOUNCER);
+        (classId2, token2) =
+            captable.createClass("Founder", "TST-B", authorized2, uint32(classId1), weight2, ALLOW_ALL_BOUNCER);
         captable.setManager(classId1, ISSUER, true);
         captable.setManager(classId2, ISSUER, true);
         vm.stopPrank();
@@ -448,20 +459,10 @@ contract CaptableMulticlassTest is BaseCaptableTest {
     }
 
     function testInitialState() public {
-        (   ,
-            uint64 votingWeight1,
-            uint32 convertsIntoClassId1,
-            uint256 _authorized1,
-            uint256 convertible1,
-            ,,,
-        ) = captable.classes(classId1);
-        (  ,
-            uint64 votingWeight2,
-            uint32 convertsIntoClassId2,
-            uint256 _authorized2,
-            uint256 convertible2,
-            ,,,
-        ) = captable.classes(classId2);
+        (, uint64 votingWeight1, uint32 convertsIntoClassId1, uint256 _authorized1, uint256 convertible1,,,,) =
+            captable.classes(classId1);
+        (, uint64 votingWeight2, uint32 convertsIntoClassId2, uint256 _authorized2, uint256 convertible2,,,,) =
+            captable.classes(classId2);
 
         assertEq(votingWeight1, weight1);
         assertEq(convertsIntoClassId1, NO_CONVERSION_FLAG);
@@ -480,7 +481,8 @@ contract CaptableMulticlassTest is BaseCaptableTest {
         assertEq(captable.getVotes(HOLDER1), holder1InitialBalance1 + holder1InitialBalance2 * weight2);
         assertEq(captable.getVotes(HOLDER2), holder2InitialBalance2 * weight2);
         assertEq(
-            captable.getTotalVotes(), holder1InitialBalance1 + (holder1InitialBalance1 + holder2InitialBalance2) * weight2
+            captable.getTotalVotes(),
+            holder1InitialBalance1 + (holder1InitialBalance1 + holder2InitialBalance2) * weight2
         );
 
         assertEq(captable.getPastVotes(HOLDER1, 1), 0);
@@ -529,7 +531,10 @@ contract CaptableMulticlassTest is BaseCaptableTest {
         captable.createClass("", "", 1000, uint32(classId2), 1, ALLOW_ALL_BOUNCER);
     }
 
-    function testChangingAuthorizedUpdatesConvertibleToLimit() public returns (uint256 newAuthorized1, uint256 newAuthorized2) {
+    function testChangingAuthorizedUpdatesConvertibleToLimit()
+        public
+        returns (uint256 newAuthorized1, uint256 newAuthorized2)
+    {
         // authorize to the limit
         newAuthorized2 = holder1InitialBalance2 + holder2InitialBalance2;
         newAuthorized1 = newAuthorized2 + holder1InitialBalance1 + holder2InitialBalance1;
@@ -537,8 +542,8 @@ contract CaptableMulticlassTest is BaseCaptableTest {
         captable.setAuthorized(classId2, newAuthorized2);
         vm.prank(address(safe));
         captable.setAuthorized(classId1, newAuthorized1);
-        (,,,uint256 _authorized1, uint256 convertible1,,,,) = captable.classes(classId1);
-        (,,,uint256 _authorized2, uint256 convertible2,,,,) = captable.classes(classId2);
+        (,,, uint256 _authorized1, uint256 convertible1,,,,) = captable.classes(classId1);
+        (,,, uint256 _authorized2, uint256 convertible2,,,,) = captable.classes(classId2);
 
         assertEq(_authorized1, newAuthorized1);
         assertEq(_authorized2, newAuthorized2);
@@ -554,7 +559,7 @@ contract CaptableMulticlassTest is BaseCaptableTest {
     }
 
     function testWhenOnConvertibleLimitCantAuthorizeMoreOnConverter() public {
-        (,uint256 newAuthorized2) = testChangingAuthorizedUpdatesConvertibleToLimit();
+        (, uint256 newAuthorized2) = testChangingAuthorizedUpdatesConvertibleToLimit();
         vm.prank(address(safe));
         vm.expectRevert(abi.encodeWithSelector(Captable.ConvertibleOverAuthorized.selector, classId1));
         captable.setAuthorized(classId2, newAuthorized2 + 1);
@@ -606,7 +611,8 @@ contract CaptableClassLimit1Test is BaseCaptableTest {
         for (uint256 i = 0; i < classesLimit; i++) {
             vm.roll(0);
             vm.prank(address(safe));
-            (uint256 classId, EquityToken token) = captable.createClass("", "", transfersLimit, NO_CONVERSION_FLAG, 1, ALLOW_ALL_BOUNCER);
+            (uint256 classId, EquityToken token) =
+                captable.createClass("", "", transfersLimit, NO_CONVERSION_FLAG, 1, ALLOW_ALL_BOUNCER);
             _selfDelegateHolders(token);
 
             // Artificially create checkpoints by issuing one share per block
@@ -652,7 +658,8 @@ contract CaptableClassLimit2Test is BaseCaptableTest {
         for (uint256 i = 0; i < classesLimit; i++) {
             vm.roll(0);
             vm.prank(address(safe));
-            (uint256 classId, EquityToken token) = captable.createClass("", "", transfersLimit, NO_CONVERSION_FLAG, 1, ALLOW_ALL_BOUNCER);
+            (uint256 classId, EquityToken token) =
+                captable.createClass("", "", transfersLimit, NO_CONVERSION_FLAG, 1, ALLOW_ALL_BOUNCER);
             _selfDelegateHolders(token);
 
             if (i == 0) {
@@ -728,14 +735,18 @@ contract CaptableBouncersTest is BaseCaptableTest {
 
         // HOLDER1 can't transfer
         vm.prank(HOLDER1);
-        vm.expectRevert(abi.encodeWithSelector(Captable.TransferBlocked.selector, bouncer, HOLDER1, HOLDER2, classId, 10));
+        vm.expectRevert(
+            abi.encodeWithSelector(Captable.TransferBlocked.selector, bouncer, HOLDER1, HOLDER2, classId, 10)
+        );
         token.transfer(HOLDER2, 10);
 
         // Even if HOLDER2 transfers to HOLDER1 who is already a holder
         vm.prank(address(safe));
         captable.issue(HOLDER2, classId, 1);
         vm.prank(HOLDER2);
-        vm.expectRevert(abi.encodeWithSelector(Captable.TransferBlocked.selector, bouncer, HOLDER2, HOLDER1, classId, 1));
+        vm.expectRevert(
+            abi.encodeWithSelector(Captable.TransferBlocked.selector, bouncer, HOLDER2, HOLDER1, classId, 1)
+        );
         token.transfer(HOLDER1, 1);
     }
 
@@ -746,7 +757,9 @@ contract CaptableBouncersTest is BaseCaptableTest {
 
         // HOLDER1 can't transfer to HOLDER2 as it is not a holder of the class
         vm.prank(HOLDER1);
-        vm.expectRevert(abi.encodeWithSelector(Captable.TransferBlocked.selector, bouncer, HOLDER1, HOLDER2, classId, 10));
+        vm.expectRevert(
+            abi.encodeWithSelector(Captable.TransferBlocked.selector, bouncer, HOLDER1, HOLDER2, classId, 10)
+        );
         token.transfer(HOLDER2, 10);
 
         // If we make HOLDER2 a holder, it can now receive from HOLDER1
@@ -766,7 +779,9 @@ contract CaptableBouncersTest is BaseCaptableTest {
 
         // HOLDER1 can't transfer to HOLDER2 as it is not a holder of any class
         vm.prank(HOLDER1);
-        vm.expectRevert(abi.encodeWithSelector(Captable.TransferBlocked.selector, bouncer, HOLDER1, HOLDER2, classId, 10));
+        vm.expectRevert(
+            abi.encodeWithSelector(Captable.TransferBlocked.selector, bouncer, HOLDER1, HOLDER2, classId, 10)
+        );
         token.transfer(HOLDER2, 10);
 
         // We create a new class and make HOLDER2 a holder of that class so it can receive shares of the first class
@@ -812,7 +827,9 @@ contract CaptableBouncersTest is BaseCaptableTest {
 
         // Bouncer doesn't allow transferring 2 because it is even
         vm.prank(HOLDER1);
-        vm.expectRevert(abi.encodeWithSelector(Captable.TransferBlocked.selector, bouncer, HOLDER1, HOLDER2, classId, 2));
+        vm.expectRevert(
+            abi.encodeWithSelector(Captable.TransferBlocked.selector, bouncer, HOLDER1, HOLDER2, classId, 2)
+        );
         token.transfer(HOLDER2, 2);
     }
 

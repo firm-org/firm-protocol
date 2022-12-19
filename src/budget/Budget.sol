@@ -241,7 +241,7 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
      * @param spender New spender account for the allowance
      */
     function setAllowanceSpender(uint256 allowanceId, address spender) external {
-         if (spender == address(0)) {
+        if (spender == address(0)) {
             revert BadInput();
         }
 

@@ -289,6 +289,7 @@ contract RolesTest is FirmTest {
     }
 
     event RoleNameChanged(uint8 indexed roleId, string name, address indexed actor);
+
     function testSafeOwnerRoleNameCanBeChanged() public {
         vm.prank(address(safe));
         vm.expectEmit(true, true, true, false);

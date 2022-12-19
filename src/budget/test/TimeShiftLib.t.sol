@@ -65,7 +65,9 @@ contract TimeShiftLibShiftTest is FirmTest {
         uint40(block.timestamp).applyShift(TimeShift(TimeShiftLib.TimeUnit.NonRecurrent, 0).encode());
 
         vm.expectRevert(abi.encodeWithSelector(TimeShiftLib.InvalidTimeShift.selector));
-        uint40(block.timestamp).applyShift(TimeShift(TimeShiftLib.TimeUnit.NonRecurrent, int40(uint40(block.timestamp + 1000))).encode());
+        uint40(block.timestamp).applyShift(
+            TimeShift(TimeShiftLib.TimeUnit.NonRecurrent, int40(uint40(block.timestamp + 1000))).encode()
+        );
     }
 
     function testOffsets() public {
@@ -154,7 +156,9 @@ contract TimeShiftLibHelpersTest is FirmTest {
 
     function testIsNonRecurrent() public {
         assertTrue(TimeShift(TimeShiftLib.TimeUnit.NonRecurrent, 0).encode().isNonRecurrent());
-        assertTrue(TimeShift(TimeShiftLib.TimeUnit.NonRecurrent, int40(uint40(block.timestamp))).encode().isNonRecurrent());
+        assertTrue(
+            TimeShift(TimeShiftLib.TimeUnit.NonRecurrent, int40(uint40(block.timestamp))).encode().isNonRecurrent()
+        );
         assertFalse(TimeShift(TimeShiftLib.TimeUnit.Yearly, type(int40).max).encode().isNonRecurrent());
     }
 }

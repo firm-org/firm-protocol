@@ -20,14 +20,10 @@ abstract contract BouncerChecker {
     function numberOfClasses() public view virtual returns (uint256);
     function balanceOf(address account, uint256 classId) public view virtual returns (uint256);
 
-    function bouncerAllowsTransfer(
-        IBouncer bouncer,
-        address from,
-        address to,
-        uint256 classId,
-        uint256 amount
-    )
-        internal view returns (bool)
+    function bouncerAllowsTransfer(IBouncer bouncer, address from, address to, uint256 classId, uint256 amount)
+        internal
+        view
+        returns (bool)
     {
         if (address(bouncer).isFlag(EMBEDDED_BOUNCER_FLAG_TYPE)) {
             EmbeddedBouncerType bouncerType = EmbeddedBouncerType(address(bouncer).flagValue());
@@ -43,9 +39,7 @@ abstract contract BouncerChecker {
         address to,
         uint256 classId,
         uint256
-    )
-        private view returns (bool)
-    {
+    ) private view returns (bool) {
         if (bouncerType == EmbeddedBouncerType.AllowAll) {
             return true;
         } else if (bouncerType == EmbeddedBouncerType.DenyAll) {

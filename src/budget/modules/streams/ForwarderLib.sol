@@ -14,14 +14,15 @@ library ForwarderLib {
 
     function getForwarder(bytes32 salt, address deployer) internal pure returns (Forwarder) {
         return Forwarder.wrap(
-            address(uint160(uint256(keccak256(
-                abi.encodePacked(
-                    bytes1(0xff),
-                    deployer,
-                    salt,
-                    keccak256(forwarderCreationCode(deployer))
+            address(
+                uint160(
+                    uint256(
+                        keccak256(
+                            abi.encodePacked(bytes1(0xff), deployer, salt, keccak256(forwarderCreationCode(deployer)))
+                        )
+                    )
                 )
-            ))))
+            )
         );
     }
 

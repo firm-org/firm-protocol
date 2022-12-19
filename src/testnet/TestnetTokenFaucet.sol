@@ -6,7 +6,7 @@ import "openzeppelin/token/ERC20/ERC20.sol";
 
 contract TestnetERC20 is ERC20, Ownable {
     uint8 private immutable _decimals;
-    
+
     constructor(string memory name, string memory symbol, uint8 decimals_) ERC20(name, symbol) {
         _decimals = decimals_;
     }

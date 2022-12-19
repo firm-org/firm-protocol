@@ -20,22 +20,13 @@ interface ISafe {
      * @param data Data payload of module transaction.
      * @param operation Operation type of module transaction: 0 == call, 1 == delegate call.
      */
-    function execTransactionFromModule(
-        address to,
-        uint256 value,
-        bytes memory data,
-        Operation operation
-    ) external returns (bool success);
+    function execTransactionFromModule(address to, uint256 value, bytes memory data, Operation operation)
+        external
+        returns (bool success);
 
-    function execTransactionFromModuleReturnData(
-        address to,
-        uint256 value,
-        bytes memory data,
-        Operation operation
-    ) external returns (
-        bool success,
-        bytes memory returnData
-    );
+    function execTransactionFromModuleReturnData(address to, uint256 value, bytes memory data, Operation operation)
+        external
+        returns (bool success, bytes memory returnData);
 
     /**
      * @dev Returns if a certain address is an owner of this Safe

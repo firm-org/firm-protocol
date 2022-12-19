@@ -24,7 +24,7 @@ contract EquityToken is ERC20Votes {
     constructor() ERC20("", "") ERC20Permit("") {
         initialize(Captable(IMPL_INIT_NOOP_ADDR), 0);
     }
-    
+
     function initialize(Captable captable_, uint32 classId_) public {
         if (address(captable) != address(0)) {
             revert AlreadyInitialized();
@@ -42,11 +42,7 @@ contract EquityToken is ERC20Votes {
         _burn(account, amount);
     }
 
-    function forcedTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) external onlyCaptable {
+    function forcedTransfer(address from, address to, uint256 amount) external onlyCaptable {
         _transfer(from, to, amount);
     }
 
