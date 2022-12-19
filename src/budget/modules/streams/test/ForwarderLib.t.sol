@@ -28,6 +28,13 @@ contract ForwarderLibImplementer {
         return ForwarderLib.create(salt);
     }
 
+    function forward(ForwarderLib.Forwarder forwarder, address target, bytes calldata data)
+        public
+        returns (bool ok, bytes memory ret)
+    {
+        return forwarder.forward(target, data);
+    }
+
     function forwardChecked(ForwarderLib.Forwarder forwarder, address target, uint256 value, bytes calldata data)
         public
         payable
@@ -66,12 +73,25 @@ contract ForwarderLibTest is FirmTest {
     function testRevertsOnRepeatedSalt() public {
         testCreateForwarder();
 
-        vm.expectRevert();
-        lib.create(SALT);
+        vm.expectRevert(ForwarderLib.ForwarderAlreadyDeployed.selector);
+        lib.create{ gas: 1e6 }(SALT);
+    }
+    
+    function testHitsTarget() public returns (ForwarderLib.Forwarder forwarder)  {
+        forwarder = testCreateForwarder();
+
+        (bool ok, bytes memory ret) = lib.forward(forwarder, address(target), abi.encodeWithSelector(target.hit.selector));
+
+        assertTrue(ok);
+        assertTrue(target.hasHitOnce(forwarder.addr()));
+        (address sender, uint256 value) = abi.decode(ret, (address, uint256));
+        assertEq(sender, forwarder.addr());
+        assertEq(value, 0);
+        assertEq(address(target).balance, 0);
     }
 
-    function testHitsTarget() public returns (ForwarderLib.Forwarder forwarder) {
-        forwarder = testCreateForwarder();
+    function testHitsTargetWithValue() public {
+        ForwarderLib.Forwarder forwarder = testCreateForwarder();
 
         address funder = account("Funder");
         vm.deal(funder, 1 ether);
