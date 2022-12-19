@@ -1,4 +1,4 @@
-# Firm Core
+# Firm Protocol
 
 ## Development
 
