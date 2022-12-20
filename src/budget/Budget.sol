@@ -170,7 +170,7 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
             if (token != parentAllowance.token) {
                 revert TokenMismatch(parentAllowance.token, token);
             }
-            // Recurrency can be zero in sub-allowances and is `inherited from the parent
+            // Recurrency can be zero in sub-allowances and is inherited from the parent
             if (!recurrency.isInherited()) {
                 // If recurrency is not inherited, amount cannot be inherited
                 if (amount == INHERITED_AMOUNT) {
