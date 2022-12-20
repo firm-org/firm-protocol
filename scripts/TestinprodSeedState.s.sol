@@ -19,11 +19,12 @@ string constant LLAMAPAYSTREAMS_MODULE_ID = "org.firm.budget.llamapay-streams";
 contract TestinprodSeedState is Test {
     error UnsupportedChain(uint256 chainId);
 
+    TestnetTokenFaucet faucet;
+    UpgradeableModuleProxyFactory moduleFactory;
+    address USDC;
+
     // send some native asset to safe before running it
     function run(GnosisSafe safe) public {
-        TestnetTokenFaucet faucet;
-        UpgradeableModuleProxyFactory moduleFactory;
-        
         if (block.chainid == 5) {
             faucet = TestnetTokenFaucet(0x88A135e2f78C6Ef38E1b72A4B75Ad835fBd50CCE);
             moduleFactory = UpgradeableModuleProxyFactory(0x2Ef2b36AD44D5c5fdeECC5a6a38464BFe50b5Da2);
@@ -33,6 +34,8 @@ contract TestinprodSeedState is Test {
         } else {
             revert UnsupportedChain(block.chainid);
         }
+
+        USDC = address(faucet.tokenWithSymbol("USDC"));
 
         // only works for backdoored firms which have 3 modules: [budget, rolesBackdoor, budgetBackdoor]
         (address[] memory modules,) = safe.getModulesPaginated(address(0x1), 3);
@@ -61,39 +64,41 @@ contract TestinprodSeedState is Test {
 
         // create some roles
         uint8[] memory roleIds = new uint8[](3);
-        roleIds[0] = rolesBackdoor.createRole(ONLY_ROOT_ROLE_AS_ADMIN, "Executive role");
-        roleIds[1] = rolesBackdoor.createRole(ONLY_ROOT_ROLE_AS_ADMIN | bytes32(1 << roleIds[0]), "Team member role");
-        roleIds[2] = rolesBackdoor.createRole(ONLY_ROOT_ROLE_AS_ADMIN | bytes32(1 << roleIds[0]), "Dev role");
+        {
+            roleIds[0] = rolesBackdoor.createRole(ONLY_ROOT_ROLE_AS_ADMIN, "Executive role");
+            roleIds[1] = rolesBackdoor.createRole(ONLY_ROOT_ROLE_AS_ADMIN | bytes32(1 << roleIds[0]), "Team member role");
+            roleIds[2] = rolesBackdoor.createRole(ONLY_ROOT_ROLE_AS_ADMIN | bytes32(1 << roleIds[0]), "Dev role");
 
-        uint8[] memory noRevokingRoles = new uint8[](0);
+            uint8[] memory noRevokingRoles = new uint8[](0);
 
-        // give all roles to all safe signers
-        address[] memory safeOwners = safe.getOwners();
-        for (uint256 i = 0; i < safeOwners.length; i++) {
-            rolesBackdoor.setRoles(safeOwners[i], roleIds, noRevokingRoles);
+            // give all roles to all safe signers
+            address[] memory safeOwners = safe.getOwners();
+            for (uint256 i = 0; i < safeOwners.length; i++) {
+                rolesBackdoor.setRoles(safeOwners[i], roleIds, noRevokingRoles);
+            }
         }
 
         // create some allowances
         uint256 generalAllowanceId = budgetBackdoor.createAllowance(
             NO_PARENT_ID,
             roleFlag(roleIds[0]),
-            address(faucet.tokenWithSymbol("USDC")), 1_000_000e6,
+            USDC, 1_000_000e6,
             TimeShift(TimeShiftLib.TimeUnit.Yearly, 0).encode(),
             "General yearly budget"
         );
         uint256 subAllowanceId1 = budget.createAllowance(
             generalAllowanceId,
             roleFlag(roleIds[1]),
-            address(faucet.tokenWithSymbol("USDC")), 25_000e6,
+            USDC, 25_000e6,
             TimeShift(TimeShiftLib.TimeUnit.Monthly, 0).encode(),
             "Monthly payroll budget"
         );
         uint256 subAllowanceId2 = budget.createAllowance(
             generalAllowanceId,
             roleFlag(roleIds[1]),
-            address(faucet.tokenWithSymbol("USDC")), 30_000e6,
-            TimeShift(TimeShiftLib.TimeUnit.Quarterly, 0).encode(),
-            "Quarterly travel budget"
+            USDC, 30_000e6,
+            TimeShift(TimeShiftLib.TimeUnit.NonRecurrent, int40(uint40(block.timestamp + 90 days))).encode(),
+            "Quarter travel budget"
         );
         uint256 gasAllowanceId = budgetBackdoor.createAllowance(
             NO_PARENT_ID,
@@ -103,13 +108,6 @@ contract TestinprodSeedState is Test {
             "Gas budget"
         );
 
-        // create some payments from the allowances
-        budgetBackdoor.executePayment(subAllowanceId2, 0x6b2b69c6e5490Be701AbFbFa440174f808C1a33B, 3600e6, "Devcon expenses");
-        // budgetBackdoor.executePayment(gasAllowanceId, 0x0FF6156B4bed7A1322f5F59eB5af46760De2b872, 0.01 ether, "v0.3 deployment gas");
-        budgetBackdoor.executePayment(generalAllowanceId, 0xFaE470CD6bce7EBac42B6da5082944D72328bC3b, 3000e6, "Equipment for new hire");
-        budgetBackdoor.executePayment(subAllowanceId1, 0xe688b84b23f322a994A53dbF8E15FA82CDB71127, 22000e6, "Process monthly payroll");
-        budgetBackdoor.executePayment(generalAllowanceId, 0x328375e18E7db8F1CA9d9bA8bF3E9C94ee34136A, 3000e6, "Special bonus");
-
         LlamaPayStreams streams = LlamaPayStreams(
             moduleFactory.deployUpgradeableModule(
                 LLAMAPAYSTREAMS_MODULE_ID,
@@ -118,10 +116,16 @@ contract TestinprodSeedState is Test {
                 1
             )
         );
-        uint256 streamsAllowanceId = budget.createAllowance(subAllowanceId1, address(streams), address(faucet.tokenWithSymbol("USDC")), 0, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode(), "Streams module");
+        uint256 streamsAllowanceId = budget.createAllowance(subAllowanceId1, address(streams), USDC, 0, TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode(), "Streams module");
         streams.configure(streamsAllowanceId, 30 days);
-        uint256 amountPerSecond = uint256(1000 * 10 ** 20) / (30 days);
-        streams.startStream(streamsAllowanceId, 0xF1F182B70255AC4846E28fd56038F9019c8d36b0, amountPerSecond, "f1 salary");
+        streams.startStream(streamsAllowanceId, 0xF1F182B70255AC4846E28fd56038F9019c8d36b0, uint256(1000 * 10 ** 20) / (30 days), "f1 salary");
+
+        // create some payments from the allowances
+        budgetBackdoor.executePayment(subAllowanceId2, 0x6b2b69c6e5490Be701AbFbFa440174f808C1a33B, 3600e6, "Devcon expenses");
+        // budgetBackdoor.executePayment(gasAllowanceId, 0x0FF6156B4bed7A1322f5F59eB5af46760De2b872, 0.01 ether, "v0.3 deployment gas");
+        budgetBackdoor.executePayment(generalAllowanceId, 0xFaE470CD6bce7EBac42B6da5082944D72328bC3b, 3000e6, "Equipment for new hire");
+        budgetBackdoor.executePayment(subAllowanceId1, 0xe688b84b23f322a994A53dbF8E15FA82CDB71127, 22000e6, "Process monthly payroll");
+        budgetBackdoor.executePayment(generalAllowanceId, 0x328375e18E7db8F1CA9d9bA8bF3E9C94ee34136A, 3000e6, "Special bonus");
 
         vm.stopBroadcast();
     }
