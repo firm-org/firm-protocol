@@ -140,7 +140,7 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
         if (parentAllowanceId == NO_PARENT_ID) {
             // Top-level allowances can only be created by the Safe
             if (_msgSender() != address(safe())) {
-                revert UnauthorizedNotAllowanceAdmin(NO_PARENT_ID);
+                revert UnauthorizedNotSafe();
             }
 
             // We don't allow setting amount 0 on top-level allowances as clients
