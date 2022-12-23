@@ -67,7 +67,7 @@ abstract contract BudgetTest is FirmTest {
     }
 
     function testNotOwnerCannotCreateTopLevelAllowance() public {
-        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(SafeAware.UnauthorizedNotSafe.selector));
         createDailyAllowance(SPENDER, 0);
     }
 
