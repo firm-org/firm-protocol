@@ -614,7 +614,7 @@ abstract contract BudgetTest is FirmTest {
     }
 
     function testCantCallSafeCallbackDirectly() public {
-        vm.expectRevert(abi.encodeWithSelector(Budget.BadExecutionContext.selector));
+        vm.expectRevert(abi.encodeWithSelector(SafeModule.BadExecutionContext.selector));
         budget.__safeContext_performMultiTransfer(token, new address[](0), new uint256[](0));
     }
 
