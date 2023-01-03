@@ -56,7 +56,7 @@ contract Voting is FirmBase, SafeModule, BaseGovernor {
         bytes[] memory calldatas,
         bytes32 descriptionHash
     ) external onlyForeignContext {
-        _execute(proposalId, targets, values, calldatas, descriptionHash);
+        super._execute(proposalId, targets, values, calldatas, descriptionHash);
     }
 
     function _executor() internal view override returns (address) {

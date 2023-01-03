@@ -38,4 +38,8 @@ contract FirmTest is Test {
     function timetravel(uint256 time) internal {
         vm.warp(block.timestamp + time);
     }
+
+    function blocktravel(uint256 blocks) internal {
+        vm.roll(block.number + blocks);
+    }
 }
