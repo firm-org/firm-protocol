@@ -31,7 +31,7 @@
             "modulesFactory": "0xCb3Dee447443B7F34aCd640AC8e304188512c2EC",
             "blockNumber": 34868283
         },
-        "v0.4.0": {
+        "v0.4.0-rc.1": {
             "firmFactory": "0x860ff9c3E9cd3A5666Cb9a5E0Ce6027D6627CD1b",
             "modulesFactory": "0x2dd8DA68D62a01Db1B29e87ed6A42E099a7C12E4",
             "blockNumber": 37024174
