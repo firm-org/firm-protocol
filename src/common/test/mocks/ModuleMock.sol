@@ -25,6 +25,6 @@ contract ModuleMock is FirmBase, SafeModule {
     }
 
     function execCall(address to, uint256 value, bytes memory data) public returns (bool success) {
-        return _exec(to, value, data, ISafe.Operation.Call);
+        return _moduleExec(to, value, data, ISafe.Operation.Call);
     }
 }

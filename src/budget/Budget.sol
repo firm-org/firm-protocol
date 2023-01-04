@@ -387,10 +387,10 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
 
     function _performTransfer(address token, address to, uint256 amount) internal returns (bool) {
         if (token == NATIVE_ASSET) {
-            return _exec(to, amount, hex"", ISafe.Operation.Call);
+            return _moduleExec(to, amount, hex"", ISafe.Operation.Call);
         } else {
             (bool callSuccess, bytes memory retData) =
-                _execAndReturnData(token, 0, abi.encodeCall(IERC20.transfer, (to, amount)), ISafe.Operation.Call);
+                _moduleExecAndReturnData(token, 0, abi.encodeCall(IERC20.transfer, (to, amount)), ISafe.Operation.Call);
 
             return callSuccess && (((retData.length == 32 && abi.decode(retData, (bool))) || retData.length == 0));
         }
@@ -400,7 +400,7 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
         internal
         returns (bool)
     {
-        return _execDelegateCallToSelf(abi.encodeCall(this.__safeContext_performMultiTransfer, (token, tos, amounts)));
+        return _moduleExecDelegateCallToSelf(abi.encodeCall(this.__safeContext_performMultiTransfer, (token, tos, amounts)));
     }
 
     function __safeContext_performMultiTransfer(address token, address[] calldata tos, uint256[] calldata amounts)

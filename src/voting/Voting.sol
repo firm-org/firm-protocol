@@ -31,7 +31,7 @@ contract Voting is FirmBase, SafeModule, OZGovernor {
     ) public {
         // calls SafeAware.__init_setSafe which reverts on reinitialization
         __init_firmBase(safe_, trustedForwarder_);
-        _initializeGovernor(token_, quorumNumerator_, votingDelay_, votingPeriod_, proposalThreshold_);
+        _setupGovernor(token_, quorumNumerator_, votingDelay_, votingPeriod_, proposalThreshold_);
     }
 
     function _executor() internal view override returns (address) {
@@ -48,7 +48,7 @@ contract Voting is FirmBase, SafeModule, OZGovernor {
         bytes memory data =
             abi.encodeCall(this.__safeContext_execute, (proposalId, targets, values, calldatas, descriptionHash));
 
-        if (!_execDelegateCallToSelf(data)) {
+        if (!_moduleExecDelegateCallToSelf(data)) {
             revert ProposalExecutionFailed(proposalId);
         }
     }

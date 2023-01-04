@@ -19,7 +19,7 @@ abstract contract OZGovernor is
 {
     constructor() Governor(name()) GovernorSettings(1, 1, 1) {}
 
-    function _initializeGovernor(
+    function _setupGovernor(
         ICaptableVotes token_,
         uint256 quorumNumerator_,
         uint256 votingDelay_,
@@ -33,12 +33,12 @@ abstract contract OZGovernor is
         _setProposalThreshold(proposalThreshold_);
     }
 
-    function quorumDenominator() public pure override returns (uint256) {
-        return 10000;
-    }
-
     function name() public pure override returns (string memory) {
         return "FirmVoting";
+    }
+
+    function quorumDenominator() public pure override returns (uint256) {
+        return 10000;
     }
 
     // Reject receiving assets
