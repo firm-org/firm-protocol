@@ -6,7 +6,7 @@ import {SafeERC20} from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
 import {FirmBase, IMPL_INIT_NOOP_ADDR, IMPL_INIT_NOOP_SAFE} from "../bases/FirmBase.sol";
 import {SafeModule, ISafe} from "../bases/SafeModule.sol";
-import {IRoles, RolesAuth} from "../common/RolesAuth.sol";
+import {IRoles, FirmRolesAuth} from "../common/FirmRolesAuth.sol";
 
 import {TimeShiftLib, EncodedTimeShift} from "./TimeShiftLib.sol";
 
@@ -21,7 +21,7 @@ uint40 constant INHERITED_RESET_TIME = 0;
  * @notice Budgeting module for efficient spending from a Safe using allowance chains
  * to delegate spending authority
  */
-contract FirmBudget is FirmBase, SafeModule, RolesAuth {
+contract FirmBudget is FirmBase, SafeModule, FirmRolesAuth {
     string public constant moduleId = "org.firm.budget";
     uint256 public constant moduleVersion = 1;
 

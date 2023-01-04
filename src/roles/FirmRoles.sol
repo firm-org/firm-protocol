@@ -14,14 +14,14 @@ import {
 } from "./IRoles.sol";
 
 /**
- * @title Roles
+ * @title FirmRoles
  * @author Firm (engineering@firm.org)
  * @notice Role management module supporting up to 256 roles optimized for batched actions
  * Inspired by Solmate's RolesAuthority and OpenZeppelin's AccessControl
  * https://github.com/Rari-Capital/solmate/blob/main/src/auth/authorities/RolesAuthority.sol)
  * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/AccessControl.sol
  */
-contract Roles is FirmBase, IRoles {
+contract FirmRoles is FirmBase, IRoles {
     string public constant moduleId = "org.firm.roles";
     uint256 public constant moduleVersion = 1;
 

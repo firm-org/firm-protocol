@@ -7,7 +7,7 @@ import {GnosisSafeProxyFactory} from "gnosis-safe/proxies/GnosisSafeProxyFactory
 import {FirmRelayer} from "../metatx/FirmRelayer.sol";
 
 import {ISafe} from "../bases/ISafe.sol";
-import {Roles} from "../roles/Roles.sol";
+import {FirmRoles} from "../roles/FirmRoles.sol";
 import {FirmBudget} from "../budget/FirmBudget.sol";
 
 import {UpgradeableModuleProxyFactory, LATEST_VERSION} from "./UpgradeableModuleProxyFactory.sol";
@@ -29,7 +29,7 @@ contract FirmFactory {
     error EnableModuleFailed();
     error InvalidContext();
 
-    event NewFirmCreated(address indexed creator, GnosisSafe indexed safe, Roles roles, FirmBudget budget);
+    event NewFirmCreated(address indexed creator, GnosisSafe indexed safe, FirmRoles roles, FirmBudget budget);
     event BackdoorsDeployed(GnosisSafe indexed safe, address[] backdoors);
 
     constructor(
@@ -70,7 +70,7 @@ contract FirmFactory {
         uint256 modulesDeployed = 1;
         (address[] memory modules,) = safe.getModulesPaginated(address(0x1), modulesDeployed);
         FirmBudget budget = FirmBudget(modules[0]);
-        Roles roles = Roles(address(budget.roles()));
+        FirmRoles roles = FirmRoles(address(budget.roles()));
 
         emit NewFirmCreated(msg.sender, safe, roles, budget);
 
@@ -92,11 +92,11 @@ contract FirmFactory {
         // since we both perform calls on 'this' with the ABI of a Safe (will fail on this contract)
 
         GnosisSafe safe = GnosisSafe(payable(address(this)));
-        Roles roles = Roles(
+        FirmRoles roles = FirmRoles(
             moduleFactory.deployUpgradeableModule(
                 ROLES_MODULE_ID,
                 LATEST_VERSION,
-                abi.encodeCall(Roles.initialize, (ISafe(payable(safe)), address(relayer))),
+                abi.encodeCall(FirmRoles.initialize, (ISafe(payable(safe)), address(relayer))),
                 1
             )
         );

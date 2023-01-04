@@ -5,7 +5,7 @@ import {FirmTest} from "../../common/test/lib/FirmTest.sol";
 import {SafeStub} from "../../common/test/mocks/SafeStub.sol";
 import {SafeAware} from "../../bases/SafeAware.sol";
 import {AddressUint8FlagsLib} from "../../common/AddressUint8FlagsLib.sol";
-import {Roles, ONLY_ROOT_ROLE_AS_ADMIN} from "../../roles/Roles.sol";
+import {FirmRoles, ONLY_ROOT_ROLE_AS_ADMIN} from "../../roles/FirmRoles.sol";
 import {roleFlag} from "../../common/test/mocks/RolesAuthMock.sol";
 
 import {Captable, IBouncer, NO_CONVERSION_FLAG, NO_CONTROLLER} from "../Captable.sol";
@@ -20,7 +20,7 @@ contract BaseCaptableTest is FirmTest {
 
     Captable captable;
     VestingController vesting;
-    Roles roles;
+    FirmRoles roles;
     SafeStub safe = new SafeStub();
 
     IBouncer ALLOW_ALL_BOUNCER = embeddedBouncer(EmbeddedBouncerType.AllowAll);
@@ -35,7 +35,7 @@ contract BaseCaptableTest is FirmTest {
     function setUp() public virtual {
         captable =
             Captable(createProxy(new Captable(), abi.encodeCall(Captable.initialize, ("TestCo", safe, address(0)))));
-        roles = Roles(createProxy(new Roles(), abi.encodeCall(Roles.initialize, (safe, address(0)))));
+        roles = FirmRoles(createProxy(new FirmRoles(), abi.encodeCall(FirmRoles.initialize, (safe, address(0)))));
         vesting = VestingController(
             createProxy(
                 new VestingController(), abi.encodeCall(VestingController.initialize, (captable, roles, address(0)))

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import {IRoles, RolesAuth} from "../../common/RolesAuth.sol";
+import {IRoles, FirmRolesAuth} from "../../common/FirmRolesAuth.sol";
 
 import {AccountController, Captable} from "./AccountController.sol";
 import {EquityToken} from "../EquityToken.sol";
 
-contract VestingController is AccountController, RolesAuth {
+contract VestingController is AccountController, FirmRolesAuth {
     string public constant moduleId = "org.firm.captable.vesting";
     uint256 public constant moduleVersion = 1;
 

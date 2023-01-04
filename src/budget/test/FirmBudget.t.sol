@@ -155,7 +155,7 @@ abstract contract FirmBudgetTest is FirmTest {
     function testInvalidSpenderReverts() public {
         uint8 badRoleId = 101; // RolesStub returns false to roleExists when id > 100
         vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(RolesAuth.UnexistentRole.selector, badRoleId));
+        vm.expectRevert(abi.encodeWithSelector(FirmRolesAuth.UnexistentRole.selector, badRoleId));
         budget.createAllowance(
             NO_PARENT_ID, roleFlag(badRoleId), token, 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
         );

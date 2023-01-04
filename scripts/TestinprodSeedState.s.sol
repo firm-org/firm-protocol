@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import 'forge-std/Test.sol';
 
 import "gnosis-safe/GnosisSafe.sol";
-import {Roles, IRoles, ISafe, ONLY_ROOT_ROLE_AS_ADMIN, ROOT_ROLE_ID} from "../src/roles/Roles.sol";
+import {FirmRoles, IRoles, ISafe, ONLY_ROOT_ROLE_AS_ADMIN, ROOT_ROLE_ID} from "../src/roles/FirmRoles.sol";
 import {FirmBudget, TimeShiftLib, NO_PARENT_ID, NATIVE_ASSET} from "../src/budget/FirmBudget.sol";
 import {TimeShift} from "../src/budget/TimeShiftLib.sol";
 import {BackdoorModule} from "../src/factory/local-utils/BackdoorModule.sol";
@@ -41,8 +41,8 @@ contract TestinprodSeedState is Test {
         (address[] memory modules,) = safe.getModulesPaginated(address(0x1), 3);
 
         FirmBudget budget = FirmBudget(modules[0]);
-        Roles roles = Roles(address(budget.roles()));
-        Roles rolesBackdoor = Roles(modules[1]);
+        FirmRoles roles = FirmRoles(address(budget.roles()));
+        FirmRoles rolesBackdoor = FirmRoles(modules[1]);
         FirmBudget budgetBackdoor = FirmBudget(modules[2]);
 
         // sanity check

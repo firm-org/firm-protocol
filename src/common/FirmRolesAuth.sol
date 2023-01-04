@@ -7,7 +7,7 @@ import {IRoles} from "../roles/IRoles.sol";
 
 uint8 constant ROLES_FLAG_TYPE = 0x01;
 
-abstract contract RolesAuth {
+abstract contract FirmRolesAuth {
     using AddressUint8FlagsLib for address;
 
     // ROLES_SLOT = keccak256("firm.rolesauth.roles") - 1

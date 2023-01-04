@@ -9,7 +9,7 @@ import {ModuleMock} from "src/common/test/mocks/ModuleMock.sol";
 
 import {FirmBudget, TimeShiftLib, NO_PARENT_ID, INHERITED_AMOUNT} from "src/budget/FirmBudget.sol";
 import {TimeShift} from "src/budget/TimeShiftLib.sol";
-import {Roles, IRoles, ISafe, ONLY_ROOT_ROLE_AS_ADMIN, ROOT_ROLE_ID} from "src/roles/Roles.sol";
+import {FirmRoles, IRoles, ISafe, ONLY_ROOT_ROLE_AS_ADMIN, ROOT_ROLE_ID} from "src/roles/FirmRoles.sol";
 import {FirmRelayer} from "src/metatx/FirmRelayer.sol";
 import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsDateTimeLibrary.sol";
 
@@ -56,14 +56,14 @@ contract FirmFactoryIntegrationTest is FirmTest {
         createFirm(address(this));
     }
 
-    event NewFirmCreated(address indexed creator, GnosisSafe indexed safe, Roles roles, FirmBudget budget);
+    event NewFirmCreated(address indexed creator, GnosisSafe indexed safe, FirmRoles roles, FirmBudget budget);
 
     function testInitialState() public {
         // we don't match the deployed contract addresses for simplicity (could precalculate them but unnecessary)
         vm.expectEmit(true, false, false, false);
-        emit NewFirmCreated(address(this), GnosisSafe(payable(0)), Roles(address(0)), FirmBudget(address(0)));
+        emit NewFirmCreated(address(this), GnosisSafe(payable(0)), FirmRoles(address(0)), FirmBudget(address(0)));
 
-        (GnosisSafe safe, FirmBudget budget, Roles roles) = createFirm(address(this));
+        (GnosisSafe safe, FirmBudget budget, FirmRoles roles) = createFirm(address(this));
 
         assertTrue(safe.isModuleEnabled(address(budget)));
         assertTrue(roles.hasRole(address(safe), ROOT_ROLE_ID));
@@ -72,7 +72,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
     }
 
     function testExecutingPaymentsFromBudget() public {
-        (GnosisSafe safe, FirmBudget budget, Roles roles) = createFirm(address(this));
+        (GnosisSafe safe, FirmBudget budget, FirmRoles roles) = createFirm(address(this));
         token.mint(address(safe), 100);
 
         (address spender, uint256 spenderPk) = accountAndKey("spender");
@@ -150,7 +150,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
         uint256 treasuryAmount = 3e7 * 10 ** token.decimals();
         address receiver = account("Receiver");
 
-        (GnosisSafe safe, FirmBudget budget, Roles roles) = createFirm(address(this));
+        (GnosisSafe safe, FirmBudget budget, FirmRoles roles) = createFirm(address(this));
         token.mint(address(safe), treasuryAmount);
 
         vm.prank(address(safe));
@@ -200,11 +200,11 @@ contract FirmFactoryIntegrationTest is FirmTest {
         assertApproxEqAbs(token.balanceOf(receiver), 15_000 * 10 ** token.decimals(), 2);
     }
 
-    function createFirm(address owner) internal returns (GnosisSafe safe, FirmBudget budget, Roles roles) {
+    function createFirm(address owner) internal returns (GnosisSafe safe, FirmBudget budget, FirmRoles roles) {
         safe = factory.createFirm(owner, false, 1);
         (address[] memory modules,) = safe.getModulesPaginated(address(0x1), 1);
         budget = FirmBudget(modules[0]);
-        roles = Roles(address(budget.roles()));
+        roles = FirmRoles(address(budget.roles()));
 
         vm.label(address(budget), "FirmBudgetProxy");
         vm.label(address(roles), "RolesProxy");

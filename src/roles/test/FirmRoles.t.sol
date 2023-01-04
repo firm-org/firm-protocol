@@ -5,11 +5,11 @@ import {FirmTest} from "../../common/test/lib/FirmTest.sol";
 import {SafeStub} from "../../common/test/mocks/SafeStub.sol";
 
 import {SafeAware} from "../../bases/SafeAware.sol";
-import "../Roles.sol";
+import "../FirmRoles.sol";
 
-contract RolesTest is FirmTest {
+contract FirmRolesTest is FirmTest {
     SafeStub safe;
-    Roles roles;
+    FirmRoles roles;
 
     address SOMEONE = account("someone");
     address SOMEONE_ELSE = account("someone else");
@@ -19,7 +19,7 @@ contract RolesTest is FirmTest {
         safe = new SafeStub();
         safe.setOwner(SAFE_OWNER, true);
 
-        roles = Roles(createProxy(new Roles(), abi.encodeCall(Roles.initialize, (ISafe(payable(safe)), address(0)))));
+        roles = FirmRoles(createProxy(new FirmRoles(), abi.encodeCall(FirmRoles.initialize, (ISafe(payable(safe)), address(0)))));
     }
 
     function testInitialRoot() public {
@@ -53,13 +53,13 @@ contract RolesTest is FirmTest {
     }
 
     function testCannotCreateRolesWithoutRolesManagerRole() public {
-        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNoRole.selector, ROLE_MANAGER_ROLE_ID));
+        vm.expectRevert(abi.encodeWithSelector(FirmRoles.UnauthorizedNoRole.selector, ROLE_MANAGER_ROLE_ID));
         roles.createRole(ONLY_ROOT_ROLE_AS_ADMIN, "");
     }
 
     function testCannotCreateRoleWithNoAdmins() public {
         vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Roles.InvalidRoleAdmins.selector));
+        vm.expectRevert(abi.encodeWithSelector(FirmRoles.InvalidRoleAdmins.selector));
         roles.createRole(NO_ROLE_ADMINS, "");
     }
 
@@ -85,7 +85,7 @@ contract RolesTest is FirmTest {
         }
         assertEq(roles.roleCount(), 255);
 
-        vm.expectRevert(abi.encodeWithSelector(Roles.RoleLimitReached.selector));
+        vm.expectRevert(abi.encodeWithSelector(FirmRoles.RoleLimitReached.selector));
         roles.createRole(ONLY_ROOT_ROLE_AS_ADMIN, "");
     }
 
@@ -108,7 +108,7 @@ contract RolesTest is FirmTest {
         vm.stopPrank();
 
         vm.prank(SOMEONE);
-        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, roleId));
+        vm.expectRevert(abi.encodeWithSelector(FirmRoles.UnauthorizedNotAdmin.selector, roleId));
         roles.setRole(SOMEONE_ELSE, roleId, true);
     }
 
@@ -149,7 +149,7 @@ contract RolesTest is FirmTest {
         vm.stopPrank();
 
         vm.prank(SOMEONE);
-        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, newRoleId));
+        vm.expectRevert(abi.encodeWithSelector(FirmRoles.UnauthorizedNotAdmin.selector, newRoleId));
         roles.setRole(SOMEONE_ELSE, newRoleId, true);
 
         vm.prank(address(safe));
@@ -170,7 +170,7 @@ contract RolesTest is FirmTest {
         vm.stopPrank();
 
         vm.prank(SOMEONE);
-        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNoRole.selector, ROLE_MANAGER_ROLE_ID));
+        vm.expectRevert(abi.encodeWithSelector(FirmRoles.UnauthorizedNoRole.selector, ROLE_MANAGER_ROLE_ID));
         roles.setRoleAdmin(newRoleId, ONLY_ROOT_ROLE_AS_ADMIN);
     }
 
@@ -181,14 +181,14 @@ contract RolesTest is FirmTest {
         vm.stopPrank();
 
         vm.prank(SOMEONE);
-        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNoRole.selector, ROLE_MANAGER_ROLE_ID));
+        vm.expectRevert(abi.encodeWithSelector(FirmRoles.UnauthorizedNoRole.selector, ROLE_MANAGER_ROLE_ID));
         roles.setRoleName(newRoleId, "Some name");
     }
 
     function testCannotChangeRoleAdminToNoAdmin() public {
         vm.startPrank(address(safe));
         uint8 newRoleId = roles.createRole(ONLY_ROOT_ROLE_AS_ADMIN, "");
-        vm.expectRevert(abi.encodeWithSelector(Roles.InvalidRoleAdmins.selector));
+        vm.expectRevert(abi.encodeWithSelector(FirmRoles.InvalidRoleAdmins.selector));
         roles.setRoleAdmin(newRoleId, NO_ROLE_ADMINS);
         vm.stopPrank();
     }
@@ -211,7 +211,7 @@ contract RolesTest is FirmTest {
         assertEq(roles.getRoleAdmins(ROLE_MANAGER_ROLE_ID), newRoleAdmin);
 
         // However, when attempting to change the admin role, it will fail
-        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, ROOT_ROLE_ID));
+        vm.expectRevert(abi.encodeWithSelector(FirmRoles.UnauthorizedNotAdmin.selector, ROOT_ROLE_ID));
         roles.setRoleAdmin(ROOT_ROLE_ID, newRoleAdmin);
     }
 
@@ -229,14 +229,14 @@ contract RolesTest is FirmTest {
     function testCannotSetAdminRolesOnUnexistentRole() public {
         uint8 unexistentRoleId = 100;
         vm.startPrank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Roles.UnexistentRole.selector, unexistentRoleId));
+        vm.expectRevert(abi.encodeWithSelector(FirmRoles.UnexistentRole.selector, unexistentRoleId));
         roles.setRoleAdmin(unexistentRoleId, ONLY_ROOT_ROLE_AS_ADMIN);
     }
 
     function testCannotSetRoleNameOnUnexistentRole() public {
         uint8 unexistentRoleId = 100;
         vm.startPrank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Roles.UnexistentRole.selector, unexistentRoleId));
+        vm.expectRevert(abi.encodeWithSelector(FirmRoles.UnexistentRole.selector, unexistentRoleId));
         roles.setRoleName(unexistentRoleId, "new name");
     }
 
@@ -250,19 +250,19 @@ contract RolesTest is FirmTest {
     function testSafeOwnerRoleCannotBeGrantedNorRevoked() public {
         vm.startPrank(address(safe));
 
-        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, SAFE_OWNER_ROLE_ID));
+        vm.expectRevert(abi.encodeWithSelector(FirmRoles.UnauthorizedNotAdmin.selector, SAFE_OWNER_ROLE_ID));
         roles.setRole(SOMEONE, SAFE_OWNER_ROLE_ID, true);
 
-        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, SAFE_OWNER_ROLE_ID));
+        vm.expectRevert(abi.encodeWithSelector(FirmRoles.UnauthorizedNotAdmin.selector, SAFE_OWNER_ROLE_ID));
         roles.setRole(SAFE_OWNER, SAFE_OWNER_ROLE_ID, false);
 
         uint8[] memory roleArray = new uint8[](1);
         roleArray[0] = SAFE_OWNER_ROLE_ID;
 
-        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, SAFE_OWNER_ROLE_ID));
+        vm.expectRevert(abi.encodeWithSelector(FirmRoles.UnauthorizedNotAdmin.selector, SAFE_OWNER_ROLE_ID));
         roles.setRoles(SOMEONE, roleArray, new uint8[](0));
 
-        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, SAFE_OWNER_ROLE_ID));
+        vm.expectRevert(abi.encodeWithSelector(FirmRoles.UnauthorizedNotAdmin.selector, SAFE_OWNER_ROLE_ID));
         roles.setRoles(SAFE_OWNER, new uint8[](0), roleArray);
 
         vm.stopPrank();
@@ -270,7 +270,7 @@ contract RolesTest is FirmTest {
 
     function testCannotSetAdminRolesOnSafeOwnerRole() public {
         vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, SAFE_OWNER_ROLE_ID));
+        vm.expectRevert(abi.encodeWithSelector(FirmRoles.UnauthorizedNotAdmin.selector, SAFE_OWNER_ROLE_ID));
         roles.setRoleAdmin(SAFE_OWNER_ROLE_ID, ONLY_ROOT_ROLE_AS_ADMIN);
     }
 
@@ -284,7 +284,7 @@ contract RolesTest is FirmTest {
         // Remove as safe owner and try granting the role to someone else
         safe.setOwner(SAFE_OWNER, false);
         vm.prank(SAFE_OWNER);
-        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, newRole));
+        vm.expectRevert(abi.encodeWithSelector(FirmRoles.UnauthorizedNotAdmin.selector, newRole));
         roles.setRole(SOMEONE_ELSE, newRole, true);
     }
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import "../../../roles/Roles.sol";
+import "../../../roles/FirmRoles.sol";
 
 contract RolesStub is IRoles {
     mapping(address => mapping(uint8 => bool)) public hasRole;

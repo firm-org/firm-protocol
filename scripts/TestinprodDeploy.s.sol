@@ -8,7 +8,7 @@ import {GnosisSafeProxyFactory} from "gnosis-safe/proxies/GnosisSafeProxyFactory
 
 import {TestinprodFactory, UpgradeableModuleProxyFactory} from "src/factory/TestinprodFactory.sol";
 import {FirmRelayer} from "src/metatx/FirmRelayer.sol";
-import {Roles} from "src/roles/Roles.sol";
+import {FirmRoles} from "src/roles/FirmRoles.sol";
 import {FirmBudget} from "src/budget/FirmBudget.sol";
 import {LlamaPayStreams, LlamaPayFactory} from "src/budget/modules/streams/LlamaPayStreams.sol";
 
@@ -21,7 +21,7 @@ abstract contract DeployBase is Test {
         vm.startBroadcast();
 
         moduleFactory = new UpgradeableModuleProxyFactory();
-        moduleFactory.register(new Roles());
+        moduleFactory.register(new FirmRoles());
         moduleFactory.register(new FirmBudget());
         moduleFactory.register(new LlamaPayStreams(LlamaPayFactory(llamaPayFactory)));
         
