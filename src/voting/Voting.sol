@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import {BaseGovernor, Context} from "./BaseGovernor.sol";
+import {OZGovernor, Context} from "./OZGovernor.sol";
 import {ICaptableVotes} from "../captable/utils/ICaptableVotes.sol";
 
 import {FirmBase, ISafe, ERC2771Context, IMPL_INIT_NOOP_ADDR, IMPL_INIT_NOOP_SAFE} from "../bases/FirmBase.sol";
 import {SafeModule} from "../bases/SafeModule.sol";
 
-contract Voting is FirmBase, SafeModule, BaseGovernor {
+contract Voting is FirmBase, SafeModule, OZGovernor {
     string public constant moduleId = "org.firm.voting";
     uint256 public constant moduleVersion = 1;
 
@@ -34,6 +34,10 @@ contract Voting is FirmBase, SafeModule, BaseGovernor {
         _initializeGovernor(token_, quorumNumerator_, votingDelay_, votingPeriod_, proposalThreshold_);
     }
 
+    function _executor() internal view override returns (address) {
+        return address(safe());
+    }
+
     function _execute(
         uint256 proposalId,
         address[] memory targets,
@@ -57,10 +61,6 @@ contract Voting is FirmBase, SafeModule, BaseGovernor {
         bytes32 descriptionHash
     ) external onlyForeignContext {
         super._execute(proposalId, targets, values, calldatas, descriptionHash);
-    }
-
-    function _executor() internal view override returns (address) {
-        return address(safe());
     }
 
     // Since both OZGovernor and FirmBase use ERC-2771 contexts but use different implementations

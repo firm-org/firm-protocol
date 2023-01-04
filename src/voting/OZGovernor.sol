@@ -8,7 +8,9 @@ import {GovernorCountingSimple} from "openzeppelin/governance/extensions/Governo
 import {GovernorCaptableVotes, ICaptableVotes} from "./lib/GovernorCaptableVotes.sol";
 import {GovernorCaptableVotesQuorumFraction} from "./lib/GovernorCaptableVotesQuorumFraction.sol";
 
-contract BaseGovernor is
+// Base contract which aggregates all the different OpenZeppelin Governor extensions
+// and makes it possible to use behind a proxy instead of with a constructor
+abstract contract OZGovernor is
     Governor,
     GovernorSettings,
     GovernorCountingSimple,
