@@ -35,7 +35,7 @@ abstract contract SafeModule is FirmBase {
      * @param data Calldata
      * @param operation Operation type of transaction: 0 = call, 1 = delegatecall
      */
-    function _exec(address to, uint256 value, bytes memory data, ISafe.Operation operation)
+    function _moduleExec(address to, uint256 value, bytes memory data, ISafe.Operation operation)
         internal
         returns (bool success)
     {
@@ -50,14 +50,14 @@ abstract contract SafeModule is FirmBase {
      * @param data Calldata
      * @param operation Operation type of transaction: 0 = call, 1 = delegatecall
      */
-    function _execAndReturnData(address to, uint256 value, bytes memory data, ISafe.Operation operation)
+    function _moduleExecAndReturnData(address to, uint256 value, bytes memory data, ISafe.Operation operation)
         internal
         returns (bool success, bytes memory returnData)
     {
         return safe().execTransactionFromModuleReturnData(to, value, data, operation);
     }
 
-    function _execDelegateCallToSelf(bytes memory data) internal returns (bool success) {
-        return _exec(address(_implementation()), 0, data, ISafe.Operation.DelegateCall);
+    function _moduleExecDelegateCallToSelf(bytes memory data) internal returns (bool success) {
+        return _moduleExec(address(_implementation()), 0, data, ISafe.Operation.DelegateCall);
     }
 }

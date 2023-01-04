@@ -48,7 +48,7 @@ contract Voting is FirmBase, SafeModule, OZGovernor {
         bytes memory data =
             abi.encodeCall(this.__safeContext_execute, (proposalId, targets, values, calldatas, descriptionHash));
 
-        if (!_execDelegateCallToSelf(data)) {
+        if (!_moduleExecDelegateCallToSelf(data)) {
             revert ProposalExecutionFailed(proposalId);
         }
     }
