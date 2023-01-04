@@ -7,19 +7,19 @@ import {RolesStub} from "../../../common/test/mocks/RolesStub.sol";
 import {TimeShift} from "../../../budget/TimeShiftLib.sol";
 import {TestnetERC20 as ERC20Token} from "../../../testnet/TestnetTokenFaucet.sol";
 
-import "../../Budget.sol";
+import "../../FirmBudget.sol";
 import {BudgetModule} from "../BudgetModule.sol";
 
 abstract contract BudgetModuleTest is FirmTest {
     SafeStub safe;
     RolesStub roles;
-    Budget budget;
+    FirmBudget budget;
     ERC20Token token = new ERC20Token("", "", 0); // use the same token all the time to mimic using previously used llamapay instances
 
     function setUp() public virtual {
         safe = new SafeStub();
         roles = new RolesStub();
-        budget = Budget(createProxy(new Budget(), abi.encodeCall(Budget.initialize, (safe, roles, address(0)))));
+        budget = FirmBudget(createProxy(new FirmBudget(), abi.encodeCall(FirmBudget.initialize, (safe, roles, address(0)))));
     }
 
     function module() internal view virtual returns (BudgetModule);

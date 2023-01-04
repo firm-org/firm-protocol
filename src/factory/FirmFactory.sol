@@ -8,7 +8,7 @@ import {FirmRelayer} from "../metatx/FirmRelayer.sol";
 
 import {ISafe} from "../bases/ISafe.sol";
 import {Roles} from "../roles/Roles.sol";
-import {Budget} from "../budget/Budget.sol";
+import {FirmBudget} from "../budget/FirmBudget.sol";
 
 import {UpgradeableModuleProxyFactory, LATEST_VERSION} from "./UpgradeableModuleProxyFactory.sol";
 
@@ -29,7 +29,7 @@ contract FirmFactory {
     error EnableModuleFailed();
     error InvalidContext();
 
-    event NewFirmCreated(address indexed creator, GnosisSafe indexed safe, Roles roles, Budget budget);
+    event NewFirmCreated(address indexed creator, GnosisSafe indexed safe, Roles roles, FirmBudget budget);
     event BackdoorsDeployed(GnosisSafe indexed safe, address[] backdoors);
 
     constructor(
@@ -69,7 +69,7 @@ contract FirmFactory {
         // However, the subgraph is struggling with this so we have this temporarily
         uint256 modulesDeployed = 1;
         (address[] memory modules,) = safe.getModulesPaginated(address(0x1), modulesDeployed);
-        Budget budget = Budget(modules[0]);
+        FirmBudget budget = FirmBudget(modules[0]);
         Roles roles = Roles(address(budget.roles()));
 
         emit NewFirmCreated(msg.sender, safe, roles, budget);
@@ -100,11 +100,11 @@ contract FirmFactory {
                 1
             )
         );
-        Budget budget = Budget(
+        FirmBudget budget = FirmBudget(
             moduleFactory.deployUpgradeableModule(
                 BUDGET_MODULE_ID,
                 LATEST_VERSION,
-                abi.encodeCall(Budget.initialize, (ISafe(payable(safe)), roles, address(relayer))),
+                abi.encodeCall(FirmBudget.initialize, (ISafe(payable(safe)), roles, address(relayer))),
                 1
             )
         );

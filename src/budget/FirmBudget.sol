@@ -16,12 +16,12 @@ uint256 constant INHERITED_AMOUNT = 0;
 uint40 constant INHERITED_RESET_TIME = 0;
 
 /**
- * @title Budget
+ * @title FirmBudget
  * @author Firm (engineering@firm.org)
  * @notice Budgeting module for efficient spending from a Safe using allowance chains
  * to delegate spending authority
  */
-contract Budget is FirmBase, SafeModule, RolesAuth {
+contract FirmBudget is FirmBase, SafeModule, RolesAuth {
     string public constant moduleId = "org.firm.budget";
     uint256 public constant moduleVersion = 1;
 

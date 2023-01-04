@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import {LlamaPay, LlamaPayFactory} from "llamapay/LlamaPayFactory.sol";
 import {IERC20, IERC20Metadata} from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
 
-import {BudgetModule, Budget} from "../BudgetModule.sol";
+import {BudgetModule, FirmBudget} from "../BudgetModule.sol";
 import {ForwarderLib} from "./ForwarderLib.sol";
 
 contract LlamaPayStreams is BudgetModule {
@@ -237,7 +237,7 @@ contract LlamaPayStreams is BudgetModule {
 
             forwarder.forwardChecked(address(streamer), abi.encodeCall(streamer.withdrawPayer, (amount)));
 
-            Budget budget = budget();
+            FirmBudget budget = budget();
             if (token.allowance(forwarder.addr(), address(budget)) < tokenAmount) {
                 forwarder.forwardChecked(
                     address(token), abi.encodeCall(IERC20.approve, (address(budget), type(uint256).max))

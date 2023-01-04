@@ -10,12 +10,12 @@ import {UpgradeableModuleProxyFactory} from "../../factory/UpgradeableModuleProx
 
 import {TimeShift, DateTimeLib} from "../../budget/TimeShiftLib.sol";
 import {SafeAware} from "../../bases/SafeAware.sol";
-import "../Budget.sol";
+import "../FirmBudget.sol";
 
-abstract contract BudgetTest is FirmTest {
+abstract contract FirmBudgetTest is FirmTest {
     SafeStub safe;
     RolesStub roles;
-    Budget budget;
+    FirmBudget budget;
     address token; // set in deriving contracts
 
     address SPENDER = account("spender");
@@ -25,7 +25,7 @@ abstract contract BudgetTest is FirmTest {
     function setUp() public virtual {
         safe = new SafeStub();
         roles = new RolesStub();
-        budget = Budget(createProxy(new Budget(), abi.encodeCall(Budget.initialize, (safe, roles, token))));
+        budget = FirmBudget(createProxy(new FirmBudget(), abi.encodeCall(FirmBudget.initialize, (safe, roles, token))));
     }
 
     function testInitialState() public {
@@ -73,7 +73,7 @@ abstract contract BudgetTest is FirmTest {
 
     function testCantCreateAllowanceWithZeroToken() public {
         vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Budget.BadInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.BadInput.selector));
         budget.createAllowance(
             NO_PARENT_ID, SPENDER, address(0), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
         );
@@ -81,7 +81,7 @@ abstract contract BudgetTest is FirmTest {
 
     function testCantCreateAllowanceWithZeroSpender() public {
         vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Budget.BadInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.BadInput.selector));
         budget.createAllowance(
             NO_PARENT_ID, address(0), token, 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
         );
@@ -97,7 +97,7 @@ abstract contract BudgetTest is FirmTest {
 
     function testCantCreateAllowanceWithZeroAmountWithoutParent() public {
         vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Budget.InheritedAmountNotAllowed.selector));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.InheritedAmountNotAllowed.selector));
         budget.createAllowance(NO_PARENT_ID, SPENDER, token, 0, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), "");
     }
 
@@ -120,7 +120,7 @@ abstract contract BudgetTest is FirmTest {
         uint256 allowanceId = testCreateAllowance();
 
         vm.startPrank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Budget.BadInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.BadInput.selector));
         budget.setAllowanceSpender(allowanceId, address(0));
     }
 
@@ -128,7 +128,7 @@ abstract contract BudgetTest is FirmTest {
         uint256 allowanceId = testCreateAllowance();
 
         vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Budget.InheritedAmountNotAllowed.selector));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.InheritedAmountNotAllowed.selector));
         budget.setAllowanceAmount(allowanceId, 0);
     }
 
@@ -139,7 +139,7 @@ abstract contract BudgetTest is FirmTest {
             allowanceId, SPENDER, token, 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
         );
         vm.prank(address(SPENDER));
-        vm.expectRevert(abi.encodeWithSelector(Budget.InheritedAmountNotAllowed.selector));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.InheritedAmountNotAllowed.selector));
         budget.setAllowanceAmount(childAllowanceId, 0);
     }
 
@@ -176,7 +176,7 @@ abstract contract BudgetTest is FirmTest {
         assertExecutePayment(SPENDER, allowanceId, RECEIVER, 2, initialTime + 2 days);
 
         vm.prank(SPENDER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, allowanceId, 7, 1));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.Overbudget.selector, allowanceId, 7, 1));
         budget.executePayment(allowanceId, RECEIVER, 7, "");
     }
 
@@ -194,7 +194,7 @@ abstract contract BudgetTest is FirmTest {
         budget.executeMultiPayment(allowanceId, tos, amounts, "");
 
         vm.prank(SPENDER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, allowanceId, 1, 0));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.Overbudget.selector, allowanceId, 1, 0));
         budget.executePayment(allowanceId, RECEIVER, 1, "");
 
         vm.warp(initialTime + 1 days);
@@ -206,7 +206,7 @@ abstract contract BudgetTest is FirmTest {
         // max out on second payment
         (tos, amounts) = _generateMultiPaymentArrays(2, RECEIVER, 2);
         vm.prank(SPENDER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, allowanceId, 4, 2));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.Overbudget.selector, allowanceId, 4, 2));
         budget.executeMultiPayment(allowanceId, tos, amounts, "");
     }
 
@@ -233,7 +233,7 @@ abstract contract BudgetTest is FirmTest {
     function testCantExecutePaymentWithZeroAmount() public {
         uint256 allowanceId = testCreateAllowance();
         vm.prank(SPENDER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.ZeroAmountPayment.selector));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.ZeroAmountPayment.selector));
         budget.executePayment(allowanceId, RECEIVER, 0, "");
     }
 
@@ -243,7 +243,7 @@ abstract contract BudgetTest is FirmTest {
         amounts[1] = 0;
 
         vm.prank(SPENDER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.ZeroAmountPayment.selector));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.ZeroAmountPayment.selector));
         budget.executeMultiPayment(allowanceId, tos, amounts, "");
     }
 
@@ -264,7 +264,7 @@ abstract contract BudgetTest is FirmTest {
         uint256 allowanceId = testCreateAllowance();
         vm.prank(SPENDER);
         vm.expectRevert(
-            abi.encodeWithSelector(Budget.PaymentExecutionFailed.selector, allowanceId, token, RECEIVER, amount)
+            abi.encodeWithSelector(FirmBudget.PaymentExecutionFailed.selector, allowanceId, token, RECEIVER, amount)
         );
         budget.executePayment(allowanceId, RECEIVER, amount, "");
 
@@ -272,7 +272,7 @@ abstract contract BudgetTest is FirmTest {
         (address[] memory tos, uint256[] memory amounts) = _generateMultiPaymentArrays(2, RECEIVER, 3);
         vm.prank(SPENDER);
         vm.expectRevert(
-            abi.encodeWithSelector(Budget.PaymentExecutionFailed.selector, allowanceId, token, address(0), 6)
+            abi.encodeWithSelector(FirmBudget.PaymentExecutionFailed.selector, allowanceId, token, address(0), 6)
         );
         budget.executeMultiPayment(allowanceId, tos, amounts, "");
     }
@@ -298,26 +298,26 @@ abstract contract BudgetTest is FirmTest {
 
         vm.startPrank(SPENDER);
 
-        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, NO_PARENT_ID));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.UnauthorizedNotAllowanceAdmin.selector, NO_PARENT_ID));
         budget.setAllowanceSpender(topLevelAllowanceId, RECEIVER);
 
-        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, NO_PARENT_ID));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.UnauthorizedNotAllowanceAdmin.selector, NO_PARENT_ID));
         budget.setAllowanceAmount(topLevelAllowanceId, 1);
 
-        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, NO_PARENT_ID));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.UnauthorizedNotAllowanceAdmin.selector, NO_PARENT_ID));
         budget.setAllowanceName(topLevelAllowanceId, "new name");
 
         vm.stopPrank();
 
         vm.startPrank(address(safe));
 
-        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, topLevelAllowanceId));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.UnauthorizedNotAllowanceAdmin.selector, topLevelAllowanceId));
         budget.setAllowanceSpender(subAllowanceId, RECEIVER);
 
-        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, topLevelAllowanceId));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.UnauthorizedNotAllowanceAdmin.selector, topLevelAllowanceId));
         budget.setAllowanceAmount(subAllowanceId, 1);
 
-        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, topLevelAllowanceId));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.UnauthorizedNotAllowanceAdmin.selector, topLevelAllowanceId));
         budget.setAllowanceName(subAllowanceId, "new name");
 
         vm.stopPrank();
@@ -342,7 +342,7 @@ abstract contract BudgetTest is FirmTest {
     function testCantCreateSuballowanceIfNotSpender() public {
         uint256 allowanceId = testCreateAllowance();
         vm.prank(address(safe)); // safe is not a spender and cant create subs
-        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, allowanceId));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.UnauthorizedNotAllowanceAdmin.selector, allowanceId));
         budget.createAllowance(
             allowanceId, SOMEONE_ELSE, token, 5, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
         );
@@ -352,7 +352,7 @@ abstract contract BudgetTest is FirmTest {
         uint256 allowanceId = testCreateAllowance();
         address differentToken = address(1);
         vm.prank(SPENDER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.TokenMismatch.selector, token, differentToken));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.TokenMismatch.selector, token, differentToken));
         budget.createAllowance(
             allowanceId, SOMEONE_ELSE, differentToken, 5, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
         );
@@ -361,7 +361,7 @@ abstract contract BudgetTest is FirmTest {
     function testSuballowanceCantInheritAmountIfRecurrencyIsNotInherited() public {
         uint256 allowanceId = testCreateAllowance();
         vm.prank(SPENDER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.InheritedAmountNotAllowed.selector));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.InheritedAmountNotAllowed.selector));
         budget.createAllowance(
             allowanceId, SOMEONE_ELSE, token, INHERITED_AMOUNT, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
         );
@@ -402,7 +402,7 @@ abstract contract BudgetTest is FirmTest {
         assertEq(spent3, 2);
         assertEq(spent4, 1); // It's one because the state doesn't get reset until a payment involving this allowance
 
-        vm.expectRevert(abi.encodeWithSelector(Budget.Overbudget.selector, allowance3, 1, 0));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.Overbudget.selector, allowance3, 1, 0));
         vm.prank(SPENDER);
         budget.executePayment(allowance4, SPENDER, 1, "");
     }
@@ -417,7 +417,7 @@ abstract contract BudgetTest is FirmTest {
         budget.setAllowanceState(topLevelAllowanceId, false);
 
         vm.prank(SPENDER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.DisabledAllowance.selector, topLevelAllowanceId));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.DisabledAllowance.selector, topLevelAllowanceId));
         budget.executePayment(childAllowanceId, RECEIVER, 1, "");
     }
 
@@ -428,11 +428,11 @@ abstract contract BudgetTest is FirmTest {
         testAllowanceChain(); // sets up the chain
 
         vm.prank(SPENDER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.UnauthorizedNotAllowanceAdmin.selector, 0));
         budget.setAllowanceState(topLevelAllowanceId, false);
 
         vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedNotAllowanceAdmin.selector, childAllowanceId - 1));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.UnauthorizedNotAllowanceAdmin.selector, childAllowanceId - 1));
         budget.setAllowanceState(childAllowanceId, false);
     }
 
@@ -442,7 +442,7 @@ abstract contract BudgetTest is FirmTest {
         createDailyAllowance(SPENDER, allowanceId);
 
         vm.prank(RECEIVER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedPaymentExecution.selector, allowanceId, RECEIVER));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.UnauthorizedPaymentExecution.selector, allowanceId, RECEIVER));
         budget.executePayment(allowanceId, RECEIVER, 7, "");
     }
 
@@ -453,7 +453,7 @@ abstract contract BudgetTest is FirmTest {
         createDailyAllowance(roleFlag(roleId), allowanceId);
 
         vm.startPrank(SPENDER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedPaymentExecution.selector, allowanceId, SPENDER));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.UnauthorizedPaymentExecution.selector, allowanceId, SPENDER));
         budget.executePayment(allowanceId, RECEIVER, 7, ""); // execution fails since SPENDER doesn't have the required role yet
 
         roles.setRole(SPENDER, roleId, true);
@@ -462,7 +462,7 @@ abstract contract BudgetTest is FirmTest {
 
     function testCantExecuteInexistentAllowance() public {
         vm.prank(SPENDER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.UnexistentAllowance.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.UnexistentAllowance.selector, 0));
         budget.executePayment(0, RECEIVER, 7, "");
     }
 
@@ -472,7 +472,7 @@ abstract contract BudgetTest is FirmTest {
         createDailyAllowance(SPENDER, allowanceId);
 
         vm.prank(RECEIVER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.UnauthorizedPaymentExecution.selector, allowanceId, RECEIVER));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.UnauthorizedPaymentExecution.selector, allowanceId, RECEIVER));
         (address[] memory tos, uint256[] memory amounts) = _generateMultiPaymentArrays(2, RECEIVER, 7);
         budget.executeMultiPayment(allowanceId, tos, amounts, "");
     }
@@ -483,7 +483,7 @@ abstract contract BudgetTest is FirmTest {
         createDailyAllowance(SPENDER, allowanceId);
 
         vm.prank(SPENDER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.BadInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.BadInput.selector));
         (address[] memory tos, uint256[] memory amounts) = _generateMultiPaymentArrays(2, RECEIVER, 7);
         tos = new address[](1);
         budget.executeMultiPayment(allowanceId, tos, amounts, "");
@@ -558,12 +558,12 @@ abstract contract BudgetTest is FirmTest {
 
         if (token == NATIVE_ASSET) {
             vm.prank(RECEIVER);
-            vm.expectRevert(abi.encodeWithSelector(Budget.NativeValueMismatch.selector));
+            vm.expectRevert(abi.encodeWithSelector(FirmBudget.NativeValueMismatch.selector));
             budget.debitAllowance{value: 6}(allowanceId, 5, "");
         } else {
             vm.startPrank(RECEIVER);
             ERC20Token(token).approve(address(budget), 5);
-            vm.expectRevert(abi.encodeWithSelector(Budget.NativeValueMismatch.selector));
+            vm.expectRevert(abi.encodeWithSelector(FirmBudget.NativeValueMismatch.selector));
             vm.deal(RECEIVER, 5);
             budget.debitAllowance{value: 5}(allowanceId, 5, "");
             vm.stopPrank();
@@ -592,7 +592,7 @@ abstract contract BudgetTest is FirmTest {
         // Fails after expiry
         vm.warp(expiresAt);
         vm.prank(SPENDER);
-        vm.expectRevert(abi.encodeWithSelector(Budget.DisabledAllowance.selector, allowanceId));
+        vm.expectRevert(abi.encodeWithSelector(FirmBudget.DisabledAllowance.selector, allowanceId));
         budget.executePayment(allowanceId, RECEIVER, 1, "");
     }
 
@@ -618,7 +618,7 @@ abstract contract BudgetTest is FirmTest {
         budget.__safeContext_performMultiTransfer(token, new address[](0), new uint256[](0));
 
         vm.expectRevert(abi.encodeWithSelector(SafeModule.BadExecutionContext.selector));
-        Budget budgetImpl = Budget(getImpl(address(budget)));
+        FirmBudget budgetImpl = FirmBudget(getImpl(address(budget)));
         budgetImpl.__safeContext_performMultiTransfer(token, new address[](0), new uint256[](0));
     }
 
@@ -692,7 +692,7 @@ abstract contract BudgetTest is FirmTest {
     }
 }
 
-contract TokenBudgetTest is BudgetTest {
+contract TokenFirmBudgetTest is FirmBudgetTest {
     function setUp() public override {
         super.setUp();
 
@@ -702,7 +702,7 @@ contract TokenBudgetTest is BudgetTest {
     }
 }
 
-contract EtherBudgetTest is BudgetTest {
+contract EtherFirmBudgetTest is FirmBudgetTest {
     function setUp() public override {
         super.setUp();
 

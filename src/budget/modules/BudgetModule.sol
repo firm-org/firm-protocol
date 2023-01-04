@@ -3,7 +3,7 @@ pragma solidity 0.8.16;
 
 import {FirmBase, ISafe, IMPL_INIT_NOOP_ADDR, IMPL_INIT_NOOP_SAFE} from "../../bases/FirmBase.sol";
 
-import {Budget} from "../Budget.sol";
+import {FirmBudget} from "../FirmBudget.sol";
 
 abstract contract BudgetModule is FirmBase {
     // BUDGET_SLOT = keccak256("firm.budgetmodule.budget") - 1
@@ -11,10 +11,10 @@ abstract contract BudgetModule is FirmBase {
 
     constructor() {
         // Initialize with impossible values in constructor so impl base cannot be used
-        initialize(Budget(IMPL_INIT_NOOP_ADDR), IMPL_INIT_NOOP_ADDR);
+        initialize(FirmBudget(IMPL_INIT_NOOP_ADDR), IMPL_INIT_NOOP_ADDR);
     }
 
-    function initialize(Budget budget_, address trustedForwarder_) public {
+    function initialize(FirmBudget budget_, address trustedForwarder_) public {
         ISafe safe = address(budget_) != IMPL_INIT_NOOP_ADDR ? budget_.safe() : IMPL_INIT_NOOP_SAFE;
 
         // Will revert if reinitialized
@@ -24,7 +24,7 @@ abstract contract BudgetModule is FirmBase {
         }
     }
 
-    function budget() public view returns (Budget _budget) {
+    function budget() public view returns (FirmBudget _budget) {
         assembly {
             _budget := sload(BUDGET_SLOT)
         }

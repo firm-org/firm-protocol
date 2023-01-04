@@ -5,7 +5,7 @@ import 'forge-std/Test.sol';
 
 import "gnosis-safe/GnosisSafe.sol";
 import {Roles, IRoles, ISafe, ONLY_ROOT_ROLE_AS_ADMIN, ROOT_ROLE_ID} from "../src/roles/Roles.sol";
-import {Budget, TimeShiftLib, NO_PARENT_ID, NATIVE_ASSET} from "../src/budget/Budget.sol";
+import {FirmBudget, TimeShiftLib, NO_PARENT_ID, NATIVE_ASSET} from "../src/budget/FirmBudget.sol";
 import {TimeShift} from "../src/budget/TimeShiftLib.sol";
 import {BackdoorModule} from "../src/factory/local-utils/BackdoorModule.sol";
 import {roleFlag} from "../src/common/test/mocks/RolesAuthMock.sol";
@@ -40,10 +40,10 @@ contract TestinprodSeedState is Test {
         // only works for backdoored firms which have 3 modules: [budget, rolesBackdoor, budgetBackdoor]
         (address[] memory modules,) = safe.getModulesPaginated(address(0x1), 3);
 
-        Budget budget = Budget(modules[0]);
+        FirmBudget budget = FirmBudget(modules[0]);
         Roles roles = Roles(address(budget.roles()));
         Roles rolesBackdoor = Roles(modules[1]);
-        Budget budgetBackdoor = Budget(modules[2]);
+        FirmBudget budgetBackdoor = FirmBudget(modules[2]);
 
         // sanity check
         assertEq(budget.moduleId(), "org.firm.budget");
