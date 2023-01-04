@@ -7,6 +7,7 @@ import {FirmBase, IMPL_INIT_NOOP_SAFE, IMPL_INIT_NOOP_ADDR} from "../bases/FirmB
 import {ISafe} from "../bases/ISafe.sol";
 
 import {EquityToken, ERC20, ERC20Votes} from "./EquityToken.sol";
+import {ICaptableVotes} from "./utils/ICaptableVotes.sol";
 import {BouncerChecker} from "./BouncerChecker.sol";
 import {IBouncer} from "./bouncers/IBouncer.sol";
 import {IAccountController} from "./controllers/AccountController.sol";
@@ -14,7 +15,7 @@ import {IAccountController} from "./controllers/AccountController.sol";
 uint32 constant NO_CONVERSION_FLAG = type(uint32).max;
 IAccountController constant NO_CONTROLLER = IAccountController(address(0));
 
-contract Captable is FirmBase, BouncerChecker {
+contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
     string public constant moduleId = "org.firm.captable";
     uint256 public constant moduleVersion = 1;
 

@@ -15,7 +15,7 @@ contract BackdoorModule is SafeModule {
     }
 
     fallback() external {
-        (bool ok, bytes memory data) = execAndReturnData(module, 0, msg.data, ISafe.Operation.Call);
+        (bool ok, bytes memory data) = _execAndReturnData(module, 0, msg.data, ISafe.Operation.Call);
 
         if (!ok) {
             assembly {
