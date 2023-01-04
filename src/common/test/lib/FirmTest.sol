@@ -9,6 +9,8 @@ import {FirmBase} from "../../../bases/FirmBase.sol";
 contract FirmTest is Test {
     UpgradeableModuleProxyFactory immutable proxyFactory = new UpgradeableModuleProxyFactory();
 
+    string constant internal EIP1967_IMPL_SLOT = "eip1967.proxy.implementation";
+
     function account(string memory label) internal returns (address addr) {
         (addr,) = accountAndKey(label);
     }
@@ -23,12 +25,20 @@ contract FirmTest is Test {
         proxy = proxyFactory.deployUpgradeableModule(impl, initdata, 0);
         vm.label(proxy, "Proxy");
 
-        assertUnsStrg(address(impl), "eip1967.proxy.implementation", address(0xffff));
-        assertUnsStrg(address(proxy), "eip1967.proxy.implementation", address(impl));
+        assertUnsStrg(address(impl), EIP1967_IMPL_SLOT, address(0xffff));
+        assertUnsStrg(address(proxy), EIP1967_IMPL_SLOT, address(impl));
+    }
+
+    function getUnsStrg(address addr, string memory key) internal view returns (bytes32 value) {
+        value = vm.load(addr, bytes32(uint256(keccak256(abi.encodePacked(key))) - 1));
+    }
+
+    function getImpl(address proxy) internal view returns (address impl) {
+        impl = address(uint160(uint256(getUnsStrg(proxy, EIP1967_IMPL_SLOT))));
     }
 
     function assertUnsStrg(address addr, string memory key, bytes32 expectedValue) internal {
-        assertEq(vm.load(addr, bytes32(uint256(keccak256(abi.encodePacked(key))) - 1)), expectedValue);
+        assertEq(getUnsStrg(addr, key), expectedValue);
     }
 
     function assertUnsStrg(address addr, string memory key, address expectedAddr) internal {

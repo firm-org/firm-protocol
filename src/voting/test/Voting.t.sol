@@ -1,14 +1,19 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
+import {DoubleEndedQueue} from "openzeppelin/utils/structs/DoubleEndedQueue.sol";
+
 import {BaseCaptableTest, EquityToken, NO_CONVERSION_FLAG} from "../../captable/test/Captable.t.sol";
 import {TargetV1 as Target} from "../../factory/test/lib/TestTargets.sol";
+import {FirmRelayer} from "../../metatx/FirmRelayer.sol";
+import {SafeAware} from "../../bases/SafeAware.sol";
 
-import {Voting} from "../Voting.sol";
+import {Voting, SafeModule} from "../Voting.sol";
 
-contract BaseVotingTest is BaseCaptableTest {
+contract VotingTest is BaseCaptableTest {
     Voting voting;
     Target target;
+    FirmRelayer relayer;
 
     uint256 constant QUORUM_NUMERATOR = 5000; // 50%
     uint256 constant VOTING_DELAY = 1;
@@ -18,16 +23,19 @@ contract BaseVotingTest is BaseCaptableTest {
     uint256 constant INITIAL_AUTHORIZED = 10000;
 
     function setUp() public virtual override {
+        vm.roll(1);
+
         super.setUp();
 
         target = new Target();
+        relayer = new FirmRelayer();
         voting = Voting(
             payable(
                 createProxy(
                     new Voting(),
                     abi.encodeCall(
                         Voting.initialize,
-                        (safe, captable, QUORUM_NUMERATOR, VOTING_DELAY, VOTING_PERIOD, PROPOSAL_THRESHOLD, address(0))
+                        (safe, captable, QUORUM_NUMERATOR, VOTING_DELAY, VOTING_PERIOD, PROPOSAL_THRESHOLD, address(relayer))
                     )
                 )
             )
@@ -46,11 +54,49 @@ contract BaseVotingTest is BaseCaptableTest {
         _selfDelegateHolders(token);
     }
 
-    function testCanCreateProposal() public {
+    function testInitialState() public {
+        assertEq(voting.name(), "FirmVoting");
+        assertEq(address(voting.token()), address(captable));
+        assertEq(voting.quorumNumerator(), QUORUM_NUMERATOR);
+        assertEq(voting.votingDelay(), VOTING_DELAY);
+        assertEq(voting.votingPeriod(), VOTING_PERIOD);
+        assertEq(voting.proposalThreshold(), PROPOSAL_THRESHOLD);
+    }
+
+    function testCantReinit() public {
+        vm.expectRevert(abi.encodeWithSelector(SafeAware.AlreadyInitialized.selector));
+        voting.initialize(safe, captable, QUORUM_NUMERATOR, VOTING_DELAY, VOTING_PERIOD, PROPOSAL_THRESHOLD, address(relayer));
+    }
+
+    function testCanCreateAndExecuteProposal() public {
+        _createAndExecuteProposal(address(target), abi.encodeCall(target.setNumber, (1)), 0, 0);
+        assertEq(target.getNumber(), 1);
+    }
+
+    function _createAndExecuteProposal(address to, bytes memory data, uint256 extraDelay, uint256 extraPeriod) internal {
         blocktravel(1);
         vm.prank(HOLDER1);
         string memory description = "Test";
-        uint256 proposalId = voting.propose(arr(address(target)), arr(0), arr(abi.encodeCall(target.setNumber, (1))), description);
+        uint256 proposalId = voting.propose(arr(address(to)), arr(0), arr(data), description);
+
+        blocktravel(VOTING_DELAY + 1 + extraDelay);
+
+        vm.prank(HOLDER1);
+        voting.castVote(proposalId, 1);
+        vm.prank(HOLDER2);
+        voting.castVote(proposalId, 0);
+
+        blocktravel(VOTING_PERIOD + extraPeriod);
+
+        voting.execute(arr(address(to)), arr(0), arr(data), keccak256(bytes(description)));
+    }
+
+    function testProposalExecutionRevertsIfActionReverts() public {
+        blocktravel(1);
+        vm.prank(HOLDER1);
+        string memory description = "Test";
+        // Target has no fallback, so this will revert
+        uint256 proposalId = voting.propose(arr(address(target)), arr(0), arr(bytes("")), description);
 
         blocktravel(VOTING_DELAY + 1);
 
@@ -61,9 +107,91 @@ contract BaseVotingTest is BaseCaptableTest {
 
         blocktravel(VOTING_PERIOD);
 
-        voting.execute(arr(address(target)), arr(0), arr(abi.encodeCall(target.setNumber, (1))), keccak256(bytes(description)));
+        vm.expectRevert(abi.encodeWithSelector(Voting.ProposalExecutionFailed.selector, proposalId));
+        voting.execute(arr(address(target)), arr(0), arr(bytes("")), keccak256(bytes(description)));
+    }
 
-        assertEq(target.getNumber(), 1);
+     function testCantCallSafeCallbackDirectly() public {
+        vm.expectRevert(abi.encodeWithSelector(SafeModule.BadExecutionContext.selector));
+        voting.__safeContext_execute(1, arr(address(0)), arr(0), arr(bytes("")), bytes32(0));
+
+        vm.expectRevert(abi.encodeWithSelector(SafeModule.BadExecutionContext.selector));
+        Voting votingImpl = Voting(payable(getImpl(address(voting))));
+        votingImpl.__safeContext_execute(1, arr(address(0)), arr(0), arr(bytes("")), bytes32(0));
+    }
+
+    function testCanUpdateSettingsThroughProposals() public {
+        _createAndExecuteProposal(address(voting), abi.encodeCall(voting.setProposalThreshold, (PROPOSAL_THRESHOLD + 1)), 0, 0);
+        assertEq(voting.proposalThreshold(), PROPOSAL_THRESHOLD + 1);
+
+        _createAndExecuteProposal(address(voting), abi.encodeCall(voting.setVotingDelay, (VOTING_DELAY + 1)), 0, 0);
+        assertEq(voting.votingDelay(), VOTING_DELAY + 1);
+
+        _createAndExecuteProposal(address(voting), abi.encodeCall(voting.setVotingPeriod, (VOTING_PERIOD + 1)), 1, 0);
+        assertEq(voting.votingPeriod(), VOTING_PERIOD + 1);
+
+        _createAndExecuteProposal(address(voting), abi.encodeCall(voting.updateQuorumNumerator, (QUORUM_NUMERATOR + 1)), 1, 1);
+        assertEq(voting.quorumNumerator(), QUORUM_NUMERATOR + 1);
+    }
+
+    function testSafeCantUpdateSettingsDirectly() public {
+        vm.startPrank(address(safe));
+
+        vm.expectRevert(abi.encodeWithSelector(DoubleEndedQueue.Empty.selector));
+        voting.setProposalThreshold(PROPOSAL_THRESHOLD + 1);
+
+        vm.expectRevert(abi.encodeWithSelector(DoubleEndedQueue.Empty.selector));
+        voting.setVotingDelay(VOTING_DELAY + 1);
+
+        vm.expectRevert(abi.encodeWithSelector(DoubleEndedQueue.Empty.selector));
+        voting.setVotingPeriod(VOTING_PERIOD + 1);
+
+        vm.expectRevert(abi.encodeWithSelector(DoubleEndedQueue.Empty.selector));
+        voting.updateQuorumNumerator(QUORUM_NUMERATOR + 1);
+
+        vm.stopPrank();
+    }
+
+    function testVotingCantUpdateSettings() public {
+        vm.startPrank(address(voting));
+
+        vm.expectRevert("Governor: onlyGovernance");
+        voting.setProposalThreshold(PROPOSAL_THRESHOLD + 1);
+
+        vm.expectRevert("Governor: onlyGovernance");
+        voting.setVotingDelay(VOTING_DELAY + 1);
+
+        vm.expectRevert("Governor: onlyGovernance");
+        voting.setVotingPeriod(VOTING_PERIOD + 1);
+
+        vm.expectRevert("Governor: onlyGovernance");
+        voting.updateQuorumNumerator(QUORUM_NUMERATOR + 1);
+
+        vm.stopPrank();
+    }
+
+    function testFirmContextUsedForGovernance() public {
+        // This has no effects since all calls are made through the safe directly
+        // but as a check that inheritance is properly handled and ERC2771Context from
+        // Firm is used
+
+        FirmRelayer.Call[] memory calls = new FirmRelayer.Call[](1);
+        calls[0] = FirmRelayer.Call({
+            to: address(voting),
+            value: 0,
+            data: abi.encodeCall(voting.setProposalThreshold, (PROPOSAL_THRESHOLD + 1)),
+            assertionIndex: 0,
+            gas: 1e6
+        });
+
+        // This is the error that Governor throws when a direct call from the executor is made
+        // but the action wasn't queued for execution through proper vote execution
+        // If the sender wasn't the executor, it would be 'Governor: onlyGovernance'
+        bytes memory votingError = abi.encodeWithSelector(DoubleEndedQueue.Empty.selector);
+
+        vm.prank(address(safe));
+        vm.expectRevert(abi.encodeWithSelector(FirmRelayer.CallExecutionFailed.selector, 0, address(voting), votingError));
+        relayer.selfRelay(calls, new FirmRelayer.Assertion[](0));
     }
 
     function arr(address a) internal pure returns (address[] memory _arr) {
