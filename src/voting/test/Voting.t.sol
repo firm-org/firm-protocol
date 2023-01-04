@@ -73,11 +73,21 @@ contract VotingTest is BaseCaptableTest {
         assertEq(target.getNumber(), 1);
     }
 
+    function testCanCreateAndExecuteProposalWithValue() public {
+        vm.deal(address(safe), 1);
+        _createAndExecuteProposal(HOLDER1, 1, bytes(""), 0, 0);
+        assertEq(HOLDER1.balance, 1);
+    }
+
     function _createAndExecuteProposal(address to, bytes memory data, uint256 extraDelay, uint256 extraPeriod) internal {
+        _createAndExecuteProposal(to, 0, data, extraDelay, extraPeriod);
+    }
+
+    function _createAndExecuteProposal(address to, uint256 value, bytes memory data, uint256 extraDelay, uint256 extraPeriod) internal {
         blocktravel(1);
         vm.prank(HOLDER1);
         string memory description = "Test";
-        uint256 proposalId = voting.propose(arr(address(to)), arr(0), arr(data), description);
+        uint256 proposalId = voting.propose(arr(address(to)), arr(value), arr(data), description);
 
         blocktravel(VOTING_DELAY + 1 + extraDelay);
 
@@ -88,7 +98,7 @@ contract VotingTest is BaseCaptableTest {
 
         blocktravel(VOTING_PERIOD + extraPeriod);
 
-        voting.execute(arr(address(to)), arr(0), arr(data), keccak256(bytes(description)));
+        voting.execute(arr(address(to)), arr(value), arr(data), keccak256(bytes(description)));
     }
 
     function testProposalExecutionRevertsIfActionReverts() public {
