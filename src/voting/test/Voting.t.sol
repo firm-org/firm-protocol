@@ -3,7 +3,7 @@ pragma solidity 0.8.16;
 
 import {DoubleEndedQueue} from "openzeppelin/utils/structs/DoubleEndedQueue.sol";
 
-import {BaseCaptableTest, EquityToken, NO_CONVERSION_FLAG} from "../../captable/test/Captable.t.sol";
+import {BaseCaptableTest, EquityToken, NO_CONVERSION_FLAG} from "../../captable/test/FirmCaptable.t.sol";
 import {TargetV1 as Target} from "../../factory/test/lib/TestTargets.sol";
 import {FirmRelayer} from "../../metatx/FirmRelayer.sol";
 import {SafeAware} from "../../bases/SafeAware.sol";

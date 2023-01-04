@@ -3,11 +3,11 @@ pragma solidity 0.8.16;
 
 import {ERC20, ERC20Votes, ERC20Permit} from "openzeppelin/token/ERC20/extensions/ERC20Votes.sol";
 
-import {Captable} from "./Captable.sol";
+import {FirmCaptable} from "./FirmCaptable.sol";
 import {IMPL_INIT_NOOP_ADDR} from "../bases/FirmBase.sol";
 
 contract EquityToken is ERC20Votes {
-    Captable public captable;
+    FirmCaptable public captable;
     uint32 public classId;
 
     error AlreadyInitialized();
@@ -22,10 +22,10 @@ contract EquityToken is ERC20Votes {
     }
 
     constructor() ERC20("", "") ERC20Permit("") {
-        initialize(Captable(IMPL_INIT_NOOP_ADDR), 0);
+        initialize(FirmCaptable(IMPL_INIT_NOOP_ADDR), 0);
     }
 
-    function initialize(Captable captable_, uint32 classId_) public {
+    function initialize(FirmCaptable captable_, uint32 classId_) public {
         if (address(captable) != address(0)) {
             revert AlreadyInitialized();
         }
@@ -47,7 +47,7 @@ contract EquityToken is ERC20Votes {
     }
 
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal override {
-        // Transfers triggered by Captable are always allowed and not checked
+        // Transfers triggered by FirmCaptable are always allowed and not checked
         if (msg.sender != address(captable)) {
             captable.ensureTransferIsAllowed(from, to, classId, amount);
         }

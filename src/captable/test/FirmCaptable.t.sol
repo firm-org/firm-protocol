@@ -8,7 +8,7 @@ import {AddressUint8FlagsLib} from "../../common/AddressUint8FlagsLib.sol";
 import {FirmRoles, ONLY_ROOT_ROLE_AS_ADMIN} from "../../roles/FirmRoles.sol";
 import {roleFlag} from "../../common/test/mocks/RolesAuthMock.sol";
 
-import {Captable, IBouncer, NO_CONVERSION_FLAG, NO_CONTROLLER} from "../Captable.sol";
+import {FirmCaptable, IBouncer, NO_CONVERSION_FLAG, NO_CONTROLLER} from "../FirmCaptable.sol";
 import {EquityToken} from "../EquityToken.sol";
 import {EmbeddedBouncerType, EMBEDDED_BOUNCER_FLAG_TYPE} from "../BouncerChecker.sol";
 import {VestingController} from "../controllers/VestingController.sol";
@@ -18,7 +18,7 @@ import {OddBouncer} from "./mocks/OddBouncer.sol";
 contract BaseCaptableTest is FirmTest {
     using AddressUint8FlagsLib for *;
 
-    Captable captable;
+    FirmCaptable captable;
     VestingController vesting;
     FirmRoles roles;
     SafeStub safe = new SafeStub();
@@ -34,7 +34,7 @@ contract BaseCaptableTest is FirmTest {
 
     function setUp() public virtual {
         captable =
-            Captable(createProxy(new Captable(), abi.encodeCall(Captable.initialize, ("TestCo", safe, address(0)))));
+            FirmCaptable(createProxy(new FirmCaptable(), abi.encodeCall(FirmCaptable.initialize, ("TestCo", safe, address(0)))));
         roles = FirmRoles(createProxy(new FirmRoles(), abi.encodeCall(FirmRoles.initialize, (safe, address(0)))));
         vesting = VestingController(
             createProxy(
@@ -66,14 +66,14 @@ contract CaptableInitTest is BaseCaptableTest {
     function testInitialState() public {
         // Create a new one to ensure proper coverage of initialize()
         captable =
-            Captable(createProxy(new Captable(), abi.encodeCall(Captable.initialize, ("TestCo1", safe, address(0)))));
+            FirmCaptable(createProxy(new FirmCaptable(), abi.encodeCall(FirmCaptable.initialize, ("TestCo1", safe, address(0)))));
 
         assertEq(address(captable.safe()), address(safe));
         assertEq(captable.name(), "TestCo1");
 
         assertEq(captable.numberOfClasses(), 0);
 
-        bytes memory unexistentError = abi.encodeWithSelector(Captable.UnexistentClass.selector, 0);
+        bytes memory unexistentError = abi.encodeWithSelector(FirmCaptable.UnexistentClass.selector, 0);
         vm.expectRevert(unexistentError);
         captable.nameFor(0);
         vm.expectRevert(unexistentError);
@@ -127,19 +127,19 @@ contract CaptableInitTest is BaseCaptableTest {
         assertEq(captable.numberOfClasses(), CLASSES_LIMIT);
 
         vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Captable.ClassCreationAboveLimit.selector));
+        vm.expectRevert(abi.encodeWithSelector(FirmCaptable.ClassCreationAboveLimit.selector));
         captable.createClass("", "", 1, NO_CONVERSION_FLAG, 0, ALLOW_ALL_BOUNCER);
     }
 
     function testCantCreateClassWithZeroAuthorized() public {
         vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Captable.BadInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(FirmCaptable.BadInput.selector));
         captable.createClass("", "", 0, NO_CONVERSION_FLAG, 0, ALLOW_ALL_BOUNCER);
     }
 
     function testCantCreateClassWithZeroAddressBouncer() public {
         vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Captable.BadInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(FirmCaptable.BadInput.selector));
         captable.createClass("", "", 1, NO_CONVERSION_FLAG, 0, IBouncer(address(0)));
     }
 }
@@ -176,7 +176,7 @@ contract CaptableOneClassTest is BaseCaptableTest {
 
     function testCantIssueAboveAuthorized() public {
         vm.prank(ISSUER);
-        vm.expectRevert(abi.encodeWithSelector(Captable.IssuedOverAuthorized.selector, classId));
+        vm.expectRevert(abi.encodeWithSelector(FirmCaptable.IssuedOverAuthorized.selector, classId));
         captable.issue(HOLDER1, classId, INITIAL_AUTHORIZED + 1);
     }
 
@@ -184,13 +184,13 @@ contract CaptableOneClassTest is BaseCaptableTest {
         vm.prank(address(safe));
         captable.setManager(classId, ISSUER, false);
         vm.prank(ISSUER);
-        vm.expectRevert(abi.encodeWithSelector(Captable.UnauthorizedNotManager.selector, classId));
+        vm.expectRevert(abi.encodeWithSelector(FirmCaptable.UnauthorizedNotManager.selector, classId));
         captable.issue(HOLDER1, classId, 1);
     }
 
     function testCantIssueZeroShares() public {
         vm.prank(ISSUER);
-        vm.expectRevert(abi.encodeWithSelector(Captable.BadInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(FirmCaptable.BadInput.selector));
         captable.issue(HOLDER1, classId, 0);
     }
 
@@ -208,7 +208,7 @@ contract CaptableOneClassTest is BaseCaptableTest {
 
     function testCantChangeAuthorizedToZero() public {
         vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Captable.BadInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(FirmCaptable.BadInput.selector));
         captable.setAuthorized(classId, 0);
     }
 
@@ -216,7 +216,7 @@ contract CaptableOneClassTest is BaseCaptableTest {
         vm.prank(ISSUER);
         captable.issue(HOLDER1, classId, INITIAL_AUTHORIZED);
         vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Captable.IssuedOverAuthorized.selector, classId));
+        vm.expectRevert(abi.encodeWithSelector(FirmCaptable.IssuedOverAuthorized.selector, classId));
         captable.setAuthorized(classId, INITIAL_AUTHORIZED - 1);
     }
 
@@ -256,7 +256,7 @@ contract CaptableOneClassTest is BaseCaptableTest {
         vm.startPrank(HOLDER1);
         vm.warp(vestingParams.startDate - 1);
         vm.expectRevert(
-            abi.encodeWithSelector(Captable.TransferBlocked.selector, vesting, HOLDER1, HOLDER2, classId, 1)
+            abi.encodeWithSelector(FirmCaptable.TransferBlocked.selector, vesting, HOLDER1, HOLDER2, classId, 1)
         );
         token.transfer(HOLDER2, 1);
 
@@ -294,12 +294,12 @@ contract CaptableOneClassTest is BaseCaptableTest {
     }
 
     function testNonManagerCannotAddController() public {
-        vm.expectRevert(abi.encodeWithSelector(Captable.UnauthorizedNotManager.selector, classId));
+        vm.expectRevert(abi.encodeWithSelector(FirmCaptable.UnauthorizedNotManager.selector, classId));
         captable.setController(HOLDER1, classId, vesting, "");
     }
 
     function testNonControllerCannotForceTransfer() public {
-        vm.expectRevert(abi.encodeWithSelector(Captable.UnauthorizedNotController.selector, classId));
+        vm.expectRevert(abi.encodeWithSelector(FirmCaptable.UnauthorizedNotController.selector, classId));
         captable.controllerForcedTransfer(HOLDER1, HOLDER2, classId, 1, "");
     }
 
@@ -315,7 +315,7 @@ contract CaptableOneClassTest is BaseCaptableTest {
     }
 
     function testNonManagerCannotForceTransfer() public {
-        vm.expectRevert(abi.encodeWithSelector(Captable.UnauthorizedNotManager.selector, classId));
+        vm.expectRevert(abi.encodeWithSelector(FirmCaptable.UnauthorizedNotManager.selector, classId));
         captable.managerForcedTransfer(HOLDER1, HOLDER2, classId, 1, "");
     }
 
@@ -399,25 +399,25 @@ contract CaptableFrozenTest is BaseCaptableTest {
 
     function testCantChangeAuthorized() public {
         vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Captable.FrozenClass.selector, classId));
+        vm.expectRevert(abi.encodeWithSelector(FirmCaptable.FrozenClass.selector, classId));
         captable.setAuthorized(classId, 100);
     }
 
     function testCantChangeManagers() public {
         vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Captable.FrozenClass.selector, classId));
+        vm.expectRevert(abi.encodeWithSelector(FirmCaptable.FrozenClass.selector, classId));
         captable.setManager(classId, ISSUER, false);
     }
 
     function testCantFreezeAgain() public {
         vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Captable.FrozenClass.selector, classId));
+        vm.expectRevert(abi.encodeWithSelector(FirmCaptable.FrozenClass.selector, classId));
         captable.freeze(classId);
     }
 
     function testCantChangeBouncer() public {
         vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Captable.FrozenClass.selector, classId));
+        vm.expectRevert(abi.encodeWithSelector(FirmCaptable.FrozenClass.selector, classId));
         captable.setBouncer(classId, embeddedBouncer(EmbeddedBouncerType.DenyAll));
     }
 }
@@ -527,7 +527,7 @@ contract CaptableMulticlassTest is BaseCaptableTest {
 
     function testCantCreateConvertibleClassIfNotEnoughAuthorized() public {
         vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Captable.ConvertibleOverAuthorized.selector, classId2));
+        vm.expectRevert(abi.encodeWithSelector(FirmCaptable.ConvertibleOverAuthorized.selector, classId2));
         captable.createClass("", "", 1000, uint32(classId2), 1, ALLOW_ALL_BOUNCER);
     }
 
@@ -554,27 +554,27 @@ contract CaptableMulticlassTest is BaseCaptableTest {
     function testWhenOnConvertibleLimitCantAuthorizeLessOnConverting() public {
         (uint256 newAuthorized1,) = testChangingAuthorizedUpdatesConvertibleToLimit();
         vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Captable.IssuedOverAuthorized.selector, classId1));
+        vm.expectRevert(abi.encodeWithSelector(FirmCaptable.IssuedOverAuthorized.selector, classId1));
         captable.setAuthorized(classId1, newAuthorized1 - 1);
     }
 
     function testWhenOnConvertibleLimitCantAuthorizeMoreOnConverter() public {
         (, uint256 newAuthorized2) = testChangingAuthorizedUpdatesConvertibleToLimit();
         vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Captable.ConvertibleOverAuthorized.selector, classId1));
+        vm.expectRevert(abi.encodeWithSelector(FirmCaptable.ConvertibleOverAuthorized.selector, classId1));
         captable.setAuthorized(classId2, newAuthorized2 + 1);
     }
 
     function testWhenOnConvertibleLimitCantIssueMore() public {
         testChangingAuthorizedUpdatesConvertibleToLimit();
         vm.prank(ISSUER);
-        vm.expectRevert(abi.encodeWithSelector(Captable.IssuedOverAuthorized.selector, classId1));
+        vm.expectRevert(abi.encodeWithSelector(FirmCaptable.IssuedOverAuthorized.selector, classId1));
         captable.issue(HOLDER1, classId1, 1);
     }
 
     function testCantChangeAuthorizedIfNotEnoughOnConvertingClass() public {
         vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Captable.ConvertibleOverAuthorized.selector, classId1));
+        vm.expectRevert(abi.encodeWithSelector(FirmCaptable.ConvertibleOverAuthorized.selector, classId1));
         captable.setAuthorized(classId2, authorized1);
     }
 
@@ -586,7 +586,7 @@ contract CaptableMulticlassTest is BaseCaptableTest {
         captable.issueAndSetController(HOLDER2, classId2, 1, controller, "");
 
         vm.prank(HOLDER2);
-        vm.expectRevert(abi.encodeWithSelector(Captable.ConversionBlocked.selector, controller, HOLDER2, classId2, 1));
+        vm.expectRevert(abi.encodeWithSelector(FirmCaptable.ConversionBlocked.selector, controller, HOLDER2, classId2, 1));
         captable.convert(classId2, 1);
     }
 
@@ -736,7 +736,7 @@ contract CaptableBouncersTest is BaseCaptableTest {
         // HOLDER1 can't transfer
         vm.prank(HOLDER1);
         vm.expectRevert(
-            abi.encodeWithSelector(Captable.TransferBlocked.selector, bouncer, HOLDER1, HOLDER2, classId, 10)
+            abi.encodeWithSelector(FirmCaptable.TransferBlocked.selector, bouncer, HOLDER1, HOLDER2, classId, 10)
         );
         token.transfer(HOLDER2, 10);
 
@@ -745,7 +745,7 @@ contract CaptableBouncersTest is BaseCaptableTest {
         captable.issue(HOLDER2, classId, 1);
         vm.prank(HOLDER2);
         vm.expectRevert(
-            abi.encodeWithSelector(Captable.TransferBlocked.selector, bouncer, HOLDER2, HOLDER1, classId, 1)
+            abi.encodeWithSelector(FirmCaptable.TransferBlocked.selector, bouncer, HOLDER2, HOLDER1, classId, 1)
         );
         token.transfer(HOLDER1, 1);
     }
@@ -758,7 +758,7 @@ contract CaptableBouncersTest is BaseCaptableTest {
         // HOLDER1 can't transfer to HOLDER2 as it is not a holder of the class
         vm.prank(HOLDER1);
         vm.expectRevert(
-            abi.encodeWithSelector(Captable.TransferBlocked.selector, bouncer, HOLDER1, HOLDER2, classId, 10)
+            abi.encodeWithSelector(FirmCaptable.TransferBlocked.selector, bouncer, HOLDER1, HOLDER2, classId, 10)
         );
         token.transfer(HOLDER2, 10);
 
@@ -780,7 +780,7 @@ contract CaptableBouncersTest is BaseCaptableTest {
         // HOLDER1 can't transfer to HOLDER2 as it is not a holder of any class
         vm.prank(HOLDER1);
         vm.expectRevert(
-            abi.encodeWithSelector(Captable.TransferBlocked.selector, bouncer, HOLDER1, HOLDER2, classId, 10)
+            abi.encodeWithSelector(FirmCaptable.TransferBlocked.selector, bouncer, HOLDER1, HOLDER2, classId, 10)
         );
         token.transfer(HOLDER2, 10);
 
@@ -828,7 +828,7 @@ contract CaptableBouncersTest is BaseCaptableTest {
         // Bouncer doesn't allow transferring 2 because it is even
         vm.prank(HOLDER1);
         vm.expectRevert(
-            abi.encodeWithSelector(Captable.TransferBlocked.selector, bouncer, HOLDER1, HOLDER2, classId, 2)
+            abi.encodeWithSelector(FirmCaptable.TransferBlocked.selector, bouncer, HOLDER1, HOLDER2, classId, 2)
         );
         token.transfer(HOLDER2, 2);
     }
@@ -841,7 +841,7 @@ contract CaptableBouncersTest is BaseCaptableTest {
 
     function testCantSetBouncerToZeroAddr() public {
         vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(Captable.BadInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(FirmCaptable.BadInput.selector));
         captable.setBouncer(classId, IBouncer(address(0)));
     }
 }

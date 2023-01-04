@@ -3,7 +3,7 @@ pragma solidity 0.8.16;
 
 import {IRoles, FirmRolesAuth} from "../../common/FirmRolesAuth.sol";
 
-import {AccountController, Captable} from "./AccountController.sol";
+import {AccountController, FirmCaptable} from "./AccountController.sol";
 import {EquityToken} from "../EquityToken.sol";
 
 contract VestingController is AccountController, FirmRolesAuth {
@@ -32,7 +32,7 @@ contract VestingController is AccountController, FirmRolesAuth {
     error UnauthorizedRevoker();
     error InvalidVestingState();
 
-    function initialize(Captable captable_, IRoles _roles, address trustedForwarder_) public {
+    function initialize(FirmCaptable captable_, IRoles _roles, address trustedForwarder_) public {
         initialize(captable_, trustedForwarder_);
         _setRoles(_roles);
     }
@@ -42,7 +42,7 @@ contract VestingController is AccountController, FirmRolesAuth {
     ////////////////////////////////////////////////////////////////////////////////
 
     /**
-     * @notice Function called by Captable to add a new account with vesting
+     * @notice Function called by FirmCaptable to add a new account with vesting
      * @param owner Address of the account owner
      * @param classId Class ID of the account
      * @param amount Amount of tokens being vested
@@ -73,7 +73,7 @@ contract VestingController is AccountController, FirmRolesAuth {
     }
 
     /**
-     * @notice Function called by Captable to check whether a transfer is allowed depending on vesting state
+     * @notice Function called by FirmCaptable to check whether a transfer is allowed depending on vesting state
      * @param from Address of the account owner
      * @param classId Class ID of the account
      * @param amount Amount of tokens being transferred
