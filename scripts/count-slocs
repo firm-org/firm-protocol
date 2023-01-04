@@ -1,0 +1,3 @@
+#!/bin/bash
+
+find src -name '*.sol' ! -path "*/test/*" ! -path "src/testnet/*" | xargs wc -l
