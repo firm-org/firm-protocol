@@ -31,7 +31,7 @@ contract Voting is FirmBase, SafeModule, OZGovernor {
     ) public {
         // calls SafeAware.__init_setSafe which reverts on reinitialization
         __init_firmBase(safe_, trustedForwarder_);
-        _initializeGovernor(token_, quorumNumerator_, votingDelay_, votingPeriod_, proposalThreshold_);
+        _setupGovernor(token_, quorumNumerator_, votingDelay_, votingPeriod_, proposalThreshold_);
     }
 
     function _executor() internal view override returns (address) {
