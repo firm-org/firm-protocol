@@ -614,8 +614,12 @@ abstract contract BudgetTest is FirmTest {
     }
 
     function testCantCallSafeCallbackDirectly() public {
-        vm.expectRevert(abi.encodeWithSelector(Budget.BadExecutionContext.selector));
+        vm.expectRevert(abi.encodeWithSelector(SafeModule.BadExecutionContext.selector));
         budget.__safeContext_performMultiTransfer(token, new address[](0), new uint256[](0));
+
+        vm.expectRevert(abi.encodeWithSelector(SafeModule.BadExecutionContext.selector));
+        Budget budgetImpl = Budget(getImpl(address(budget)));
+        budgetImpl.__safeContext_performMultiTransfer(token, new address[](0), new uint256[](0));
     }
 
     function createDailyAllowance(address spender, uint256 expectedId) public returns (uint256 allowanceId) {

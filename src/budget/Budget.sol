@@ -90,7 +90,6 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
     error InheritedAmountNotAllowed();
     error ZeroAmountPayment();
     error BadInput();
-    error BadExecutionContext();
     error UnauthorizedPaymentExecution(uint256 allowanceId, address actor);
     error Overbudget(uint256 allowanceId, uint256 amount, uint256 remainingBudget);
     error PaymentExecutionFailed(uint256 allowanceId, address token, address to, uint256 amount);
@@ -388,10 +387,10 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
 
     function _performTransfer(address token, address to, uint256 amount) internal returns (bool) {
         if (token == NATIVE_ASSET) {
-            return exec(to, amount, hex"", ISafe.Operation.Call);
+            return _exec(to, amount, hex"", ISafe.Operation.Call);
         } else {
             (bool callSuccess, bytes memory retData) =
-                execAndReturnData(token, 0, abi.encodeCall(IERC20.transfer, (to, amount)), ISafe.Operation.Call);
+                _execAndReturnData(token, 0, abi.encodeCall(IERC20.transfer, (to, amount)), ISafe.Operation.Call);
 
             return callSuccess && (((retData.length == 32 && abi.decode(retData, (bool))) || retData.length == 0));
         }
@@ -401,25 +400,13 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
         internal
         returns (bool)
     {
-        bytes memory data = abi.encodeCall(this.__safeContext_performMultiTransfer, (token, tos, amounts));
-
-        (bool callSuccess, bytes memory retData) =
-            execAndReturnData(address(_implementation()), 0, data, ISafe.Operation.DelegateCall);
-        return callSuccess && retData.length == 32 && abi.decode(retData, (bool));
+        return _execDelegateCallToSelf(abi.encodeCall(this.__safeContext_performMultiTransfer, (token, tos, amounts)));
     }
 
     function __safeContext_performMultiTransfer(address token, address[] calldata tos, uint256[] calldata amounts)
         external
-        returns (bool)
+        onlyForeignContext
     {
-        // This function has to be external, but we need to ensure that it cannot be ran
-        // if we are on the proxy or impl context
-        // There's pressumably nothing malicious that could be done in this contract,
-        // but it's a good extra safety check
-        if (!_isForeignContext()) {
-            revert BadExecutionContext();
-        }
-
         uint256 length = tos.length;
 
         if (token == NATIVE_ASSET) {
@@ -440,8 +427,6 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
                 }
             }
         }
-
-        return true;
     }
 
     function _getAllowanceAndValidateAdmin(uint256 allowanceId) internal view returns (Allowance storage allowance) {
