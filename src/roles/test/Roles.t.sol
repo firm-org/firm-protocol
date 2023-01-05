@@ -297,3 +297,69 @@ contract RolesTest is FirmTest {
         roles.setRoleName(SAFE_OWNER_ROLE_ID, "new name");
     }
 }
+
+contract RolesRootRoleTest is FirmTest {
+    SafeStub safe;
+    Roles roles;
+
+    address ROOT = account("Root");
+    address ROLE_MANAGER = account("Role Manager");
+    address SOMEONE = account("Someone");
+    uint8 someRoleId;
+
+    function setUp() public {
+        safe = new SafeStub();
+
+        roles = Roles(createProxy(new Roles(), abi.encodeCall(Roles.initialize, (ISafe(payable(safe)), address(0)))));
+        vm.startPrank(address(safe));
+        someRoleId = roles.createRole(ONLY_ROOT_ROLE_AS_ADMIN, "");
+        // Separate the roles
+        roles.setRole(ROOT, ROOT_ROLE_ID, true);
+        roles.setRole(ROLE_MANAGER, ROLE_MANAGER_ROLE_ID, true);
+        roles.setRole(SOMEONE, someRoleId, true);
+        vm.stopPrank();
+    }
+
+    function testRootHasAllRoles() public {
+        assertTrue(roles.hasRole(ROOT, ROOT_ROLE_ID));
+        assertTrue(roles.hasRole(ROOT, ROLE_MANAGER_ROLE_ID));
+        assertTrue(roles.hasRole(ROOT, someRoleId));
+    }
+
+    function testRootCanRemoveSafeAsRoot() public {
+        vm.prank(ROOT);
+        roles.setRole(address(safe), ROOT_ROLE_ID, false);
+
+        assertFalse(roles.hasRole(address(safe), ROOT_ROLE_ID));
+        assertFalse(roles.hasRole(address(safe), ROLE_MANAGER_ROLE_ID));
+        assertFalse(roles.hasRole(address(safe), someRoleId));
+    }
+
+    function testRootCanSetNoAdminsFromRootRole() public {
+        // As admin, root can grant the root role
+        vm.prank(ROOT);
+        roles.setRole(SOMEONE, ROOT_ROLE_ID, true);
+        assertTrue(roles.hasRole(SOMEONE, ROOT_ROLE_ID));
+
+        // As root holder, root can set the admins of the root role (which allows setting it to no admins)
+        vm.prank(ROOT);
+        roles.setRoleAdmins(ROOT_ROLE_ID, bytes32(0));
+
+        // Root can no longer revoke the root role and it is fixed
+        vm.prank(ROOT);
+        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, ROOT_ROLE_ID));
+        roles.setRole(SOMEONE, ROOT_ROLE_ID, false);
+    }
+
+    function testRoleManagerCannotChangeRootRoleAdmins() public {
+        vm.prank(ROLE_MANAGER);
+        vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, ROOT_ROLE_ID));
+        roles.setRoleAdmins(ROOT_ROLE_ID, bytes32(0));
+    }
+
+    function testCannotSetNoAdminsForRootManagerRole() public {
+        vm.prank(ROOT);
+        vm.expectRevert(abi.encodeWithSelector(Roles.InvalidRoleAdmins.selector));
+        roles.setRoleAdmins(ROLE_MANAGER_ROLE_ID, bytes32(0));
+    }
+}
