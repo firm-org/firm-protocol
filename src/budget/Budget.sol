@@ -143,21 +143,22 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
                 revert UnauthorizedNotSafe();
             }
 
-            // We don't allow setting amount 0 on top-level allowances as clients
-            // could support setting 0 as the amount for the allowance and that
+            // We don't allow setting inherited amounts on top-level allowances as
+            // it could be prone to a client-side mistake to send 0 as the amount which will
             // will create an allowance that allows completely wiping the safe (for the token)
             if (amount == INHERITED_AMOUNT) {
                 revert InheritedAmountNotAllowed();
             }
 
-            // For top-level allowances, recurrency needs to be set and cannot be zero
+            // For top-level allowances, recurrency needs to be set and cannot be zero (inherited)
             // applyShift reverts with InvalidTimeShift if recurrency is unspecified
             // Therefore, nextResetTime is always greater than the current time
             nextResetTime = uint40(block.timestamp).applyShift(recurrency);
         } else {
+            // Reverts if parentAllowanceId doesn't exist
             Allowance storage parentAllowance = _getAllowance(parentAllowanceId);
 
-            // Not checking whether the parentAllowance is enabled is a explicit decision
+            // Not checking whether the parentAllowance is enabled is an explicit decision
             // Disabling any allowance in a given allowance chain will result in all its
             // children not being able to execute payments
             // This allows for disabling a certain allowance to reconfigure the whole tree
@@ -182,10 +183,11 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
             }
         }
 
+        // Checks that if it is a role flag, a roles instance has been set and the role exists
         _validateAuthorizedAddress(spender);
 
         unchecked {
-            // The index of the first allowance is 1, so NO_PARENT_ID can be 0 (gas op)
+            // The index of the first allowance is 1, so NO_PARENT_ID can be 0 (optimization)
             allowanceId = ++allowancesCount;
         }
 
@@ -226,6 +228,7 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
     function setAllowanceAmount(uint256 allowanceId, uint256 amount) external {
         Allowance storage allowance = _getAllowanceAndValidateAdmin(allowanceId);
 
+        // Same checks for what allowances can have an inherited amount as in the creation
         if (amount == INHERITED_AMOUNT && (allowance.parentId == NO_PARENT_ID || !allowance.recurrency.isInherited())) {
             revert InheritedAmountNotAllowed();
         }
@@ -322,7 +325,7 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
         }
 
         uint256 count = tos.length;
-        if (count != amounts.length || count == 0) {
+        if (count == 0 || count != amounts.length) {
             revert BadInput();
         }
 
@@ -451,7 +454,7 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
 
     function _isAdminOnAllowance(Allowance storage allowance, address actor) internal view returns (bool) {
         // Changes to the allowance state can be done by the same entity that could
-        // create that allowance in the first place
+        // create that allowance in the first place (a spender of the parent allowance)
         // In the case of top-level allowances, only the safe can enable/disable them
         // For child allowances, spenders of the parent can change the state of the child
         uint256 parentId = allowance.parentId;
@@ -463,7 +466,9 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
         uint256 amount,
         function(uint256, uint256) pure returns (uint256) op
     ) internal returns (uint40 nextResetTime, bool allowanceResets) {
-        Allowance storage allowance = allowances[allowanceId]; // allowanceId always points to an existing allowance
+        // Can do 'unsafely' as this function only used when allowanceId always points to an allowance which exists
+        // (checked through _getAllowance or a parentId which always exists)
+        Allowance storage allowance = allowances[allowanceId];
 
         if (allowance.isDisabled) {
             revert DisabledAllowance(allowanceId);
@@ -476,6 +481,7 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
         } else {
             nextResetTime = allowance.nextResetTime;
 
+            // Reset time has past, so we need to reset the allowance
             if (uint40(block.timestamp) >= nextResetTime) {
                 EncodedTimeShift recurrency = allowance.recurrency;
                 // For a non-recurrent allowance, after the reset time has passed,
@@ -485,25 +491,23 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
                 } else {
                     allowanceResets = true;
                     nextResetTime = uint40(block.timestamp).applyShift(recurrency);
+                    allowance.nextResetTime = nextResetTime;
                 }
             }
 
-            if (allowanceResets) {
-                allowance.nextResetTime = nextResetTime;
-            }
-
+            // Recursively update all parent allowances before checking the amounts (inheritance forces this)
             if (allowance.parentId != NO_PARENT_ID) {
                 _checkAndUpdateAllowanceChain(allowance.parentId, amount, op);
             }
         }
 
         if (allowance.amount != INHERITED_AMOUNT) {
-            uint256 spentAfterPayment = op(allowanceResets ? 0 : allowance.spent, amount);
-            if (spentAfterPayment > allowance.amount) {
+            uint256 spentAfter = op(allowanceResets ? 0 : allowance.spent, amount);
+            if (spentAfter > allowance.amount) {
                 revert Overbudget(allowanceId, amount, allowance.amount - allowance.spent);
             }
 
-            allowance.spent = spentAfterPayment;
+            allowance.spent = spentAfter;
         }
     }
 
