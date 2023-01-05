@@ -362,4 +362,14 @@ contract RolesRootRoleTest is FirmTest {
         vm.expectRevert(abi.encodeWithSelector(Roles.InvalidRoleAdmins.selector));
         roles.setRoleAdmins(ROLE_MANAGER_ROLE_ID, bytes32(0));
     }
+
+    function testSomeRoleCanAdminRootRole() public {
+        vm.prank(ROOT);
+        roles.setRoleAdmins(ROOT_ROLE_ID, bytes32(uint256(1 << someRoleId)));
+        assertTrue(roles.hasRole(SOMEONE, someRoleId)); // transitively gets the root role as admin
+
+        vm.prank(SOMEONE);
+        roles.setRole(SOMEONE, ROOT_ROLE_ID, true);
+        assertTrue(roles.hasRole(SOMEONE, ROOT_ROLE_ID));
+    }
 }
