@@ -7,6 +7,11 @@ import {IERC20, IERC20Metadata} from "openzeppelin/token/ERC20/extensions/IERC20
 import {BudgetModule, Budget} from "../BudgetModule.sol";
 import {ForwarderLib} from "./ForwarderLib.sol";
 
+/**
+ * @title LlamaPayStreams
+ * @author Firm (engineering@firm.org)
+ * @notice Budget module to manage LlamaPay v1 streams from Budget allowances
+ */
 contract LlamaPayStreams is BudgetModule {
     using ForwarderLib for ForwarderLib.Forwarder;
 
@@ -43,6 +48,9 @@ contract LlamaPayStreams is BudgetModule {
         llamaPayFactory = llamaPayFactory_;
     }
 
+    // Note: Initialization is done in the BudgetModule.initialize since
+    // LlamaPayStreams doesn't have any other state that needs to be initialized
+
     ////////////////////////
     // Config
     ////////////////////////
@@ -59,6 +67,8 @@ contract LlamaPayStreams is BudgetModule {
             revert StreamsAlreadyConfigured(allowanceId);
         }
 
+        // Due to how LlamaPay v1 works, intermediate forwarder contracts are used to manage deposits
+        // in LlamaPay separately for each allowance. These are the contracts that appear as payers on LlamaPay.
         (LlamaPay streamer, ForwarderLib.Forwarder forwarder) = _setupStreamsForAllowance(streamConfig, allowanceId);
 
         emit StreamsConfigured(allowanceId, streamer, forwarder);
@@ -77,7 +87,6 @@ contract LlamaPayStreams is BudgetModule {
     }
 
     function _setPrepayBuffer(uint256 allowanceId, StreamConfig storage streamConfig, uint40 prepayBuffer) internal {
-        // TODO: Consider enforcing a reasonable minimum prepay buffer (e.g. 1 day)
         if (prepayBuffer == 0) {
             revert InvalidPrepayBuffer(allowanceId);
         }
@@ -188,6 +197,9 @@ contract LlamaPayStreams is BudgetModule {
         );
     }
 
+    /**
+     * @dev Rebalances the amount that should be deposited to LlamaPay based on the current state of the streams
+     */
     function _rebalance(
         uint256 allowanceId,
         StreamConfig storage streamConfig,

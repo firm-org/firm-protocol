@@ -17,7 +17,7 @@ abstract contract BudgetModule is FirmBase {
     function initialize(Budget budget_, address trustedForwarder_) public {
         ISafe safe = address(budget_) != IMPL_INIT_NOOP_ADDR ? budget_.safe() : IMPL_INIT_NOOP_SAFE;
 
-        // Will revert if reinitialized
+        // Will revert if already initialized
         __init_firmBase(safe, trustedForwarder_);
         assembly {
             sstore(BUDGET_SLOT, budget_)
