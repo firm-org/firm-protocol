@@ -7,7 +7,7 @@ import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsD
 type EncodedTimeShift is bytes6;
 
 struct TimeShift {
-    TimeShiftLib.TimeUnit unit; // in the special case of seconds, offset doesn't apply
+    TimeShiftLib.TimeUnit unit;
     int40 offset;
 }
 
@@ -22,8 +22,8 @@ function decode(EncodedTimeShift encoded) pure returns (TimeShiftLib.TimeUnit un
 }
 
 // Note this is an efficient way to check for inherited time shifts
-// Even if an offset is specified, it will be ignored, but it will
-// no longer be considered an invalid state
+// Even if an offset is specified, it will be ignored, but it is still
+// considered an inherited time shift
 function isInherited(EncodedTimeShift encoded) pure returns (bool) {
     return EncodedTimeShift.unwrap(encoded) < 0x010000000000;
 }
@@ -69,7 +69,7 @@ library TimeShiftLib {
         uint40 realTime = uint40(int40(time) + offset);
         (uint256 y, uint256 m, uint256 d) = realTime.toDate();
 
-        // Split branches for shorter paths and put the most common cases first
+        // Gas opt: split branches for shorter paths and handle the most common cases first
         if (uint8(unit) > 3) {
             if (unit == TimeUnit.Yearly) {
                 (y, m, d) = (y + 1, 1, 1);
@@ -92,6 +92,7 @@ library TimeShiftLib {
             }
         }
 
+        // All time shifts are relative to the beginning of the day UTC before removing the offset
         uint256 shiftedTs = DateTimeLib.timestampFromDateTime(y, m, d, 0, 0, 0);
         return uint40(int40(uint40(shiftedTs)) - offset);
     }
