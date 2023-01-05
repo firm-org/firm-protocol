@@ -107,8 +107,8 @@ contract Roles is FirmBase, IRoles {
      * @param roleId ID of the role
      * @param roleAdmins Bitmap of roles that can perform admin actions on this role
      */
-    function setRoleAdmin(uint8 roleId, bytes32 roleAdmins) external {
-        if (roleAdmins == NO_ROLE_ADMINS) {
+    function setRoleAdmins(uint8 roleId, bytes32 roleAdmins) external {
+        if (roleAdmins == NO_ROLE_ADMINS && roleId != ROOT_ROLE_ID) {
             revert InvalidRoleAdmins();
         }
 
@@ -260,6 +260,7 @@ contract Roles is FirmBase, IRoles {
      * @return True if the user has admin rights over the role
      */
     function isRoleAdmin(address user, uint8 roleId) public view returns (bool) {
+        // Safe owner role has no admin as it is a dynamic role (assigned and revoked by the Safe)
         return roleId < SAFE_OWNER_ROLE_ID ? _isRoleAdmin(user, getUserRoles[user], roleId) : false;
     }
 
@@ -269,11 +270,19 @@ contract Roles is FirmBase, IRoles {
      * @return True if the role has been created
      */
     function roleExists(uint8 roleId) public view returns (bool) {
-        return getRoleAdmins[roleId] != NO_ROLE_ADMINS || roleId == SAFE_OWNER_ROLE_ID;
+        return roleId == ROOT_ROLE_ID // Root role is allowed to be left without admins
+            || roleId == SAFE_OWNER_ROLE_ID // Safe owner role doesn't have admins as it is a dynamic role
+            || getRoleAdmins[roleId] != NO_ROLE_ADMINS; // All other roles must have admins if they exist
     }
 
     function _isRoleAdmin(address user, bytes32 userRoles, uint8 roleId) internal view returns (bool) {
         bytes32 roleAdmins = getRoleAdmins[roleId];
+
+        // A user is considered an admin of a role if any of the following are true:
+        // - User explicitly has a role that is an admin of the role
+        // - User has the root role, the role exists, and the role checked is not the root role (allows for root to be left without admins)
+        // - User is an owner of the safe and the safe owner role is an admin of the role
+
         return (userRoles & roleAdmins) != 0
             || (_hasRootRole(userRoles) && roleExists(roleId) && roleId != ROOT_ROLE_ID)
             || (uint256(roleAdmins >> SAFE_OWNER_ROLE_ID) & 1 != 0 && safe().isOwner(user));

@@ -154,7 +154,7 @@ contract RolesTest is FirmTest {
 
         vm.prank(address(safe));
         bytes32 newRoleAdmin = ONLY_ROOT_ROLE_AS_ADMIN | bytes32(1 << uint256(newRoleId));
-        roles.setRoleAdmin(newRoleId, newRoleAdmin); // those with newRoleId are admins
+        roles.setRoleAdmins(newRoleId, newRoleAdmin); // those with newRoleId are admins
         assertEq(roles.getRoleAdmins(newRoleId), newRoleAdmin);
 
         vm.prank(SOMEONE);
@@ -171,7 +171,7 @@ contract RolesTest is FirmTest {
 
         vm.prank(SOMEONE);
         vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNoRole.selector, ROLE_MANAGER_ROLE_ID));
-        roles.setRoleAdmin(newRoleId, ONLY_ROOT_ROLE_AS_ADMIN);
+        roles.setRoleAdmins(newRoleId, ONLY_ROOT_ROLE_AS_ADMIN);
     }
 
     function testCannotChangeRoleNameWithoutRolesManagerRole() public {
@@ -189,14 +189,14 @@ contract RolesTest is FirmTest {
         vm.startPrank(address(safe));
         uint8 newRoleId = roles.createRole(ONLY_ROOT_ROLE_AS_ADMIN, "");
         vm.expectRevert(abi.encodeWithSelector(Roles.InvalidRoleAdmins.selector));
-        roles.setRoleAdmin(newRoleId, NO_ROLE_ADMINS);
+        roles.setRoleAdmins(newRoleId, NO_ROLE_ADMINS);
         vm.stopPrank();
     }
 
     function testAdminCanChangeAdminForAdminRole() public {
         bytes32 newRoleAdmin = ONLY_ROOT_ROLE_AS_ADMIN | bytes32(1 << uint256(ROLE_MANAGER_ROLE_ID));
         vm.prank(address(safe));
-        roles.setRoleAdmin(ROOT_ROLE_ID, newRoleAdmin);
+        roles.setRoleAdmins(ROOT_ROLE_ID, newRoleAdmin);
         assertEq(roles.getRoleAdmins(ROOT_ROLE_ID), newRoleAdmin);
     }
 
@@ -207,12 +207,12 @@ contract RolesTest is FirmTest {
         // As SOMEONE is granted ROLE_MANAGER_ROLE_ID, it can change the admin for all roles, including ROLE_MANAGER_ROLE_ID
         vm.startPrank(SOMEONE);
         bytes32 newRoleAdmin = ONLY_ROOT_ROLE_AS_ADMIN | bytes32(1 << uint256(ROLE_MANAGER_ROLE_ID));
-        roles.setRoleAdmin(ROLE_MANAGER_ROLE_ID, newRoleAdmin);
+        roles.setRoleAdmins(ROLE_MANAGER_ROLE_ID, newRoleAdmin);
         assertEq(roles.getRoleAdmins(ROLE_MANAGER_ROLE_ID), newRoleAdmin);
 
         // However, when attempting to change the admin role, it will fail
         vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, ROOT_ROLE_ID));
-        roles.setRoleAdmin(ROOT_ROLE_ID, newRoleAdmin);
+        roles.setRoleAdmins(ROOT_ROLE_ID, newRoleAdmin);
     }
 
     function testRoleAdminHasRole() public {
@@ -230,7 +230,7 @@ contract RolesTest is FirmTest {
         uint8 unexistentRoleId = 100;
         vm.startPrank(address(safe));
         vm.expectRevert(abi.encodeWithSelector(Roles.UnexistentRole.selector, unexistentRoleId));
-        roles.setRoleAdmin(unexistentRoleId, ONLY_ROOT_ROLE_AS_ADMIN);
+        roles.setRoleAdmins(unexistentRoleId, ONLY_ROOT_ROLE_AS_ADMIN);
     }
 
     function testCannotSetRoleNameOnUnexistentRole() public {
@@ -271,7 +271,7 @@ contract RolesTest is FirmTest {
     function testCannotSetAdminRolesOnSafeOwnerRole() public {
         vm.prank(address(safe));
         vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNotAdmin.selector, SAFE_OWNER_ROLE_ID));
-        roles.setRoleAdmin(SAFE_OWNER_ROLE_ID, ONLY_ROOT_ROLE_AS_ADMIN);
+        roles.setRoleAdmins(SAFE_OWNER_ROLE_ID, ONLY_ROOT_ROLE_AS_ADMIN);
     }
 
     function testSafeOwnerRoleCanBeRoleAdmin() public {
