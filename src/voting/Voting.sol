@@ -7,6 +7,12 @@ import {ICaptableVotes} from "../captable/utils/ICaptableVotes.sol";
 import {FirmBase, ISafe, ERC2771Context, IMPL_INIT_NOOP_ADDR, IMPL_INIT_NOOP_SAFE} from "../bases/FirmBase.sol";
 import {SafeModule} from "../bases/SafeModule.sol";
 
+/**
+ * @title Voting
+ * @author Firm (engineering@firm.org)
+ * @notice Voting module wrapping OpenZeppelin's Governor compatible with Firm's Captable
+ * https://docs.openzeppelin.com/contracts/4.x/api/governance
+ */
 contract Voting is FirmBase, SafeModule, OZGovernor {
     string public constant moduleId = "org.firm.voting";
     uint256 public constant moduleVersion = 1;
