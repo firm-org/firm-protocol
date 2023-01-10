@@ -6,6 +6,11 @@ import {ERC20, ERC20Votes, ERC20Permit} from "openzeppelin/token/ERC20/extension
 import {Captable} from "./Captable.sol";
 import {IMPL_INIT_NOOP_ADDR} from "../bases/FirmBase.sol";
 
+/**
+ * @title Equity token
+ * @author Firm (engineering@firm.org)
+ * @notice ERC20 with vote delegation controlled by a Captable contract
+ */
 contract EquityToken is ERC20Votes {
     Captable public captable;
     uint32 public classId;

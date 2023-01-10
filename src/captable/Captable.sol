@@ -15,6 +15,12 @@ import {IAccountController} from "./controllers/AccountController.sol";
 uint32 constant NO_CONVERSION_FLAG = type(uint32).max;
 IAccountController constant NO_CONTROLLER = IAccountController(address(0));
 
+/**
+ * @title Captable
+ * @author Firm (engineering@firm.org)
+ * @notice Captable manages ownership and voting rights in a company, controlling
+ * a set of equity tokens representing classes of stock
+ */
 contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
     string public constant moduleId = "org.firm.captable";
     uint256 public constant moduleVersion = 1;
