@@ -5,9 +5,9 @@ import {SafeAware, ISafe} from "./SafeAware.sol";
 import {IModuleMetadata} from "./IModuleMetadata.sol";
 
 // When the base contract (implementation) that proxies use is created,
-// we use this no-op address when an address is needed
-ISafe constant IMPL_INIT_NOOP_SAFE = ISafe(payable(address(1)));
+// we use this no-op address when an address is needed to make contracts initialized but unusable
 address constant IMPL_INIT_NOOP_ADDR = address(1);
+ISafe constant IMPL_INIT_NOOP_SAFE = ISafe(payable(IMPL_INIT_NOOP_ADDR));
 
 /**
  * @title EIP1967Upgradeable
