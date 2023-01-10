@@ -15,6 +15,20 @@ import {IAccountController} from "./controllers/AccountController.sol";
 uint32 constant NO_CONVERSION_FLAG = type(uint32).max;
 IAccountController constant NO_CONTROLLER = IAccountController(address(0));
 
+/*
+THE TRANSFER OF THE SECURITIES REFERENCED HEREIN IS SUBJECT TO CERTAIN TRANSFER
+RESTRICTIONS SET FORTH IN THE COMPANY’S BYLAWS, WHICH MAY BE OBTAINED UPON
+WRITTEN REQUEST TO THE COMPANY AT ITS DESIGNATED ELECTRONIC ADDRESS.
+THE COMPANY SHALL NOT REGISTER OR OTHERWISE RECOGNIZE OR GIVE EFFECT TO ANY
+PURPORTED TRANSFER OF SECURITIES THAT DOES NOT COMPLY WITH SUCH TRANSFER RESTRICTIONS.
+*/
+
+/**
+ * @title Captable
+ * @author Firm (engineering@firm.org)
+ * @notice Captable manages ownership and voting rights in a company, controlling
+ * a set of equity tokens representing classes of stock
+ */
 contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
     string public constant moduleId = "org.firm.captable";
     uint256 public constant moduleVersion = 1;

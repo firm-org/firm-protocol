@@ -6,6 +6,19 @@ import {ERC20, ERC20Votes, ERC20Permit} from "openzeppelin/token/ERC20/extension
 import {Captable} from "./Captable.sol";
 import {IMPL_INIT_NOOP_ADDR} from "../bases/FirmBase.sol";
 
+/*
+THE TRANSFER OF THE SECURITIES REFERENCED HEREIN IS SUBJECT TO CERTAIN TRANSFER
+RESTRICTIONS SET FORTH IN THE COMPANY’S BYLAWS, WHICH MAY BE OBTAINED UPON
+WRITTEN REQUEST TO THE COMPANY AT ITS DESIGNATED ELECTRONIC ADDRESS.
+THE COMPANY SHALL NOT REGISTER OR OTHERWISE RECOGNIZE OR GIVE EFFECT TO ANY
+PURPORTED TRANSFER OF SECURITIES THAT DOES NOT COMPLY WITH SUCH TRANSFER RESTRICTIONS.
+*/
+
+/**
+ * @title Equity token
+ * @author Firm (engineering@firm.org)
+ * @notice ERC20 with vote delegation controlled by a Captable contract
+ */
 contract EquityToken is ERC20Votes {
     Captable public captable;
     uint32 public classId;
