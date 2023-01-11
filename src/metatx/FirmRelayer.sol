@@ -5,7 +5,10 @@ import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
 import {EIP712} from "openzeppelin/utils/cryptography/draft-EIP712.sol";
 
 /**
- * @dev Custom ERC2771 forwarding relayer tailor made for Firm's UX needs
+ * @title FirmRelayer
+ * @author Firm (engineering@firm.org)
+ * @notice Relayer for gas-less transactions
+ * @dev Custom ERC2771 forwarding relayer tailor made for Firm's UX needs and return value assertions
  * Inspired by https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.7.3/contracts/metatx/MinimalForwarder.sol (MIT licensed)
  */
 contract FirmRelayer is EIP712 {
