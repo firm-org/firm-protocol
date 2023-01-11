@@ -49,6 +49,7 @@ contract FirmRelayer is EIP712 {
     // bytes32 internal constant ASSERTION_TYPEHASH = keccak256(abi.encodePacked(ASSERTION_TYPE));
     // bytes32 internal constant CALL_TYPEHASH = keccak256(abi.encodePacked(CALL_TYPE));
     // bytes32 internal constant ZERO_HASH = keccak256("");
+    // All hashes are hardcoded as an optimization
     bytes32 internal constant REQUEST_TYPEHASH =   0x4e408063141dd503cd4ffb41da06a207a002e1632bbb7a1c2058bb5100bbdd68;
     bytes32 internal constant ASSERTION_TYPEHASH = 0xb8e6765a43e49f2a6e73bf063f697a2d4a289bc2c471f51c126f382b1370ecde;
     bytes32 internal constant CALL_TYPEHASH =      0xe1f11d512d9db71c9cfb8c40837bacb6c300df10de574e99f55b8fe640ecb2f3;
