@@ -5,7 +5,10 @@ import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
 import {EIP712} from "openzeppelin/utils/cryptography/draft-EIP712.sol";
 
 /**
- * @dev Custom ERC2771 forwarding relayer tailor made for Firm's UX needs
+ * @title FirmRelayer
+ * @author Firm (engineering@firm.org)
+ * @notice Relayer for gas-less transactions
+ * @dev Custom ERC2771 forwarding relayer tailor made for Firm's UX needs and return value assertions
  * Inspired by https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.7.3/contracts/metatx/MinimalForwarder.sol (MIT licensed)
  */
 contract FirmRelayer is EIP712 {
@@ -36,17 +39,21 @@ contract FirmRelayer is EIP712 {
     }
 
     // See https://eips.ethereum.org/EIPS/eip-712#definition-of-typed-structured-data-%F0%9D%95%8A
-    string internal constant ASSERTION_TYPE = "Assertion(uint256 position,bytes32 expectedValue)";
-    string internal constant CALL_TYPE = "Call(address to,uint256 value,uint256 gas,bytes data,uint256 assertionIndex)";
-
-    bytes32 internal constant REQUEST_TYPEHASH = keccak256(
-        abi.encodePacked(
-            "RelayRequest(address from,uint256 nonce,Call[] calls,Assertion[] assertions)", ASSERTION_TYPE, CALL_TYPE
-        )
-    );
-    bytes32 internal constant ASSERTION_TYPEHASH = keccak256(abi.encodePacked(ASSERTION_TYPE));
-    bytes32 internal constant CALL_TYPEHASH = keccak256(abi.encodePacked(CALL_TYPE));
-    bytes32 internal constant ZERO_HASH = keccak256("");
+    // string internal constant ASSERTION_TYPE = "Assertion(uint256 position,bytes32 expectedValue)";
+    // string internal constant CALL_TYPE = "Call(address to,uint256 value,uint256 gas,bytes data,uint256 assertionIndex)";
+    // bytes32 internal constant REQUEST_TYPEHASH = keccak256(
+    //    abi.encodePacked(
+    //        "RelayRequest(address from,uint256 nonce,Call[] calls,Assertion[] assertions)", ASSERTION_TYPE, CALL_TYPE
+    //    )
+    //);
+    // bytes32 internal constant ASSERTION_TYPEHASH = keccak256(abi.encodePacked(ASSERTION_TYPE));
+    // bytes32 internal constant CALL_TYPEHASH = keccak256(abi.encodePacked(CALL_TYPE));
+    // bytes32 internal constant ZERO_HASH = keccak256("");
+    // All hashes are hardcoded as an optimization
+    bytes32 internal constant REQUEST_TYPEHASH =   0x4e408063141dd503cd4ffb41da06a207a002e1632bbb7a1c2058bb5100bbdd68;
+    bytes32 internal constant ASSERTION_TYPEHASH = 0xb8e6765a43e49f2a6e73bf063f697a2d4a289bc2c471f51c126f382b1370ecde;
+    bytes32 internal constant CALL_TYPEHASH =      0xe1f11d512d9db71c9cfb8c40837bacb6c300df10de574e99f55b8fe640ecb2f3;
+    bytes32 internal constant ZERO_HASH =          0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
 
     uint256 internal constant ASSERTION_WORD_SIZE = 32;
 
