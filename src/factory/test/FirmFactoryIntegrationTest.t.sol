@@ -52,7 +52,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
     }
 
     function testFactoryGas() public {
-        createFirm(address(this));
+        createBarebonesFirm(address(this));
     }
 
     event NewFirmCreated(address indexed creator, GnosisSafe indexed safe);
@@ -62,7 +62,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
         vm.expectEmit(true, false, false, false);
         emit NewFirmCreated(address(this), GnosisSafe(payable(0)));
 
-        (GnosisSafe safe, Budget budget, Roles roles) = createFirm(address(this));
+        (GnosisSafe safe, Budget budget, Roles roles) = createBarebonesFirm(address(this));
 
         assertTrue(safe.isModuleEnabled(address(budget)));
         assertTrue(roles.hasRole(address(safe), ROOT_ROLE_ID));
@@ -70,21 +70,41 @@ contract FirmFactoryIntegrationTest is FirmTest {
         assertTrue(budget.isTrustedForwarder(address(relayer)));
     }
 
-    function testExecutingPaymentsFromBudget() public {
-        (GnosisSafe safe, Budget budget, Roles roles) = createFirm(address(this));
-        token.mint(address(safe), 100);
+    function createFirmWithRoleAndAllowance(address spender) internal returns (GnosisSafe safe, Budget budget, Roles roles) {
+        address[] memory safeOwners = new address[](1);
+        safeOwners[0] = address(this);
+        FirmFactory.SafeConfig memory safeConfig = FirmFactory.SafeConfig(safeOwners, 1);
 
+        uint8 roleId = 2;
+        FirmFactory.AllowanceCreationInput[] memory allowances = new FirmFactory.AllowanceCreationInput[](1);
+        allowances[0] = FirmFactory.AllowanceCreationInput(
+            roleFlag(roleId), address(token), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
+        );
+
+        address[] memory grantees = new address[](1);
+        grantees[0] = spender;
+        FirmFactory.RoleCreationInput[] memory rolesCreationInput = new FirmFactory.RoleCreationInput[](1);
+        rolesCreationInput[0] = FirmFactory.RoleCreationInput(
+            ONLY_ROOT_ROLE_AS_ADMIN, "Executive", grantees
+        );
+
+        FirmFactory.FirmConfig memory firmConfig = FirmFactory.FirmConfig({
+            budgetConfig: FirmFactory.BudgetConfig(allowances),
+            rolesConfig: FirmFactory.RolesConfig(rolesCreationInput),
+            withCaptableAndVoting: false
+        });
+
+        return getFirmAddresses(factory.createFirm(safeConfig, firmConfig, 1));
+    }
+
+    function testExecutingPaymentsFromBudget() public {
         (address spender, uint256 spenderPk) = accountAndKey("spender");
         address receiver = account("receiver");
+        
+        (GnosisSafe safe, Budget budget, Roles roles) = createFirmWithRoleAndAllowance(spender);
+        uint256 allowanceId = budget.allowancesCount();
 
-        vm.startPrank(address(safe));
-        uint8 roleId = roles.createRole(ONLY_ROOT_ROLE_AS_ADMIN, "Executive");
-        roles.setRole(spender, roleId, true);
-
-        uint256 allowanceId = budget.createAllowance(
-            NO_PARENT_ID, roleFlag(roleId), address(token), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
-        );
-        vm.stopPrank();
+        token.mint(address(safe), 100);
 
         vm.startPrank(spender);
         address[] memory tos = new address[](2);
@@ -104,31 +124,34 @@ contract FirmFactoryIntegrationTest is FirmTest {
         vm.warp(block.timestamp + 1 days);
 
         // create a suballowance and execute payment from it in a metatx
-        uint256 newAllowanceId = allowanceId + 1;
-        FirmRelayer.Call[] memory calls = new FirmRelayer.Call[](2);
-        calls[0] = FirmRelayer.Call({
-            to: address(budget),
-            data: abi.encodeCall(
-                Budget.createAllowance,
-                (allowanceId, spender, address(token), 1, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), "")
-                ),
-            assertionIndex: 1,
-            value: 0,
-            gas: 1_000_000
-        });
-        calls[1] = FirmRelayer.Call({
-            to: address(budget),
-            data: abi.encodeCall(Budget.executePayment, (newAllowanceId, receiver, 1, "")),
-            assertionIndex: 0,
-            value: 0,
-            gas: 1_000_000
-        });
+        FirmRelayer.RelayRequest memory request;
+        {
+            uint256 newAllowanceId = allowanceId + 1;
+            FirmRelayer.Call[] memory calls = new FirmRelayer.Call[](2);
+            calls[0] = FirmRelayer.Call({
+                to: address(budget),
+                data: abi.encodeCall(
+                    Budget.createAllowance,
+                    (allowanceId, spender, address(token), 1, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), "")
+                    ),
+                assertionIndex: 1,
+                value: 0,
+                gas: 1_000_000
+            });
+            calls[1] = FirmRelayer.Call({
+                to: address(budget),
+                data: abi.encodeCall(Budget.executePayment, (newAllowanceId, receiver, 1, "")),
+                assertionIndex: 0,
+                value: 0,
+                gas: 1_000_000
+            });
 
-        FirmRelayer.Assertion[] memory assertions = new FirmRelayer.Assertion[](1);
-        assertions[0] = FirmRelayer.Assertion({position: 0, expectedValue: bytes32(newAllowanceId)});
+            FirmRelayer.Assertion[] memory assertions = new FirmRelayer.Assertion[](1);
+            assertions[0] = FirmRelayer.Assertion({position: 0, expectedValue: bytes32(newAllowanceId)});
 
-        FirmRelayer.RelayRequest memory request =
-            FirmRelayer.RelayRequest({from: spender, nonce: 0, calls: calls, assertions: assertions});
+            request =
+                FirmRelayer.RelayRequest({from: spender, nonce: 0, calls: calls, assertions: assertions});
+        }
 
         relayer.relay(request, _signPacked(relayer.requestTypedDataHash(request), spenderPk));
 
@@ -136,7 +159,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
     }
 
     function testModuleUpgrades() public {
-        (GnosisSafe safe, Budget budget,) = createFirm(address(this));
+        (GnosisSafe safe, Budget budget,) = createBarebonesFirm(address(this));
 
         ModuleMock newImpl = new ModuleMock(1);
         vm.prank(address(safe));
@@ -149,7 +172,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
         uint256 treasuryAmount = 3e7 * 10 ** token.decimals();
         address receiver = account("Receiver");
 
-        (GnosisSafe safe, Budget budget, Roles roles) = createFirm(address(this));
+        (GnosisSafe safe, Budget budget, Roles roles) = createBarebonesFirm(address(this));
         token.mint(address(safe), treasuryAmount);
 
         vm.prank(address(safe));
@@ -199,11 +222,15 @@ contract FirmFactoryIntegrationTest is FirmTest {
         assertApproxEqAbs(token.balanceOf(receiver), 15_000 * 10 ** token.decimals(), 2);
     }
 
-    function createFirm(address owner) internal returns (GnosisSafe safe, Budget budget, Roles roles) {
-        safe = factory.createBarebonesFirm(owner, 1);
+    function createBarebonesFirm(address owner) internal returns (GnosisSafe safe, Budget budget, Roles roles) {
+        return getFirmAddresses(factory.createBarebonesFirm(owner, 1));
+    }
+
+    function getFirmAddresses(GnosisSafe safe) internal returns (GnosisSafe _safe, Budget budget, Roles roles) {
         (address[] memory modules,) = safe.getModulesPaginated(address(0x1), 1);
         budget = Budget(modules[0]);
         roles = Roles(address(budget.roles()));
+        _safe = safe;
 
         vm.label(address(budget), "BudgetProxy");
         vm.label(address(roles), "RolesProxy");
