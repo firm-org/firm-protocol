@@ -15,9 +15,8 @@ import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsD
 
 import {LlamaPayStreams, BudgetModule, IERC20, ForwarderLib} from "src/budget/modules/streams/LlamaPayStreams.sol";
 
-import {TestinprodFactory, UpgradeableModuleProxyFactory, LATEST_VERSION} from "../TestinprodFactory.sol";
-import {LocalDeploy} from "scripts/LocalDeploy.s.sol";
-import {TestinprodDeploy, DeployBase} from "scripts/TestinprodDeploy.s.sol";
+import {FirmFactory, UpgradeableModuleProxyFactory, LATEST_VERSION} from "../FirmFactory.sol";
+import {FirmFactoryDeployLive, FirmFactoryDeployLocal, FirmFactoryDeploy} from "scripts/FirmFactoryDeploy.s.sol";
 
 import {TestnetERC20 as ERC20Token} from "../../testnet/TestnetTokenFaucet.sol";
 import {IUSDCMinting} from "./lib/IUSDCMinting.sol";
@@ -28,23 +27,23 @@ contract FirmFactoryIntegrationTest is FirmTest {
     using TimeShiftLib for *;
     using ForwarderLib for ForwarderLib.Forwarder;
 
-    TestinprodFactory factory;
+    FirmFactory factory;
     UpgradeableModuleProxyFactory moduleFactory;
     FirmRelayer relayer;
     ERC20Token token;
 
     function setUp() public {
-        DeployBase deployer;
+        FirmFactoryDeploy deployer;
 
         if (block.chainid == 1) {
-            deployer = new TestinprodDeploy();
+            deployer = new FirmFactoryDeployLive();
             token = ERC20Token(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48); // mainnet USDC
 
             IUSDCMinting usdc = IUSDCMinting(address(token));
             vm.prank(usdc.masterMinter()); // master rug
             usdc.configureMinter(address(this), type(uint256).max);
         } else {
-            deployer = new LocalDeploy();
+            deployer = new FirmFactoryDeployLocal();
             token = new ERC20Token("", "", 6);
         }
 
@@ -56,12 +55,12 @@ contract FirmFactoryIntegrationTest is FirmTest {
         createFirm(address(this));
     }
 
-    event NewFirmCreated(address indexed creator, GnosisSafe indexed safe, Roles roles, Budget budget);
+    event NewFirmCreated(address indexed creator, GnosisSafe indexed safe);
 
     function testInitialState() public {
         // we don't match the deployed contract addresses for simplicity (could precalculate them but unnecessary)
         vm.expectEmit(true, false, false, false);
-        emit NewFirmCreated(address(this), GnosisSafe(payable(0)), Roles(address(0)), Budget(address(0)));
+        emit NewFirmCreated(address(this), GnosisSafe(payable(0)));
 
         (GnosisSafe safe, Budget budget, Roles roles) = createFirm(address(this));
 
@@ -201,7 +200,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
     }
 
     function createFirm(address owner) internal returns (GnosisSafe safe, Budget budget, Roles roles) {
-        safe = factory.createFirm(owner, false, 1);
+        safe = factory.createBarebonesFirm(owner, 1);
         (address[] memory modules,) = safe.getModulesPaginated(address(0x1), 1);
         budget = Budget(modules[0]);
         roles = Roles(address(budget.roles()));
