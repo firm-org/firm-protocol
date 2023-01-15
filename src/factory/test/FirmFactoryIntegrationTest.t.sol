@@ -87,7 +87,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
         uint8 roleId = 2;
         FirmFactory.AllowanceCreationInput[] memory allowances = new FirmFactory.AllowanceCreationInput[](1);
         allowances[0] = FirmFactory.AllowanceCreationInput(
-            roleFlag(roleId), address(token), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
+            NO_PARENT_ID, roleFlag(roleId), address(token), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
         );
 
         address[] memory grantees = new address[](1);
@@ -263,7 +263,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
         FirmFactory.AllowanceCreationInput[] memory allowances = new FirmFactory.AllowanceCreationInput[](1);
         // Create an allowance which allows safe owners to spend 10 tokens daily
         allowances[0] = FirmFactory.AllowanceCreationInput(
-            roleFlag(SAFE_OWNER_ROLE_ID), address(token), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
+            NO_PARENT_ID, roleFlag(SAFE_OWNER_ROLE_ID), address(token), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
         );
         FirmFactory.RoleCreationInput[] memory noRolesInput = new FirmFactory.RoleCreationInput[](0);
         FirmFactory.FirmConfig memory firmConfig = FirmFactory.FirmConfig({
@@ -280,7 +280,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
         vm.roll(1);
         (GnosisSafe safe, Budget budget, Roles roles, Voting voting, Captable captable) = createFirmWithCaptableVotingAndAllowance();
         token.mint(address(safe), 100);
-        
+
         (EquityToken equityToken,,,,,,,,) = captable.classes(0);
 
         assertEq(equityToken.balanceOf(shareholder1), shareholder1Shares);

@@ -8,7 +8,7 @@ import {FirmRelayer} from "../metatx/FirmRelayer.sol";
 
 import {ISafe} from "../bases/ISafe.sol";
 import {Roles} from "../roles/Roles.sol";
-import {Budget, EncodedTimeShift, NO_PARENT_ID} from "../budget/Budget.sol";
+import {Budget, EncodedTimeShift} from "../budget/Budget.sol";
 import {Captable, IBouncer} from "../captable/Captable.sol";
 import {Voting} from "../voting/Voting.sol";
 
@@ -68,6 +68,7 @@ contract FirmFactory {
     }
 
     struct AllowanceCreationInput {
+        uint256 parentAllowanceId;
         address spender;
         address token;
         uint256 amount;
@@ -178,7 +179,7 @@ contract FirmFactory {
             AllowanceCreationInput memory allowance = config.allowances[i];
 
             budget.createAllowance(
-                NO_PARENT_ID, allowance.spender, allowance.token, allowance.amount, allowance.recurrency, allowance.name
+                allowance.parentAllowanceId, allowance.spender, allowance.token, allowance.amount, allowance.recurrency, allowance.name
             );
 
             unchecked {
