@@ -66,6 +66,7 @@ contract FirmFactory {
     struct BudgetConfig {
         AllowanceCreationInput[] allowances;
     }
+
     struct AllowanceCreationInput {
         address spender;
         address token;
@@ -77,6 +78,7 @@ contract FirmFactory {
     struct RolesConfig {
         RoleCreationInput[] roles;
     }
+
     struct RoleCreationInput {
         bytes32 roleAdmins;
         string name;
@@ -86,19 +88,21 @@ contract FirmFactory {
     struct CaptableConfig {
         string name;
         ClassCreationInput[] classes;
-        ShareIssuanceInput[] issuance;
+        ShareIssuanceInput[] issuances;
     }
+
     struct ClassCreationInput {
         string className;
         string ticker;
         uint256 authorized;
-        uint256 convertsToClassId;
-        uint256 votingWeight;
+        uint32 convertsToClassId;
+        uint64 votingWeight;
         IBouncer bouncer;
     }
+
     struct ShareIssuanceInput {
         uint256 classId;
-        address to;
+        address account;
         uint256 amount;
     }
 
@@ -120,7 +124,16 @@ contract FirmFactory {
         bytes memory setupFirmData = abi.encodeCall(this.setupFirm, (firmConfig, nonce));
         bytes memory safeInitData = abi.encodeCall(
             GnosisSafe.setup,
-            (safeConfig.owners, safeConfig.requiredSignatures, address(this), setupFirmData, address(0), address(0), 0, payable(0))
+            (
+                safeConfig.owners,
+                safeConfig.requiredSignatures,
+                address(this),
+                setupFirmData,
+                address(0),
+                address(0),
+                0,
+                payable(0)
+            )
         );
 
         safe = GnosisSafe(payable(safeFactory.createProxyWithNonce(safeImpl, safeInitData, nonce)));
@@ -139,9 +152,13 @@ contract FirmFactory {
 
         Roles roles = setupRoles(config.rolesConfig, nonce);
         Budget budget = setupBudget(config.budgetConfig, roles, nonce);
-
-        // Could gas optimize it by writing to Safe storage directly
         safe.enableModule(address(budget));
+
+        if (config.withCaptableAndVoting) {
+            Captable captable = setupCaptable(config.captableConfig, nonce);
+            Voting voting = setupVoting(config.votingConfig, captable, nonce);
+            safe.enableModule(address(voting));
+        }
     }
 
     function setupBudget(BudgetConfig calldata config, Roles roles, uint256 nonce) internal returns (Budget budget) {
@@ -161,12 +178,7 @@ contract FirmFactory {
             AllowanceCreationInput memory allowance = config.allowances[i];
 
             budget.createAllowance(
-                NO_PARENT_ID,
-                allowance.spender,
-                allowance.token,
-                allowance.amount,
-                allowance.recurrency,
-                allowance.name
+                NO_PARENT_ID, allowance.spender, allowance.token, allowance.amount, allowance.recurrency, allowance.name
             );
 
             unchecked {
@@ -207,15 +219,79 @@ contract FirmFactory {
         }
     }
 
+    function setupCaptable(CaptableConfig calldata config, uint256 nonce) internal returns (Captable captable) {
+        // Function should only be run in Safe context. It assumes that this check already ocurred
+        captable = Captable(
+            moduleFactory.deployUpgradeableModule(
+                CAPTABLE_MODULE_ID,
+                LATEST_VERSION,
+                abi.encodeCall(Captable.initialize, (config.name, ISafe(payable(address(this))), address(relayer))),
+                nonce
+            )
+        );
+
+        // As we are the safe, we can just create the classes and issue shares
+        uint256 classCount = config.classes.length;
+        for (uint256 i = 0; i < classCount;) {
+            ClassCreationInput memory class = config.classes[i];
+            captable.createClass(
+                class.className,
+                class.ticker,
+                class.authorized,
+                class.convertsToClassId,
+                class.votingWeight,
+                class.bouncer
+            );
+
+            unchecked {
+                ++i;
+            }
+        }
+
+        uint256 issuanceCount = config.issuances.length;
+        for (uint256 i = 0; i < issuanceCount;) {
+            ShareIssuanceInput memory issuance = config.issuances[i];
+            // it is possible that this reverts if the class does not exist or
+            // the amount to be issued goes over the authorized amount
+            captable.issue(issuance.account, issuance.classId, issuance.amount);
+
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    function setupVoting(VotingConfig calldata config, Captable captable, uint256 nonce)
+        internal
+        returns (Voting voting)
+    {
+        // Function should only be run in Safe context. It assumes that this check already ocurred
+        bytes memory votingInitData = abi.encodeCall(
+            Voting.initialize,
+            (
+                ISafe(payable(address(this))),
+                captable,
+                config.quorumNumerator,
+                config.votingDelay,
+                config.votingPeriod,
+                config.proposalThreshold,
+                address(relayer)
+            )
+        );
+        voting = Voting(
+            payable(moduleFactory.deployUpgradeableModule(VOTING_MODULE_ID, LATEST_VERSION, votingInitData, nonce))
+        );
+    }
+
     function defaultOneOwnerSafeConfig(address owner) internal pure returns (SafeConfig memory) {
         address[] memory owners = new address[](1);
         owners[0] = owner;
-        return SafeConfig({ owners: owners, requiredSignatures: 1 });
+        return SafeConfig({owners: owners, requiredSignatures: 1});
     }
 
     function defaultBarebonesFirmConfig() internal pure returns (FirmConfig memory) {
-        BudgetConfig memory budgetConfig = BudgetConfig({ allowances: new AllowanceCreationInput[](0) });
-        RolesConfig memory rolesConfig = RolesConfig({ roles: new RoleCreationInput[](0) });
+        BudgetConfig memory budgetConfig = BudgetConfig({allowances: new AllowanceCreationInput[](0)});
+        RolesConfig memory rolesConfig = RolesConfig({roles: new RoleCreationInput[](0)});
         CaptableConfig memory captableConfig;
         VotingConfig memory votingConfig;
 
