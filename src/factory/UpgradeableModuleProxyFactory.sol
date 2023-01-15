@@ -67,7 +67,10 @@ contract UpgradeableModuleProxyFactory is Ownable {
             revert FailedInitialization();
         }
     }
-
+    
+    /**
+     * @dev Proxy EVM code from factory/proxy-asm generated with ETK
+     */
     function createProxy(IModuleMetadata implementation, bytes32 salt) internal returns (address proxy) {
         bytes memory initcode = abi.encodePacked(
             hex"73",
