@@ -98,7 +98,7 @@ contract CaptableInitTest is BaseCaptableTest {
         (
             EquityToken token_,
             uint64 votingWeight,
-            uint32 convertsIntoClassId,
+            uint32 convertsToClassId,
             uint256 authorized,
             uint256 convertible,
             string memory name,
@@ -108,7 +108,7 @@ contract CaptableInitTest is BaseCaptableTest {
         ) = captable.classes(id);
         assertEq(address(token_), address(token));
         assertEq(votingWeight, 1);
-        assertEq(convertsIntoClassId, NO_CONVERSION_FLAG);
+        assertEq(convertsToClassId, NO_CONVERSION_FLAG);
         assertEq(authorized, 100);
         assertEq(convertible, 0);
         assertEq(name, "Common");
@@ -459,18 +459,18 @@ contract CaptableMulticlassTest is BaseCaptableTest {
     }
 
     function testInitialState() public {
-        (, uint64 votingWeight1, uint32 convertsIntoClassId1, uint256 _authorized1, uint256 convertible1,,,,) =
+        (, uint64 votingWeight1, uint32 convertsToClassId1, uint256 _authorized1, uint256 convertible1,,,,) =
             captable.classes(classId1);
-        (, uint64 votingWeight2, uint32 convertsIntoClassId2, uint256 _authorized2, uint256 convertible2,,,,) =
+        (, uint64 votingWeight2, uint32 convertsToClassId2, uint256 _authorized2, uint256 convertible2,,,,) =
             captable.classes(classId2);
 
         assertEq(votingWeight1, weight1);
-        assertEq(convertsIntoClassId1, NO_CONVERSION_FLAG);
+        assertEq(convertsToClassId1, NO_CONVERSION_FLAG);
         assertEq(_authorized1, authorized1);
         assertEq(convertible1, authorized2);
 
         assertEq(votingWeight2, weight2);
-        assertEq(convertsIntoClassId2, classId1);
+        assertEq(convertsToClassId2, classId1);
         assertEq(_authorized2, authorized2);
         assertEq(convertible2, 0);
     }
