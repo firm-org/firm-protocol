@@ -9,10 +9,10 @@ import {FirmRelayer} from "../metatx/FirmRelayer.sol";
 import {ISafe} from "../bases/ISafe.sol";
 import {Roles} from "../roles/Roles.sol";
 import {Budget, EncodedTimeShift, NO_PARENT_ID} from "../budget/Budget.sol";
+import {Captable, IBouncer} from "../captable/Captable.sol";
+import {Voting} from "../voting/Voting.sol";
 
 import {UpgradeableModuleProxyFactory, LATEST_VERSION} from "./UpgradeableModuleProxyFactory.sol";
-
-import {BackdoorModule} from "./local-utils/BackdoorModule.sol";
 
 string constant ROLES_MODULE_ID = "org.firm.roles";
 string constant BUDGET_MODULE_ID = "org.firm.budget";
@@ -53,9 +53,14 @@ contract FirmFactory {
     }
 
     struct FirmConfig {
+        // if false, only roles and budget are created
+        bool withCaptableAndVoting;
+        // budget and roles are always created
         BudgetConfig budgetConfig;
         RolesConfig rolesConfig;
-        bool withCaptableAndVoting;
+        // optional depending on 'withCaptableAndVoting'
+        CaptableConfig captableConfig;
+        VotingConfig votingConfig;
     }
 
     struct BudgetConfig {
@@ -78,10 +83,36 @@ contract FirmFactory {
         address[] grantees;
     }
 
+    struct CaptableConfig {
+        string name;
+        ClassCreationInput[] classes;
+        ShareIssuanceInput[] issuance;
+    }
+    struct ClassCreationInput {
+        string className;
+        string ticker;
+        uint256 authorized;
+        uint256 convertsToClassId;
+        uint256 votingWeight;
+        IBouncer bouncer;
+    }
+    struct ShareIssuanceInput {
+        uint256 classId;
+        address to;
+        uint256 amount;
+    }
+
+    struct VotingConfig {
+        uint256 quorumNumerator;
+        uint256 votingDelay;
+        uint256 votingPeriod;
+        uint256 proposalThreshold;
+    }
+
     function createBarebonesFirm(address owner, uint256 nonce) public returns (GnosisSafe safe) {
         return createFirm(defaultOneOwnerSafeConfig(owner), defaultBarebonesFirmConfig(), nonce);
     }
-    
+
     function createFirm(SafeConfig memory safeConfig, FirmConfig memory firmConfig, uint256 nonce)
         public
         returns (GnosisSafe safe)
@@ -185,10 +216,15 @@ contract FirmFactory {
     function defaultBarebonesFirmConfig() internal pure returns (FirmConfig memory) {
         BudgetConfig memory budgetConfig = BudgetConfig({ allowances: new AllowanceCreationInput[](0) });
         RolesConfig memory rolesConfig = RolesConfig({ roles: new RoleCreationInput[](0) });
+        CaptableConfig memory captableConfig;
+        VotingConfig memory votingConfig;
+
         return FirmConfig({
+            withCaptableAndVoting: false,
             budgetConfig: budgetConfig,
             rolesConfig: rolesConfig,
-            withCaptableAndVoting: false
+            captableConfig: captableConfig,
+            votingConfig: votingConfig
         });
     }
 }

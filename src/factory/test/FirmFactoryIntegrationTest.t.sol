@@ -87,11 +87,15 @@ contract FirmFactoryIntegrationTest is FirmTest {
         rolesCreationInput[0] = FirmFactory.RoleCreationInput(
             ONLY_ROOT_ROLE_AS_ADMIN, "Executive", grantees
         );
-
+        
+        FirmFactory.CaptableConfig memory captableConfig;
+        FirmFactory.VotingConfig memory votingConfig;
         FirmFactory.FirmConfig memory firmConfig = FirmFactory.FirmConfig({
+            withCaptableAndVoting: false,
             budgetConfig: FirmFactory.BudgetConfig(allowances),
             rolesConfig: FirmFactory.RolesConfig(rolesCreationInput),
-            withCaptableAndVoting: false
+            captableConfig: captableConfig,
+            votingConfig: votingConfig
         });
 
         return getFirmAddresses(factory.createFirm(safeConfig, firmConfig, 1));
