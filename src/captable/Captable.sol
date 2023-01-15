@@ -38,7 +38,7 @@ contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
     struct Class {
         EquityToken token;
         uint64 votingWeight;
-        uint32 convertsIntoClassId;
+        uint32 convertsToClassId;
         uint256 authorized;
         uint256 convertible;
         string name;
@@ -66,7 +66,7 @@ contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
         string name,
         string ticker,
         uint256 authorized,
-        uint32 convertsIntoClassId,
+        uint32 convertsToClassId,
         uint64 votingWeight,
         IBouncer indexed bouncer
     );
@@ -111,7 +111,7 @@ contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
      * @param ticker Ticker of the class (cannot be changed later)
      * @param authorized Number of shares authorized for issuance (must be > 0)
      *        It has to fit in the authorized amount of the class it converts into
-     * @param convertsIntoClassId ID of the class that holders can convert to (NO_CONVERSION_FLAG if none)
+     * @param convertsToClassId ID of the class that holders can convert to (NO_CONVERSION_FLAG if none)
      * @param votingWeight Voting weight of the class (will be multiplied by balance when checking votes)
      * @param bouncer Bouncer that will be used to check transfers
      *        It cannot be zero. For allow all transfers, use `EmbeddedBouncerType.AllowAll` (addrFlag=0x00..0102)
@@ -122,7 +122,7 @@ contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
         string calldata className,
         string calldata ticker,
         uint256 authorized,
-        uint32 convertsIntoClassId,
+        uint32 convertsToClassId,
         uint64 votingWeight,
         IBouncer bouncer
     ) external onlySafe returns (uint256 classId, EquityToken token) {
@@ -135,11 +135,11 @@ contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
             }
         }
 
-        // When creating the first class, unless convertsIntoClassId == NO_CONVERSION_FLAG,
-        // this will implicitly revert, since there's no convertsIntoClassId for which
+        // When creating the first class, unless convertsToClassId == NO_CONVERSION_FLAG,
+        // this will implicitly revert, since there's no convertsToClassId for which
         // _getClass() won't revert (_getClass() is called within _changeConvertibleAmount())
-        if (convertsIntoClassId != NO_CONVERSION_FLAG) {
-            _changeConvertibleAmount(convertsIntoClassId, authorized, true);
+        if (convertsToClassId != NO_CONVERSION_FLAG) {
+            _changeConvertibleAmount(convertsToClassId, authorized, true);
         }
 
         // Deploys token with a non-upgradeable EIP-1967 token
@@ -153,11 +153,11 @@ contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
         class.authorized = authorized;
         class.name = className;
         class.ticker = ticker;
-        class.convertsIntoClassId = convertsIntoClassId;
+        class.convertsToClassId = convertsToClassId;
         class.bouncer = bouncer;
         class.isManager[msg.sender] = true; // safe addr is set as manager for class (use msg.sender directly as no metatxs here)
 
-        emit ClassCreated(classId, token, className, ticker, authorized, convertsIntoClassId, votingWeight, bouncer);
+        emit ClassCreated(classId, token, className, ticker, authorized, convertsToClassId, votingWeight, bouncer);
         emit ClassManagerSet(classId, msg.sender, true);
     }
 
@@ -188,9 +188,9 @@ contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
         }
 
         // If the class converts into another class, update the convertible amount of that class
-        if (class.convertsIntoClassId != NO_CONVERSION_FLAG) {
+        if (class.convertsToClassId != NO_CONVERSION_FLAG) {
             uint256 delta = isDecreasing ? oldAuthorized - newAuthorized : newAuthorized - oldAuthorized;
-            _changeConvertibleAmount(class.convertsIntoClassId, delta, !isDecreasing);
+            _changeConvertibleAmount(class.convertsToClassId, delta, !isDecreasing);
         }
 
         class.authorized = newAuthorized;
@@ -428,7 +428,7 @@ contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
      */
     function convert(uint256 fromClassId, uint256 amount) external {
         Class storage fromClass = _getClass(fromClassId);
-        uint256 toClassId = fromClass.convertsIntoClassId;
+        uint256 toClassId = fromClass.convertsToClassId;
         Class storage toClass = _getClass(toClassId);
 
         address sender = _msgSender();
