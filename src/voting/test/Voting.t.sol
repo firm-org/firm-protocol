@@ -35,7 +35,15 @@ contract VotingTest is BaseCaptableTest {
                     new Voting(),
                     abi.encodeCall(
                         Voting.initialize,
-                        (safe, captable, QUORUM_NUMERATOR, VOTING_DELAY, VOTING_PERIOD, PROPOSAL_THRESHOLD, address(relayer))
+                        (
+                            safe,
+                            captable,
+                            QUORUM_NUMERATOR,
+                            VOTING_DELAY,
+                            VOTING_PERIOD,
+                            PROPOSAL_THRESHOLD,
+                            address(relayer)
+                        )
                     )
                 )
             )
@@ -65,7 +73,9 @@ contract VotingTest is BaseCaptableTest {
 
     function testCantReinit() public {
         vm.expectRevert(abi.encodeWithSelector(SafeAware.AlreadyInitialized.selector));
-        voting.initialize(safe, captable, QUORUM_NUMERATOR, VOTING_DELAY, VOTING_PERIOD, PROPOSAL_THRESHOLD, address(relayer));
+        voting.initialize(
+            safe, captable, QUORUM_NUMERATOR, VOTING_DELAY, VOTING_PERIOD, PROPOSAL_THRESHOLD, address(relayer)
+        );
     }
 
     function testCanCreateAndExecuteProposal() public {
@@ -79,11 +89,19 @@ contract VotingTest is BaseCaptableTest {
         assertEq(HOLDER1.balance, 1);
     }
 
-    function _createAndExecuteProposal(address to, bytes memory data, uint256 extraDelay, uint256 extraPeriod) internal {
+    function _createAndExecuteProposal(address to, bytes memory data, uint256 extraDelay, uint256 extraPeriod)
+        internal
+    {
         _createAndExecuteProposal(to, 0, data, extraDelay, extraPeriod);
     }
 
-    function _createAndExecuteProposal(address to, uint256 value, bytes memory data, uint256 extraDelay, uint256 extraPeriod) internal {
+    function _createAndExecuteProposal(
+        address to,
+        uint256 value,
+        bytes memory data,
+        uint256 extraDelay,
+        uint256 extraPeriod
+    ) internal {
         blocktravel(1);
         vm.prank(HOLDER1);
         string memory description = "Test";
@@ -121,7 +139,7 @@ contract VotingTest is BaseCaptableTest {
         voting.execute(arr(address(target)), arr(0), arr(bytes("")), keccak256(bytes(description)));
     }
 
-     function testCantCallSafeCallbackDirectly() public {
+    function testCantCallSafeCallbackDirectly() public {
         vm.expectRevert(abi.encodeWithSelector(SafeModule.BadExecutionContext.selector));
         voting.__safeContext_execute(1, arr(address(0)), arr(0), arr(bytes("")), bytes32(0));
 
@@ -131,7 +149,9 @@ contract VotingTest is BaseCaptableTest {
     }
 
     function testCanUpdateSettingsThroughProposals() public {
-        _createAndExecuteProposal(address(voting), abi.encodeCall(voting.setProposalThreshold, (PROPOSAL_THRESHOLD + 1)), 0, 0);
+        _createAndExecuteProposal(
+            address(voting), abi.encodeCall(voting.setProposalThreshold, (PROPOSAL_THRESHOLD + 1)), 0, 0
+        );
         assertEq(voting.proposalThreshold(), PROPOSAL_THRESHOLD + 1);
 
         _createAndExecuteProposal(address(voting), abi.encodeCall(voting.setVotingDelay, (VOTING_DELAY + 1)), 0, 0);
@@ -140,7 +160,9 @@ contract VotingTest is BaseCaptableTest {
         _createAndExecuteProposal(address(voting), abi.encodeCall(voting.setVotingPeriod, (VOTING_PERIOD + 1)), 1, 0);
         assertEq(voting.votingPeriod(), VOTING_PERIOD + 1);
 
-        _createAndExecuteProposal(address(voting), abi.encodeCall(voting.updateQuorumNumerator, (QUORUM_NUMERATOR + 1)), 1, 1);
+        _createAndExecuteProposal(
+            address(voting), abi.encodeCall(voting.updateQuorumNumerator, (QUORUM_NUMERATOR + 1)), 1, 1
+        );
         assertEq(voting.quorumNumerator(), QUORUM_NUMERATOR + 1);
     }
 
@@ -200,7 +222,9 @@ contract VotingTest is BaseCaptableTest {
         bytes memory votingError = abi.encodeWithSelector(DoubleEndedQueue.Empty.selector);
 
         vm.prank(address(safe));
-        vm.expectRevert(abi.encodeWithSelector(FirmRelayer.CallExecutionFailed.selector, 0, address(voting), votingError));
+        vm.expectRevert(
+            abi.encodeWithSelector(FirmRelayer.CallExecutionFailed.selector, 0, address(voting), votingError)
+        );
         relayer.selfRelay(calls, new FirmRelayer.Assertion[](0));
     }
 

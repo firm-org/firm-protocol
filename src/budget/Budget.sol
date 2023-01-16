@@ -404,7 +404,9 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
         internal
         returns (bool)
     {
-        return _moduleExecDelegateCallToSelf(abi.encodeCall(this.__safeContext_performMultiTransfer, (token, tos, amounts)));
+        return _moduleExecDelegateCallToSelf(
+            abi.encodeCall(this.__safeContext_performMultiTransfer, (token, tos, amounts))
+        );
     }
 
     function __safeContext_performMultiTransfer(address token, address[] calldata tos, uint256[] calldata amounts)

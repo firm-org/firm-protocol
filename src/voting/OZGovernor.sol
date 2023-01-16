@@ -79,24 +79,24 @@ abstract contract OZGovernor is
 
     // The following functions are overrides required by Solidity.
 
-    function votingDelay() public view override (IGovernor, GovernorSettings) returns (uint256) {
+    function votingDelay() public view override(IGovernor, GovernorSettings) returns (uint256) {
         return super.votingDelay();
     }
 
-    function votingPeriod() public view override (IGovernor, GovernorSettings) returns (uint256) {
+    function votingPeriod() public view override(IGovernor, GovernorSettings) returns (uint256) {
         return super.votingPeriod();
     }
 
     function quorum(uint256 blockNumber)
         public
         view
-        override (IGovernor, GovernorCaptableVotesQuorumFraction)
+        override(IGovernor, GovernorCaptableVotesQuorumFraction)
         returns (uint256)
     {
         return super.quorum(blockNumber);
     }
 
-    function proposalThreshold() public view override (Governor, GovernorSettings) returns (uint256) {
+    function proposalThreshold() public view override(Governor, GovernorSettings) returns (uint256) {
         return super.proposalThreshold();
     }
 }

@@ -179,7 +179,12 @@ contract FirmFactory {
             AllowanceCreationInput memory allowance = config.allowances[i];
 
             budget.createAllowance(
-                allowance.parentAllowanceId, allowance.spender, allowance.token, allowance.amount, allowance.recurrency, allowance.name
+                allowance.parentAllowanceId,
+                allowance.spender,
+                allowance.token,
+                allowance.amount,
+                allowance.recurrency,
+                allowance.name
             );
 
             unchecked {

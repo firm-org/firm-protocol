@@ -236,7 +236,11 @@ contract FirmFactoryIntegrationTest is FirmTest {
     address shareholder2 = account("Shareholder 2");
     uint256 shareholder1Shares = 60;
     uint256 shareholder2Shares = 40;
-    function createFirmWithCaptableVotingAndAllowance() internal returns (GnosisSafe safe, Budget budget, Roles roles, Voting voting, Captable captable) {
+
+    function createFirmWithCaptableVotingAndAllowance()
+        internal
+        returns (GnosisSafe safe, Budget budget, Roles roles, Voting voting, Captable captable)
+    {
         address[] memory safeOwners = new address[](1);
         safeOwners[0] = address(this);
         FirmFactory.SafeConfig memory safeConfig = FirmFactory.SafeConfig(safeOwners, 1);
@@ -254,16 +258,17 @@ contract FirmFactoryIntegrationTest is FirmTest {
         shareIssuances[0] = FirmFactory.ShareIssuanceInput(0, shareholder1, shareholder1Shares);
         shareIssuances[1] = FirmFactory.ShareIssuanceInput(0, shareholder2, shareholder2Shares);
         FirmFactory.CaptableConfig memory captableConfig = FirmFactory.CaptableConfig("TestCo", classes, shareIssuances);
-        FirmFactory.VotingConfig memory votingConfig = FirmFactory.VotingConfig({
-            quorumNumerator: 5000,
-            votingDelay: 1,
-            votingPeriod: 1,
-            proposalThreshold: 1
-        });
+        FirmFactory.VotingConfig memory votingConfig =
+            FirmFactory.VotingConfig({quorumNumerator: 5000, votingDelay: 1, votingPeriod: 1, proposalThreshold: 1});
         FirmFactory.AllowanceCreationInput[] memory allowances = new FirmFactory.AllowanceCreationInput[](1);
         // Create an allowance which allows safe owners to spend 10 tokens daily
         allowances[0] = FirmFactory.AllowanceCreationInput(
-            NO_PARENT_ID, roleFlag(SAFE_OWNER_ROLE_ID), address(token), 10, TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(), ""
+            NO_PARENT_ID,
+            roleFlag(SAFE_OWNER_ROLE_ID),
+            address(token),
+            10,
+            TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode(),
+            ""
         );
         FirmFactory.RoleCreationInput[] memory noRolesInput = new FirmFactory.RoleCreationInput[](0);
         FirmFactory.FirmConfig memory firmConfig = FirmFactory.FirmConfig({
@@ -278,7 +283,8 @@ contract FirmFactoryIntegrationTest is FirmTest {
 
     function testExecutingProposalsFromVoting() public {
         vm.roll(1);
-        (GnosisSafe safe, Budget budget, Roles roles, Voting voting, Captable captable) = createFirmWithCaptableVotingAndAllowance();
+        (GnosisSafe safe, Budget budget, Roles roles, Voting voting, Captable captable) =
+            createFirmWithCaptableVotingAndAllowance();
         token.mint(address(safe), 100);
 
         (EquityToken equityToken,,,,,,,,) = captable.classes(0);
@@ -292,9 +298,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
         equityToken.delegate(shareholder2);
         blocktravel(1);
 
-        bytes memory proposalData = abi.encodeCall(
-            OwnerManager.addOwnerWithThreshold, (shareholder1, 1)
-        );
+        bytes memory proposalData = abi.encodeCall(OwnerManager.addOwnerWithThreshold, (shareholder1, 1));
         _createAndExecuteProposal(voting, address(safe), 0, proposalData);
 
         // now, as safe owner, shareholder 1 has permission to execute budget payments
@@ -305,12 +309,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
         assertEq(token.balanceOf(shareholder2), 1);
     }
 
-     function _createAndExecuteProposal(
-        Voting voting,
-        address to,
-        uint256 value,
-        bytes memory data
-    ) internal {
+    function _createAndExecuteProposal(Voting voting, address to, uint256 value, bytes memory data) internal {
         blocktravel(1);
         vm.prank(shareholder1);
         string memory description = "Test";
@@ -342,7 +341,10 @@ contract FirmFactoryIntegrationTest is FirmTest {
         vm.label(address(roles), "RolesProxy");
     }
 
-    function getFirmAddressesWithCaptableVoting(GnosisSafe safe) internal returns (GnosisSafe _safe, Budget budget, Roles roles, Voting voting, Captable captable) {
+    function getFirmAddressesWithCaptableVoting(GnosisSafe safe)
+        internal
+        returns (GnosisSafe _safe, Budget budget, Roles roles, Voting voting, Captable captable)
+    {
         (address[] memory modules,) = safe.getModulesPaginated(address(0x1), 2);
         budget = Budget(modules[1]);
         roles = Roles(address(budget.roles()));
