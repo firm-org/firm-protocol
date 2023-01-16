@@ -9,7 +9,7 @@ import {FirmBase} from "../../../bases/FirmBase.sol";
 contract FirmTest is Test {
     UpgradeableModuleProxyFactory immutable proxyFactory = new UpgradeableModuleProxyFactory();
 
-    string constant internal EIP1967_IMPL_SLOT = "eip1967.proxy.implementation";
+    string internal constant EIP1967_IMPL_SLOT = "eip1967.proxy.implementation";
 
     function account(string memory label) internal returns (address addr) {
         (addr,) = accountAndKey(label);
