@@ -94,6 +94,7 @@ contract CaptableInitTest is BaseCaptableTest {
         assertEq(token.name(), "TestCo: Common");
         assertEq(token.symbol(), "TST-A");
         assertEq(token.totalSupply(), 0);
+        assertEq(token.decimals(), 18);
 
         (
             EquityToken token_,
