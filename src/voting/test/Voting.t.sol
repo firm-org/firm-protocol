@@ -58,8 +58,8 @@ contract VotingTest is BaseCaptableTest {
         captable.issue(HOLDER1, classId, INITIAL_AUTHORIZED / 2 + 1);
         captable.issue(HOLDER2, classId, INITIAL_AUTHORIZED / 2 - 1);
         vm.stopPrank();
-        blocktravel(1);
         _selfDelegateHolders(token);
+        blocktravel(1);
     }
 
     function testInitialState() public {
@@ -202,30 +202,33 @@ contract VotingTest is BaseCaptableTest {
         vm.stopPrank();
     }
 
-    function testFirmContextUsedForGovernance() public {
-        // This has no effects since all calls are made through the safe directly
-        // but as a check that inheritance is properly handled and ERC2771Context from
-        // Firm is used
-
+    function testFirmContextUsedInVoting() public {
+        // Ensure that ERC2771 context from Firm is used and it's compatible with FirmRelayer
         FirmRelayer.Call[] memory calls = new FirmRelayer.Call[](1);
         calls[0] = FirmRelayer.Call({
             to: address(voting),
             value: 0,
-            data: abi.encodeCall(voting.setProposalThreshold, (PROPOSAL_THRESHOLD + 1)),
+            data: abi.encodeCall(voting.propose, (new address[](1), new uint256[](1), new bytes[](1), "Test")),
             assertionIndex: 0,
             gas: 1e6
         });
+        uint256 proposalId = voting.hashProposal(new address[](1), new uint256[](1), new bytes[](1), keccak256(bytes("Test")));
 
-        // This is the error that Governor throws when a direct call from the executor is made
-        // but the action wasn't queued for execution through proper vote execution
-        // If the sender wasn't the executor, it would be 'Governor: onlyGovernance'
-        bytes memory votingError = abi.encodeWithSelector(DoubleEndedQueue.Empty.selector);
+        address nonShareholder = account("Non Shareholder");
 
-        vm.prank(address(safe));
+        vm.prank(address(nonShareholder));
+        bytes memory votingError = abi.encodeWithSignature("Error(string)", "Governor: proposer votes below proposal threshold");
         vm.expectRevert(
             abi.encodeWithSelector(FirmRelayer.CallExecutionFailed.selector, 0, address(voting), votingError)
         );
         relayer.selfRelay(calls, new FirmRelayer.Assertion[](0));
+
+        vm.expectRevert("Governor: unknown proposal id");
+        voting.state(proposalId);
+
+        vm.prank(HOLDER1);
+        relayer.selfRelay(calls, new FirmRelayer.Assertion[](0));
+        assertEq(uint8(voting.state(proposalId)), 0);
     }
 
     function arr(address a) internal pure returns (address[] memory _arr) {
