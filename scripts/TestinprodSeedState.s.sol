@@ -7,7 +7,7 @@ import "gnosis-safe/GnosisSafe.sol";
 import {Roles, IRoles, ISafe, ONLY_ROOT_ROLE_AS_ADMIN, ROOT_ROLE_ID} from "../src/roles/Roles.sol";
 import {Budget, TimeShiftLib, NO_PARENT_ID, NATIVE_ASSET} from "../src/budget/Budget.sol";
 import {TimeShift} from "../src/budget/TimeShiftLib.sol";
-import {BackdoorModule} from "../src/factory/local-utils/BackdoorModule.sol";
+import {BackdoorModule} from "../src/testnet/BackdoorModule.sol";
 import {roleFlag} from "../src/bases/test/mocks/RolesAuthMock.sol";
 import {TestnetTokenFaucet} from "../src/testnet/TestnetTokenFaucet.sol";
 
