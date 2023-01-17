@@ -283,7 +283,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
 
     function testExecutingProposalsFromVoting() public {
         vm.roll(1);
-        (GnosisSafe safe, Budget budget, Roles roles, Voting voting, Captable captable) =
+        (GnosisSafe safe, Budget budget,, Voting voting, Captable captable) =
             createFirmWithCaptableVotingAndAllowance();
         token.mint(address(safe), 100);
 
