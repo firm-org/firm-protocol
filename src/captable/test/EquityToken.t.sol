@@ -28,6 +28,27 @@ contract EquityTokenTest is BaseCaptableTest {
         assertEq(token.decimals(), 18);
     }
 
+    function testCantReinitialize() public {
+        vm.expectRevert(abi.encodeWithSelector(EquityToken.AlreadyInitialized.selector));
+        token.initialize(captable, 1);
+    }
+
+    function testCaptableCanPerformAdminActions() public {
+        vm.startPrank(address(captable));
+
+        token.mint(HOLDER2, 2);
+        assertEq(token.balanceOf(HOLDER2), 2);
+
+        token.burn(HOLDER2, 1);
+        assertEq(token.balanceOf(HOLDER2), 1);
+
+        token.forcedTransfer(HOLDER2, HOLDER1, 1);
+        assertEq(token.balanceOf(HOLDER1), HOLDER_BALANCE + 1);
+        assertEq(token.balanceOf(HOLDER2), 0);
+        
+        vm.stopPrank();
+    }
+
     function testNonCaptableCannotPerformAdminActions() public {
         bytes memory onlyCaptableError = abi.encodeWithSelector(EquityToken.UnauthorizedNotCaptable.selector);
         
