@@ -11,7 +11,7 @@ import {
     ONLY_ROOT_ROLE_AS_ADMIN,
     NO_ROLE_ADMINS,
     SAFE_OWNER_ROLE_ID
-} from "./IRoles.sol";
+} from "./interfaces/IRoles.sol";
 
 /**
  * @title Roles

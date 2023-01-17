@@ -2,7 +2,7 @@
 pragma solidity 0.8.16;
 
 import {OZGovernor, Context} from "./OZGovernor.sol";
-import {ICaptableVotes} from "../captable/utils/ICaptableVotes.sol";
+import {ICaptableVotes} from "../captable/interfaces/ICaptableVotes.sol";
 
 import {FirmBase, ISafe, ERC2771Context, IMPL_INIT_NOOP_ADDR, IMPL_INIT_NOOP_SAFE} from "../bases/FirmBase.sol";
 import {SafeModule} from "../bases/SafeModule.sol";

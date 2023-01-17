@@ -2,7 +2,7 @@
 pragma solidity ^0.8.16;
 
 import {SafeAware, ISafe} from "./SafeAware.sol";
-import {IModuleMetadata} from "./IModuleMetadata.sol";
+import {IModuleMetadata} from "./interfaces/IModuleMetadata.sol";
 
 // When the base contract (implementation) that proxies use is created,
 // we use this no-op address when an address is needed to make contracts initialized but unusable

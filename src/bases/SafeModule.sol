@@ -2,7 +2,7 @@
 pragma solidity ^0.8.16;
 
 import {FirmBase} from "./FirmBase.sol";
-import {ISafe} from "./ISafe.sol";
+import {ISafe} from "./interfaces/ISafe.sol";
 
 /**
  * @title SafeModule

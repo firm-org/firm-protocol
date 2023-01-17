@@ -6,7 +6,7 @@ import {ModuleMock} from "src/bases/test/mocks/ModuleMock.sol";
 import {SafeStub} from "src/bases/test/mocks/SafeStub.sol";
 import {UpgradeableModuleProxyFactory} from "src/factory/UpgradeableModuleProxyFactory.sol";
 
-import {ISafe} from "../ISafe.sol";
+import {ISafe} from "../interfaces/ISafe.sol";
 
 contract BasesTest is FirmTest {
     UpgradeableModuleProxyFactory factory = new UpgradeableModuleProxyFactory();

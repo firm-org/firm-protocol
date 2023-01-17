@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import {ISafe} from "src/bases/ISafe.sol";
+import {ISafe} from "src/bases/interfaces/ISafe.sol";
 
 contract SafeStub is ISafe {
     function execTransactionFromModule(address to, uint256 value, bytes memory data, ISafe.Operation operation)

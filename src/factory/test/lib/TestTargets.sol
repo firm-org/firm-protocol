@@ -2,7 +2,7 @@
 pragma solidity 0.8.16;
 
 import {FirmBase, IModuleMetadata} from "../../../bases/FirmBase.sol";
-import {ISafe} from "../../../bases/ISafe.sol";
+import {ISafe} from "../../../bases/interfaces/ISafe.sol";
 
 abstract contract TargetBase is FirmBase {
     string public constant moduleId = "org.firm.test-target";

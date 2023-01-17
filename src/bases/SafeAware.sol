@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.16;
 
-import {ISafe} from "./ISafe.sol";
+import {ISafe} from "./interfaces/ISafe.sol";
 
 /**
  * @title SafeAware
