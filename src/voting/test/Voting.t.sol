@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.16;
+pragma solidity 0.8.17;
 
 import {DoubleEndedQueue} from "openzeppelin/utils/structs/DoubleEndedQueue.sol";
 

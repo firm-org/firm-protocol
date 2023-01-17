@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.0;
 
 import {ISafe} from "./interfaces/ISafe.sol";
 import {ERC2771Context} from "./ERC2771Context.sol";

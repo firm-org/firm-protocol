@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.0;
 
 uint8 constant ROOT_ROLE_ID = 0;
 uint8 constant ROLE_MANAGER_ROLE_ID = 1;

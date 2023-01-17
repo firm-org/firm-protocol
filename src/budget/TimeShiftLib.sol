@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.16;
+pragma solidity 0.8.17;
 
 // Formal verification for library and formula: https://twitter.com/Zellic_io/status/1510341868021854209
 import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsDateTimeLibrary.sol";

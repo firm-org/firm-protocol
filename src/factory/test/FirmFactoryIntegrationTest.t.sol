@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.16;
+pragma solidity 0.8.17;
 
 import {GnosisSafe, OwnerManager} from "gnosis-safe/GnosisSafe.sol";
 
@@ -283,7 +283,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
 
     function testExecutingProposalsFromVoting() public {
         vm.roll(1);
-        (GnosisSafe safe, Budget budget, Roles roles, Voting voting, Captable captable) =
+        (GnosisSafe safe, Budget budget,, Voting voting, Captable captable) =
             createFirmWithCaptableVotingAndAllowance();
         token.mint(address(safe), 100);
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Unlicense
-pragma solidity 0.8.16;
+pragma solidity 0.8.17;
 
 import {AddressUint8FlagsLib} from "../bases/utils/AddressUint8FlagsLib.sol";
 
