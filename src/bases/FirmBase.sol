@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.16;
 
-import {ISafe} from "./ISafe.sol";
+import {ISafe} from "./interfaces/ISafe.sol";
 import {ERC2771Context} from "./ERC2771Context.sol";
 import {EIP1967Upgradeable, IMPL_INIT_NOOP_ADDR, IMPL_INIT_NOOP_SAFE} from "./EIP1967Upgradeable.sol";
-import {IModuleMetadata} from "./IModuleMetadata.sol";
+import {IModuleMetadata} from "./interfaces/IModuleMetadata.sol";
 
 abstract contract FirmBase is EIP1967Upgradeable, ERC2771Context, IModuleMetadata {
     event Initialized(ISafe indexed safe, IModuleMetadata indexed implementation);

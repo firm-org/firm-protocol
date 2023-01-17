@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import {FirmTest} from "../../common/test/lib/FirmTest.sol";
-import {SafeStub} from "../../common/test/mocks/SafeStub.sol";
-import {SafeAware} from "../../bases/SafeAware.sol";
-import {AddressUint8FlagsLib} from "../../common/AddressUint8FlagsLib.sol";
-import {Roles, ONLY_ROOT_ROLE_AS_ADMIN} from "../../roles/Roles.sol";
-import {roleFlag} from "../../common/test/mocks/RolesAuthMock.sol";
+import {FirmTest} from "src/bases/test/lib/FirmTest.sol";
+import {SafeStub} from "src/bases/test/mocks/SafeStub.sol";
+import {SafeAware} from "src/bases/SafeAware.sol";
+import {AddressUint8FlagsLib} from "src/bases/utils/AddressUint8FlagsLib.sol";
+import {Roles, ONLY_ROOT_ROLE_AS_ADMIN} from "src/roles/Roles.sol";
+import {roleFlag} from "src/bases/test/mocks/RolesAuthMock.sol";
 
 import {Captable, IBouncer, NO_CONVERSION_FLAG, NO_CONTROLLER} from "../Captable.sol";
 import {EquityToken} from "../EquityToken.sol";

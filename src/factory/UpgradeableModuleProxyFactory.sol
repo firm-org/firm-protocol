@@ -2,7 +2,7 @@
 pragma solidity 0.8.16;
 
 import {Ownable} from "openzeppelin/access/Ownable.sol";
-import {IModuleMetadata} from "../bases/IModuleMetadata.sol";
+import {IModuleMetadata} from "../bases/interfaces/IModuleMetadata.sol";
 
 uint256 constant LATEST_VERSION = type(uint256).max;
 
@@ -67,7 +67,7 @@ contract UpgradeableModuleProxyFactory is Ownable {
             revert FailedInitialization();
         }
     }
-
+    
     /**
      * @dev Proxy EVM code from factory/proxy-asm generated with ETK
      */

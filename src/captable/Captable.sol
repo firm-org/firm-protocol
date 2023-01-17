@@ -4,12 +4,12 @@ pragma solidity 0.8.16;
 import {Clones} from "openzeppelin/proxy/Clones.sol";
 
 import {FirmBase, IMPL_INIT_NOOP_SAFE, IMPL_INIT_NOOP_ADDR} from "../bases/FirmBase.sol";
-import {ISafe} from "../bases/ISafe.sol";
+import {ISafe} from "../bases/interfaces/ISafe.sol";
 
 import {EquityToken, ERC20, ERC20Votes} from "./EquityToken.sol";
-import {ICaptableVotes} from "./utils/ICaptableVotes.sol";
+import {ICaptableVotes} from "./interfaces/ICaptableVotes.sol";
 import {BouncerChecker} from "./BouncerChecker.sol";
-import {IBouncer} from "./bouncers/IBouncer.sol";
+import {IBouncer} from "./interfaces/IBouncer.sol";
 import {IAccountController} from "./controllers/AccountController.sol";
 
 uint32 constant NO_CONVERSION_FLAG = type(uint32).max;

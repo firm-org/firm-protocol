@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import {SafeModule, ISafe} from "../../bases/SafeModule.sol";
+import {SafeModule, ISafe} from "../bases/SafeModule.sol";
 
 contract BackdoorModule is SafeModule {
     string public constant moduleId = "org.firm.backdoor";

@@ -6,7 +6,7 @@ import {GnosisSafeProxyFactory} from "gnosis-safe/proxies/GnosisSafeProxyFactory
 
 import {FirmRelayer} from "../metatx/FirmRelayer.sol";
 
-import {ISafe} from "../bases/ISafe.sol";
+import {ISafe} from "../bases/interfaces/ISafe.sol";
 import {Roles} from "../roles/Roles.sol";
 import {Budget, EncodedTimeShift} from "../budget/Budget.sol";
 import {Captable, IBouncer} from "../captable/Captable.sol";

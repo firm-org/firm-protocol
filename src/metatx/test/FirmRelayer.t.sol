@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import {FirmTest} from "../../common/test/lib/FirmTest.sol";
+import {FirmTest} from "../../bases/test/lib/FirmTest.sol";
 
 import "../FirmRelayer.sol";
 import "./mocks/RelayTarget.sol";
