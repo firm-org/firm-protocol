@@ -3,7 +3,7 @@ pragma solidity 0.8.16;
 
 import {AddressUint8FlagsLib} from "../bases/utils/AddressUint8FlagsLib.sol";
 
-import {IBouncer} from "./bouncers/IBouncer.sol";
+import {IBouncer} from "./interfaces/IBouncer.sol";
 
 uint8 constant EMBEDDED_BOUNCER_FLAG_TYPE = 0x02;
 

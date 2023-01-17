@@ -4,7 +4,7 @@ pragma solidity ^0.8.16;
 import {FirmBase, ISafe, IMPL_INIT_NOOP_ADDR, IMPL_INIT_NOOP_SAFE} from "../../bases/FirmBase.sol";
 
 import {Captable} from "../Captable.sol";
-import {IBouncer} from "../bouncers/IBouncer.sol";
+import {IBouncer} from "../interfaces/IBouncer.sol";
 
 abstract contract IAccountController is IBouncer {
     function addAccount(address owner, uint256 classId, uint256 amount, bytes calldata extraParams) external virtual;
