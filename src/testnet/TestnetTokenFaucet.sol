@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.16;
+pragma solidity 0.8.17;
 
 import "openzeppelin/access/Ownable.sol";
 import "openzeppelin/token/ERC20/ERC20.sol";

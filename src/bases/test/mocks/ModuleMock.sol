@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.16;
+pragma solidity 0.8.17;
 
 import {FirmBase} from "src/bases/FirmBase.sol";
 import {ISafe, SafeModule} from "src/bases/SafeModule.sol";

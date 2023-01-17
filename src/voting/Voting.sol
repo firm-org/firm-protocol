@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.16;
+pragma solidity 0.8.17;
 
 import {OZGovernor, Context} from "./OZGovernor.sol";
 import {ICaptableVotes} from "../captable/interfaces/ICaptableVotes.sol";
