@@ -3,7 +3,7 @@ pragma solidity 0.8.16;
 
 import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsDateTimeLibrary.sol";
 
-import {FirmTest} from "../../common/test/lib/FirmTest.sol";
+import {FirmTest} from "../../bases/test/lib/FirmTest.sol";
 import "../TimeShiftLib.sol";
 
 contract TimeShiftLibShiftTest is FirmTest {

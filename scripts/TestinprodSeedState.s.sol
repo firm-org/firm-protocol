@@ -8,7 +8,7 @@ import {Roles, IRoles, ISafe, ONLY_ROOT_ROLE_AS_ADMIN, ROOT_ROLE_ID} from "../sr
 import {Budget, TimeShiftLib, NO_PARENT_ID, NATIVE_ASSET} from "../src/budget/Budget.sol";
 import {TimeShift} from "../src/budget/TimeShiftLib.sol";
 import {BackdoorModule} from "../src/factory/local-utils/BackdoorModule.sol";
-import {roleFlag} from "../src/common/test/mocks/RolesAuthMock.sol";
+import {roleFlag} from "../src/bases/test/mocks/RolesAuthMock.sol";
 import {TestnetTokenFaucet} from "../src/testnet/TestnetTokenFaucet.sol";
 
 import {LlamaPayStreams, BudgetModule, IERC20, ForwarderLib} from "src/budget/modules/streams/LlamaPayStreams.sol";

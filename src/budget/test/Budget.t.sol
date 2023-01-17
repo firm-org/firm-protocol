@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import {FirmTest} from "../../common/test/lib/FirmTest.sol";
-import {RolesStub} from "../../common/test/mocks/RolesStub.sol";
-import {roleFlag} from "../../common/test/mocks/RolesAuthMock.sol";
-import {SafeStub} from "../../common/test/mocks/SafeStub.sol";
+import {FirmTest} from "../../bases/test/lib/FirmTest.sol";
+import {RolesStub} from "../../bases/test/mocks/RolesStub.sol";
+import {roleFlag} from "../../bases/test/mocks/RolesAuthMock.sol";
+import {SafeStub} from "../../bases/test/mocks/SafeStub.sol";
 import {TestnetERC20 as ERC20Token} from "../../testnet/TestnetTokenFaucet.sol";
 import {UpgradeableModuleProxyFactory} from "../../factory/UpgradeableModuleProxyFactory.sol";
 

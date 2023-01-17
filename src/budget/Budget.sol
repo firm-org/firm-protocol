@@ -6,7 +6,7 @@ import {SafeERC20} from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
 import {FirmBase, IMPL_INIT_NOOP_ADDR, IMPL_INIT_NOOP_SAFE} from "../bases/FirmBase.sol";
 import {SafeModule, ISafe} from "../bases/SafeModule.sol";
-import {IRoles, RolesAuth} from "../common/RolesAuth.sol";
+import {IRoles, RolesAuth} from "../bases/RolesAuth.sol";
 
 import {TimeShiftLib, EncodedTimeShift} from "./TimeShiftLib.sol";
 

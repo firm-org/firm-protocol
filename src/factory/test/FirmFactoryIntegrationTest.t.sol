@@ -3,9 +3,9 @@ pragma solidity 0.8.16;
 
 import {GnosisSafe, OwnerManager} from "gnosis-safe/GnosisSafe.sol";
 
-import {FirmTest} from "src/common/test/lib/FirmTest.sol";
-import {roleFlag} from "src/common/test/mocks/RolesAuthMock.sol";
-import {ModuleMock} from "src/common/test/mocks/ModuleMock.sol";
+import {FirmTest} from "src/bases/test/lib/FirmTest.sol";
+import {roleFlag} from "src/bases/test/mocks/RolesAuthMock.sol";
+import {ModuleMock} from "src/bases/test/mocks/ModuleMock.sol";
 
 import {Budget, TimeShiftLib, NO_PARENT_ID, INHERITED_AMOUNT} from "src/budget/Budget.sol";
 import {TimeShift} from "src/budget/TimeShiftLib.sol";
@@ -13,7 +13,7 @@ import {Roles, IRoles, ISafe, ONLY_ROOT_ROLE_AS_ADMIN, ROOT_ROLE_ID, SAFE_OWNER_
 import {Captable, EquityToken, IBouncer, NO_CONVERSION_FLAG} from "src/captable/Captable.sol";
 import {Voting} from "src/voting/Voting.sol";
 import {EmbeddedBouncerType, EMBEDDED_BOUNCER_FLAG_TYPE} from "src/captable/BouncerChecker.sol";
-import {AddressUint8FlagsLib} from "src/common/AddressUint8FlagsLib.sol";
+import {AddressUint8FlagsLib} from "src/bases/utils/AddressUint8FlagsLib.sol";
 
 import {FirmRelayer} from "src/metatx/FirmRelayer.sol";
 import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsDateTimeLibrary.sol";

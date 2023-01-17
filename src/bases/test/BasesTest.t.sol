@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import {FirmTest} from "src/common/test/lib/FirmTest.sol";
-import {ModuleMock} from "src/common/test/mocks/ModuleMock.sol";
-import {SafeStub} from "src/common/test/mocks/SafeStub.sol";
+import {FirmTest} from "src/bases/test/lib/FirmTest.sol";
+import {ModuleMock} from "src/bases/test/mocks/ModuleMock.sol";
+import {SafeStub} from "src/bases/test/mocks/SafeStub.sol";
 import {UpgradeableModuleProxyFactory} from "src/factory/UpgradeableModuleProxyFactory.sol";
 
 import {ISafe} from "../ISafe.sol";

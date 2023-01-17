@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import {FirmTest} from "../../../common/test/lib/FirmTest.sol";
-import {SafeStub} from "../../../common/test/mocks/SafeStub.sol";
-import {RolesStub} from "../../../common/test/mocks/RolesStub.sol";
+import {FirmTest} from "../../../bases/test/lib/FirmTest.sol";
+import {SafeStub} from "../../../bases/test/mocks/SafeStub.sol";
+import {RolesStub} from "../../../bases/test/mocks/RolesStub.sol";
 import {TimeShift} from "../../../budget/TimeShiftLib.sol";
 import {TestnetERC20 as ERC20Token} from "../../../testnet/TestnetTokenFaucet.sol";
 

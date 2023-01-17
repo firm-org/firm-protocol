@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
 
-import {IRoles, RolesAuth} from "../../common/RolesAuth.sol";
+import {IRoles, RolesAuth} from "../../bases/RolesAuth.sol";
 
 import {AccountController, Captable} from "./AccountController.sol";
 import {EquityToken} from "../EquityToken.sol";

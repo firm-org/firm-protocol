@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.16;
 
-import {AddressUint8FlagsLib} from "./AddressUint8FlagsLib.sol";
+import {AddressUint8FlagsLib} from "./utils/AddressUint8FlagsLib.sol";
 
 import {IRoles} from "../roles/IRoles.sol";
 
