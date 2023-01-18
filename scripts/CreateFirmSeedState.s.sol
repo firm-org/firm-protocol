@@ -48,7 +48,7 @@ contract CreateFirmSeedState is Test {
         USDC = address(faucet.tokenWithSymbol("USDC"));
 
         FirmFactory.SafeConfig memory safeConfig = factory.defaultOneOwnerSafeConfig(msg.sender);
-        FirmFactory.FirmConfig memory firmConfig = firmConfig();
+        FirmFactory.FirmConfig memory firmConfig = buildFirmConfig();
 
         vm.broadcast();
         safe = factory.createFirm(safeConfig, firmConfig, block.timestamp);
@@ -89,7 +89,7 @@ contract CreateFirmSeedState is Test {
         vm.stopBroadcast();
     }
 
-    function firmConfig() internal view returns (FirmFactory.FirmConfig memory config) {
+    function buildFirmConfig() internal view returns (FirmFactory.FirmConfig memory config) {
         address owner = msg.sender;
 
         address[] memory grantees = new address[](1);
