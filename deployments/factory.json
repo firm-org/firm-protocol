@@ -40,6 +40,11 @@
             "firmFactory": "0x860ff9c3E9cd3A5666Cb9a5E0Ce6027D6627CD1b",
             "modulesFactory": "0x2dd8DA68D62a01Db1B29e87ed6A42E099a7C12E4",
             "blockNumber": 37024174
+        },
+        "v0.5.0": {
+            "firmFactory": "0x9aC87d21984F5a42A549eDC0306a5b4813626843",
+            "modulesFactory": "0x4a04206FCe29faB48D3195F9a2892A6d02D4aC6e",
+            "blockNumber": 38227127
         }
     }
 }

@@ -32,7 +32,7 @@ contract CreateFirmSeedState is Test {
             factory = FirmFactory(0x757BfeA33a67412a1099BD00f431153509E0e1BC); // v0.5
         } else if (block.chainid == 137) { // matic
             faucet = TestnetTokenFaucet(0xA1dD2A67E26DC400b6dd31354bA653ea4EeF86F5);
-            factory = FirmFactory(address(0)); // TODO
+            factory = FirmFactory(0x9aC87d21984F5a42A549eDC0306a5b4813626843); // v0.5
         } else if (block.chainid == 31337) { // anvil
             faucet = (new TestnetFaucetDeploy()).run();
             factory = FirmFactory(0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE);
