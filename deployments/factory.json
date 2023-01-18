@@ -19,10 +19,15 @@
             "firmFactory": "0xa1b159a50613c8f0c6b01d02b8a2258a94eed480",
             "blockNumber": 7638312
         },
-        "v0.3.0-rc.1": {
+        "v0.3.0": {
             "firmFactory": "0x229f7159dab0840B8dd6215F09Dc7238B11c70e1",
             "modulesFactory": "0x2Ef2b36AD44D5c5fdeECC5a6a38464BFe50b5Da2",
             "blockNumber": 7833032
+        },
+        "v0.5.0": {
+            "firmFactory": "0x757BfeA33a67412a1099BD00f431153509E0e1BC",
+            "modulesFactory": "0x7feED33B89605C5171bfF6051F64954a892Af043",
+            "blockNumber": 8331988
         }
     },
     "137": {
@@ -35,6 +40,11 @@
             "firmFactory": "0x860ff9c3E9cd3A5666Cb9a5E0Ce6027D6627CD1b",
             "modulesFactory": "0x2dd8DA68D62a01Db1B29e87ed6A42E099a7C12E4",
             "blockNumber": 37024174
+        },
+        "v0.5.0": {
+            "firmFactory": "0x9aC87d21984F5a42A549eDC0306a5b4813626843",
+            "modulesFactory": "0x4a04206FCe29faB48D3195F9a2892A6d02D4aC6e",
+            "blockNumber": 38227123
         }
     }
 }
