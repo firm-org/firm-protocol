@@ -19,7 +19,7 @@
             "firmFactory": "0xa1b159a50613c8f0c6b01d02b8a2258a94eed480",
             "blockNumber": 7638312
         },
-        "v0.3.0-rc.1": {
+        "v0.3.0": {
             "firmFactory": "0x229f7159dab0840B8dd6215F09Dc7238B11c70e1",
             "modulesFactory": "0x2Ef2b36AD44D5c5fdeECC5a6a38464BFe50b5Da2",
             "blockNumber": 7833032
