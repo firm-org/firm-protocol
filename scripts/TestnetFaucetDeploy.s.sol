@@ -6,10 +6,10 @@ import "forge-std/Test.sol";
 import {TestnetTokenFaucet} from "../src/testnet/TestnetTokenFaucet.sol";
 
 contract TestnetFaucetDeploy is Test {
-    function run() public {
+    function run() public returns (TestnetTokenFaucet faucet) {
         vm.startBroadcast();
         
-        TestnetTokenFaucet faucet = new TestnetTokenFaucet();
+        faucet = new TestnetTokenFaucet();
 
         faucet.create("USD Coin", "USDC", 6);
         faucet.create("Tether USD", "USDT", 6);

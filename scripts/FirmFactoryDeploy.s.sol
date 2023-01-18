@@ -27,6 +27,9 @@ abstract contract FirmFactoryDeploy is Test {
 
         vm.startBroadcast();
 
+        // The account that runs the script is the initial owner of the UpgradeableModuleProxyFactory
+        // and therefore the only account that can create new modules/versions.
+        
         moduleFactory = new UpgradeableModuleProxyFactory();
         moduleFactory.register(new Roles());
         moduleFactory.register(new Budget());
