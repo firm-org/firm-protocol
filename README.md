@@ -38,3 +38,15 @@ was correctly deployed by performing a call to it:
 ```
 cast call [FirmFactory address] "moduleFactory()(address)"
 ```
+
+## Live deployments
+
+Make sure the git repo is not dirty and force a clean build:
+```
+forge build --force
+```
+
+Use `FirmFactoryDeploy` script to deploy to a live network (add flags to `forge script` for your deployment account to be used):
+```
+forge script scripts/FirmFactoryDeploy.s.sol:FirmFactoryDeployLive --broadcast --fork-url [JSON-RPC for network to deploy to]
+```
