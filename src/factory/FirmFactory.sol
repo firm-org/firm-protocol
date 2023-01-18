@@ -289,13 +289,13 @@ contract FirmFactory {
         );
     }
 
-    function defaultOneOwnerSafeConfig(address owner) internal pure returns (SafeConfig memory) {
+    function defaultOneOwnerSafeConfig(address owner) public pure returns (SafeConfig memory) {
         address[] memory owners = new address[](1);
         owners[0] = owner;
         return SafeConfig({owners: owners, requiredSignatures: 1});
     }
 
-    function defaultBarebonesFirmConfig() internal pure returns (FirmConfig memory) {
+    function defaultBarebonesFirmConfig() public pure returns (FirmConfig memory) {
         BudgetConfig memory budgetConfig = BudgetConfig({allowances: new AllowanceCreationInput[](0)});
         RolesConfig memory rolesConfig = RolesConfig({roles: new RoleCreationInput[](0)});
         CaptableConfig memory captableConfig;

@@ -1,0 +1,5 @@
+#!/bin/bash
+
+forge script scripts/FirmFactoryDeploy.s.sol:FirmFactoryDeployLocal --broadcast --rpc-url http://localhost:8545 \
+    --mnemonics "test test test test test test test test test test test junk" \
+    --sender 0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266
