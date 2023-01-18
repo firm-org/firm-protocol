@@ -11,6 +11,7 @@ foundryup
 
 ### Build and test
 ```
+git clone https://github.com/firm-org/firm-protocol.git
 forge install
 forge build
 forge test
