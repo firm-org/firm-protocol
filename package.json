@@ -1,15 +1,12 @@
 {
     "name": "@firm-org/firm-protocol",
     "version": "0.0.1",
-    "main": "index.js",
+    "license": "(GPL-3.0-or-later OR MIT)",
     "repository": "https://github.com/firm-org/firm-protocol",
     "files": [
         "/out",
         "/src"
     ],
-    "scripts": {
-        "deploy:local": "source scripts/deploy-local.sh"
-    },
     "devDependencies": {},
     "dependencies": {}
 }
