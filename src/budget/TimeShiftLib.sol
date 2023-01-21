@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.17;
 
 // Formal verification for library and formula: https://twitter.com/Zellic_io/status/1510341868021854209

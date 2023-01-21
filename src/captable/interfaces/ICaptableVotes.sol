@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 // More minimal interface of OZ's IVotes.sol which exposes the functions neccesary for vote counting
