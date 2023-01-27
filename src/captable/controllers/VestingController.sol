@@ -88,8 +88,11 @@ contract VestingController is AccountController, RolesAuth {
         uint256 lockedAmount = calculateLockedAmount(account.amount, account.params, block.timestamp);
 
         if (lockedAmount > 0) {
-            uint256 afterBalance = captable().balanceOf(from, classId) - amount;
-
+            uint256 beforeBalance = captable().balanceOf(from, classId);
+            if (beforeBalance < lockedAmount) {
+                return false;
+            }
+            uint256 afterBalance = beforeBalance - amount;
             return afterBalance >= lockedAmount;
         }
 
@@ -109,17 +112,16 @@ contract VestingController is AccountController, RolesAuth {
     function revokeVesting(address owner, uint256 classId, uint40 effectiveDate) external {
         Account storage account = accounts[owner][classId];
 
-        if (!_isAuthorized(_msgSender(), account.params.revoker)) {
-            revert UnauthorizedRevoker();
-        }
-
         if (account.amount == 0) {
             revert AccountDoesntExist();
         }
 
-        // TODO: add hard limit for how much in the past can the effective date be?
+        if (!_isAuthorized(_msgSender(), account.params.revoker)) {
+            revert UnauthorizedRevoker();
+        }
+
         uint256 unvestedAmount = calculateLockedAmount(account.amount, account.params, effectiveDate);
-        if (unvestedAmount == 0) {
+        if (unvestedAmount == 0 || block.timestamp >= account.params.endDate) {
             revert InvalidVestingState();
         }
 
@@ -139,7 +141,7 @@ contract VestingController is AccountController, RolesAuth {
      * @param owner Address of the account owner
      * @param classId Class ID of the account
      */
-    function cleanupFullyVested(address owner, uint256 classId) external {
+    function cleanupFullyVestedAccount(address owner, uint256 classId) external {
         Account storage account = accounts[owner][classId];
 
         if (account.amount == 0) {
