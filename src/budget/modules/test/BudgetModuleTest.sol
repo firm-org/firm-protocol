@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.17;
 
-import {FirmTest} from "../../../bases/test/lib/FirmTest.sol";
-import {SafeStub} from "../../../bases/test/mocks/SafeStub.sol";
-import {RolesStub} from "../../../bases/test/mocks/RolesStub.sol";
-import {TimeShift} from "../../../budget/TimeShiftLib.sol";
-import {TestnetERC20 as ERC20Token} from "../../../testnet/TestnetTokenFaucet.sol";
+import {FirmTest} from "src/bases/test/lib/FirmTest.sol";
+import {SafeStub} from "src/bases/test/mocks/SafeStub.sol";
+import {RolesStub} from "src/bases/test/mocks/RolesStub.sol";
+import {TimeShift} from "src/budget/TimeShiftLib.sol";
+import {TestnetERC20 as ERC20Token} from "src/testnet/TestnetTokenFaucet.sol";
 
 import "../../Budget.sol";
 import {BudgetModule} from "../BudgetModule.sol";
