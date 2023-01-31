@@ -6,8 +6,10 @@ import {Test} from "forge-std/Test.sol";
 import {GnosisSafe} from "gnosis-safe/GnosisSafe.sol";
 import {Roles, IRoles, ISafe, ONLY_ROOT_ROLE_AS_ADMIN, ROOT_ROLE_ID} from "src/roles/Roles.sol";
 import {Budget, TimeShiftLib, NO_PARENT_ID, NATIVE_ASSET} from "src/budget/Budget.sol";
+import {Captable, NO_CONVERSION_FLAG} from "src/captable/Captable.sol";
 import {TimeShift} from "src/budget/TimeShiftLib.sol";
 import {roleFlag} from "src/bases/test/mocks/RolesAuthMock.sol";
+import {bouncerFlag, EmbeddedBouncerType} from "src/captable/test/BouncerFlags.sol";
 import {TestnetTokenFaucet} from "src/testnet/TestnetTokenFaucet.sol";
 
 import {LlamaPayStreams, BudgetModule, IERC20, ForwarderLib} from "src/budget/modules/streams/LlamaPayStreams.sol";
@@ -53,8 +55,8 @@ contract CreateFirmSeedState is Test {
         vm.broadcast();
         safe = factory.createFirm(safeConfig, firmConfig, block.timestamp);
 
-        (address[] memory modules,) = safe.getModulesPaginated(address(0x1), 1);
-        Budget budget = Budget(modules[0]);
+        (address[] memory modules,) = safe.getModulesPaginated(address(0x1), 2);
+        Budget budget = Budget(modules[1]);
         Roles roles = Roles(address(budget.roles()));
         // sanity check
         assertEq(budget.moduleId(), "org.firm.budget");
@@ -89,9 +91,10 @@ contract CreateFirmSeedState is Test {
         vm.stopBroadcast();
     }
 
-    function buildFirmConfig() internal view returns (FirmFactory.FirmConfig memory config) {
+    function buildFirmConfig() internal view returns (FirmFactory.FirmConfig memory) {
         address owner = msg.sender;
 
+        // Roles config
         address[] memory grantees = new address[](1);
         grantees[0] = owner;
         FirmFactory.RoleCreationInput[] memory roles = new FirmFactory.RoleCreationInput[](3);
@@ -100,6 +103,7 @@ contract CreateFirmSeedState is Test {
         roles[1] = FirmFactory.RoleCreationInput(ONLY_ROOT_ROLE_AS_ADMIN | bytes32(1 << executiveRoleId), "Team member role", grantees);
         roles[2] = FirmFactory.RoleCreationInput(ONLY_ROOT_ROLE_AS_ADMIN | bytes32(1 << executiveRoleId), "Dev role", grantees);
 
+        // Budget config
         FirmFactory.AllowanceCreationInput[] memory allowances = new FirmFactory.AllowanceCreationInput[](4);
         uint256 generalAllowanceId = 1;
         allowances[0] = FirmFactory.AllowanceCreationInput(
@@ -131,8 +135,42 @@ contract CreateFirmSeedState is Test {
             "Gas budget"
         );
 
-        config.rolesConfig = FirmFactory.RolesConfig(roles);
-        config.budgetConfig = FirmFactory.BudgetConfig(allowances);
-        config.withCaptableAndVoting = false;
+        // Captable config
+        FirmFactory.ClassCreationInput[] memory classes = new FirmFactory.ClassCreationInput[](2);
+        classes[0] = FirmFactory.ClassCreationInput(
+            "Common", "SDC-A",
+            100_000_000 ether,
+            NO_CONVERSION_FLAG,
+            1,
+            bouncerFlag(EmbeddedBouncerType.AllowAll)
+        );
+        classes[1] = FirmFactory.ClassCreationInput(
+            "Supervoting", "SDC-B",
+            classes[0].authorized / 100, // 1% of the authorized can be issued as supervoting shares
+            0,
+            10, // 10x voting power
+            bouncerFlag(EmbeddedBouncerType.DenyAll)
+        );
+
+        FirmFactory.ShareIssuanceInput[] memory issuances = new FirmFactory.ShareIssuanceInput[](3);
+        issuances[0] = FirmFactory.ShareIssuanceInput(0, msg.sender, 5_000_000 ether);
+        issuances[1] = FirmFactory.ShareIssuanceInput(1, msg.sender, 500_000 ether);
+        issuances[2] = FirmFactory.ShareIssuanceInput(0, 0x6b2b69c6e5490Be701AbFbFa440174f808C1a33B, 3_000_000 ether);
+
+        // Voting config
+        FirmFactory.VotingConfig memory votingConfig = FirmFactory.VotingConfig({
+            quorumNumerator: 100, // 1%
+            votingDelay: 0, // 0 blocks
+            votingPeriod: 100, // 100 blocks
+            proposalThreshold: 1 // Any shareholder can start a vote
+        });
+
+        return FirmFactory.FirmConfig({
+            withCaptableAndVoting: true,
+            rolesConfig: FirmFactory.RolesConfig(roles),
+            budgetConfig: FirmFactory.BudgetConfig(allowances),
+            captableConfig: FirmFactory.CaptableConfig("Seed Company, Inc.", classes, issuances),
+            votingConfig: votingConfig
+        });
     }
 }
