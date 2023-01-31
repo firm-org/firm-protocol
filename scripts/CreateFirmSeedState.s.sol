@@ -7,6 +7,7 @@ import {GnosisSafe} from "gnosis-safe/GnosisSafe.sol";
 import {Roles, IRoles, ISafe, ONLY_ROOT_ROLE_AS_ADMIN, ROOT_ROLE_ID} from "src/roles/Roles.sol";
 import {Budget, TimeShiftLib, NO_PARENT_ID, NATIVE_ASSET} from "src/budget/Budget.sol";
 import {Captable, NO_CONVERSION_FLAG} from "src/captable/Captable.sol";
+import {Voting} from "src/voting/Voting.sol";
 import {TimeShift} from "src/budget/TimeShiftLib.sol";
 import {roleFlag} from "src/bases/test/mocks/RolesAuthMock.sol";
 import {bouncerFlag, EmbeddedBouncerType} from "src/captable/test/BouncerFlags.sol";
@@ -58,6 +59,9 @@ contract CreateFirmSeedState is Test {
         (address[] memory modules,) = safe.getModulesPaginated(address(0x1), 2);
         Budget budget = Budget(modules[1]);
         Roles roles = Roles(address(budget.roles()));
+        Voting voting = Voting(payable(modules[0]));
+        Captable captable = Captable(address(voting.token()));
+
         // sanity check
         assertEq(budget.moduleId(), "org.firm.budget");
         assertEq(roles.moduleId(), "org.firm.roles");
@@ -87,6 +91,9 @@ contract CreateFirmSeedState is Test {
         budget.executePayment(generalAllowanceId, 0xFaE470CD6bce7EBac42B6da5082944D72328bC3b, 3000e6, "Equipment for new hire");
         budget.executePayment(subAllowanceId1, 0xe688b84b23f322a994A53dbF8E15FA82CDB71127, 22000e6, "Process monthly payroll");
         budget.executePayment(generalAllowanceId, 0x328375e18E7db8F1CA9d9bA8bF3E9C94ee34136A, 3000e6, "Special bonus");
+
+        // trigger a share conversions
+        captable.convert(1, 100_000);
 
         vm.stopBroadcast();
     }
