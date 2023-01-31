@@ -9,7 +9,7 @@ import {Budget, TimeShiftLib, NO_PARENT_ID, NATIVE_ASSET} from "src/budget/Budge
 import {Captable, NO_CONVERSION_FLAG} from "src/captable/Captable.sol";
 import {Voting} from "src/voting/Voting.sol";
 import {TimeShift} from "src/budget/TimeShiftLib.sol";
-import {roleFlag} from "src/bases/test/mocks/RolesAuthMock.sol";
+import {roleFlag} from "src/bases/test/lib/RolesAuthFlags.sol";
 import {bouncerFlag, EmbeddedBouncerType} from "src/captable/test/lib/BouncerFlags.sol";
 import {TestnetTokenFaucet} from "src/testnet/TestnetTokenFaucet.sol";
 

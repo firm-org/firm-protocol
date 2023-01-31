@@ -3,7 +3,9 @@ pragma solidity 0.8.17;
 
 import {FirmTest} from "./lib/FirmTest.sol";
 
-import {RolesAuthMock, roleFlag} from "./mocks/RolesAuthMock.sol";
+import {roleFlag} from "./lib/RolesAuthFlags.sol";
+import {RolesAuthMock} from "./mocks/RolesAuthMock.sol";
+
 import {RolesStub} from "./mocks/RolesStub.sol";
 
 contract RolesAuthTest is FirmTest {

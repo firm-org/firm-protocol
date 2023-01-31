@@ -2,7 +2,7 @@
 pragma solidity 0.8.17;
 
 import {RolesStub} from "src/bases/test/mocks/RolesStub.sol";
-import {roleFlag} from "src/bases/test/mocks/RolesAuthMock.sol";
+import {roleFlag} from "src/bases/test/lib/RolesAuthFlags.sol";
 
 import {AccountControllerTest} from "./AccountControllerTest.sol";
 import {VestingController, AccountController} from "../VestingController.sol";

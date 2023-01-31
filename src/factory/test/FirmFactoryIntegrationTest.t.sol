@@ -4,7 +4,7 @@ pragma solidity 0.8.17;
 import {GnosisSafe, OwnerManager} from "gnosis-safe/GnosisSafe.sol";
 
 import {FirmTest} from "src/bases/test/lib/FirmTest.sol";
-import {roleFlag} from "src/bases/test/mocks/RolesAuthMock.sol";
+import {roleFlag} from "src/bases/test/lib/RolesAuthFlags.sol";
 import {ModuleMock} from "src/bases/test/mocks/ModuleMock.sol";
 
 import {Budget, TimeShiftLib, NO_PARENT_ID, INHERITED_AMOUNT} from "src/budget/Budget.sol";

@@ -5,7 +5,7 @@ import {FirmTest} from "src/bases/test/lib/FirmTest.sol";
 import {SafeStub} from "src/bases/test/mocks/SafeStub.sol";
 import {SafeAware} from "src/bases/SafeAware.sol";
 import {Roles, ONLY_ROOT_ROLE_AS_ADMIN} from "src/roles/Roles.sol";
-import {roleFlag} from "src/bases/test/mocks/RolesAuthMock.sol";
+import {roleFlag} from "src/bases/test/lib/RolesAuthFlags.sol";
 
 import {Captable, IBouncer, NO_CONVERSION_FLAG, NO_CONTROLLER} from "../Captable.sol";
 import {EquityToken} from "../EquityToken.sol";
