@@ -4,26 +4,23 @@ pragma solidity 0.8.17;
 import {FirmTest} from "src/bases/test/lib/FirmTest.sol";
 import {SafeStub} from "src/bases/test/mocks/SafeStub.sol";
 import {SafeAware} from "src/bases/SafeAware.sol";
-import {AddressUint8FlagsLib} from "src/bases/utils/AddressUint8FlagsLib.sol";
 import {Roles, ONLY_ROOT_ROLE_AS_ADMIN} from "src/roles/Roles.sol";
-import {roleFlag} from "src/bases/test/mocks/RolesAuthMock.sol";
+import {roleFlag} from "src/bases/test/lib/RolesAuthFlags.sol";
 
 import {Captable, IBouncer, NO_CONVERSION_FLAG, NO_CONTROLLER} from "../Captable.sol";
 import {EquityToken} from "../EquityToken.sol";
-import {EmbeddedBouncerType, EMBEDDED_BOUNCER_FLAG_TYPE} from "../BouncerChecker.sol";
+import {bouncerFlag, EmbeddedBouncerType} from "./lib/BouncerFlags.sol";
 import {VestingController} from "../controllers/VestingController.sol";
 import {DisallowController} from "./mocks/DisallowController.sol";
 import {OddBouncer} from "./mocks/OddBouncer.sol";
 
 contract BaseCaptableTest is FirmTest {
-    using AddressUint8FlagsLib for *;
-
     Captable captable;
     VestingController vesting;
     Roles roles;
     SafeStub safe = new SafeStub();
 
-    IBouncer ALLOW_ALL_BOUNCER = embeddedBouncer(EmbeddedBouncerType.AllowAll);
+    IBouncer ALLOW_ALL_BOUNCER = bouncerFlag(EmbeddedBouncerType.AllowAll);
 
     address HOLDER1 = account("Holder #1");
     address HOLDER2 = account("Holder #2");
@@ -55,10 +52,6 @@ contract BaseCaptableTest is FirmTest {
         token.delegate(HOLDER1);
         vm.prank(HOLDER2);
         token.delegate(HOLDER2);
-    }
-
-    function embeddedBouncer(EmbeddedBouncerType bouncerType) internal pure returns (IBouncer) {
-        return IBouncer(uint8(bouncerType).toFlag(EMBEDDED_BOUNCER_FLAG_TYPE));
     }
 }
 
@@ -115,6 +108,7 @@ contract CaptableInitTest is BaseCaptableTest {
         assertEq(name, "Common");
         assertEq(ticker, "TST-A");
         assertEq(address(bouncer), address(ALLOW_ALL_BOUNCER));
+        assertEq(address(bouncer), 0x0000000000000000000000000000000000000102);
         assertEq(isFrozen, false);
     }
 
@@ -419,7 +413,7 @@ contract CaptableFrozenTest is BaseCaptableTest {
     function testCantChangeBouncer() public {
         vm.prank(address(safe));
         vm.expectRevert(abi.encodeWithSelector(Captable.FrozenClass.selector, classId));
-        captable.setBouncer(classId, embeddedBouncer(EmbeddedBouncerType.DenyAll));
+        captable.setBouncer(classId, bouncerFlag(EmbeddedBouncerType.DenyAll));
     }
 }
 
@@ -697,8 +691,6 @@ contract CaptableClassLimit2Test is BaseCaptableTest {
 }
 
 contract CaptableBouncersTest is BaseCaptableTest {
-    using AddressUint8FlagsLib for *;
-
     uint256 classId;
     EquityToken token;
 
@@ -730,7 +722,7 @@ contract CaptableBouncersTest is BaseCaptableTest {
     }
 
     function testDenyAllBouncer() public {
-        IBouncer bouncer = embeddedBouncer(EmbeddedBouncerType.DenyAll);
+        IBouncer bouncer = bouncerFlag(EmbeddedBouncerType.DenyAll);
         vm.prank(address(safe));
         captable.setBouncer(classId, bouncer);
 
@@ -752,7 +744,7 @@ contract CaptableBouncersTest is BaseCaptableTest {
     }
 
     function testClassHoldersOnlyBouncer() public {
-        IBouncer bouncer = embeddedBouncer(EmbeddedBouncerType.AllowTransferToClassHolder);
+        IBouncer bouncer = bouncerFlag(EmbeddedBouncerType.AllowTransferToClassHolder);
         vm.prank(address(safe));
         captable.setBouncer(classId, bouncer);
 
@@ -774,7 +766,7 @@ contract CaptableBouncersTest is BaseCaptableTest {
     }
 
     function testHoldersOnlyBouncer() public {
-        IBouncer bouncer = embeddedBouncer(EmbeddedBouncerType.AllowTransferToAllHolders);
+        IBouncer bouncer = bouncerFlag(EmbeddedBouncerType.AllowTransferToAllHolders);
         vm.prank(address(safe));
         captable.setBouncer(classId, bouncer);
 
@@ -797,7 +789,7 @@ contract CaptableBouncersTest is BaseCaptableTest {
     }
 
     function testFailsOnNonExistentEmbeddedBouncer() public {
-        IBouncer badBouncer = IBouncer(uint8(100).toFlag(EMBEDDED_BOUNCER_FLAG_TYPE));
+        IBouncer badBouncer = IBouncer(0x0000000000000000000000000000000000000a02);
         vm.prank(address(safe));
         captable.setBouncer(classId, badBouncer);
 
@@ -807,7 +799,7 @@ contract CaptableBouncersTest is BaseCaptableTest {
     }
 
     function testFailsOnBadFlagForEmbeddedBouncer() public {
-        IBouncer badBouncer = IBouncer(uint8(EmbeddedBouncerType.AllowAll).toFlag(0x10));
+        IBouncer badBouncer = IBouncer(0x0000000000000000000000000000000000000101);
         vm.prank(address(safe));
         captable.setBouncer(classId, badBouncer);
 
@@ -837,7 +829,7 @@ contract CaptableBouncersTest is BaseCaptableTest {
     function testCantSetBouncerIfNotSafe() public {
         vm.prank(HOLDER1);
         vm.expectRevert(abi.encodeWithSelector(SafeAware.UnauthorizedNotSafe.selector));
-        captable.setBouncer(classId, embeddedBouncer(EmbeddedBouncerType.DenyAll));
+        captable.setBouncer(classId, bouncerFlag(EmbeddedBouncerType.DenyAll));
     }
 
     function testCantSetBouncerToZeroAddr() public {

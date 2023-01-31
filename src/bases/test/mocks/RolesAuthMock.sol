@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.17;
 
-import "../../RolesAuth.sol";
-
-function roleFlag(uint8 role) pure returns (address) {
-    return AddressUint8FlagsLib.toFlag(role, ROLES_FLAG_TYPE);
-}
+import {RolesAuth, IRoles} from "../../RolesAuth.sol";
 
 contract RolesAuthMock is RolesAuth {
     constructor(IRoles _roles) {

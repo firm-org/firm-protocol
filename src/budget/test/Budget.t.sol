@@ -3,7 +3,7 @@ pragma solidity 0.8.17;
 
 import {FirmTest} from "../../bases/test/lib/FirmTest.sol";
 import {RolesStub} from "../../bases/test/mocks/RolesStub.sol";
-import {roleFlag} from "../../bases/test/mocks/RolesAuthMock.sol";
+import {roleFlag} from "../../bases/test/lib/RolesAuthFlags.sol";
 import {SafeStub} from "../../bases/test/mocks/SafeStub.sol";
 import {TestnetERC20 as ERC20Token} from "../../testnet/TestnetTokenFaucet.sol";
 import {UpgradeableModuleProxyFactory} from "../../factory/UpgradeableModuleProxyFactory.sol";
