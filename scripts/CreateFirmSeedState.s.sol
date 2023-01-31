@@ -10,7 +10,7 @@ import {Captable, NO_CONVERSION_FLAG} from "src/captable/Captable.sol";
 import {Voting} from "src/voting/Voting.sol";
 import {TimeShift} from "src/budget/TimeShiftLib.sol";
 import {roleFlag} from "src/bases/test/mocks/RolesAuthMock.sol";
-import {bouncerFlag, EmbeddedBouncerType} from "src/captable/test/BouncerFlags.sol";
+import {bouncerFlag, EmbeddedBouncerType} from "src/captable/test/lib/BouncerFlags.sol";
 import {TestnetTokenFaucet} from "src/testnet/TestnetTokenFaucet.sol";
 
 import {LlamaPayStreams, BudgetModule, IERC20, ForwarderLib} from "src/budget/modules/streams/LlamaPayStreams.sol";
@@ -92,7 +92,7 @@ contract CreateFirmSeedState is Test {
         budget.executePayment(subAllowanceId1, 0xe688b84b23f322a994A53dbF8E15FA82CDB71127, 22000e6, "Process monthly payroll");
         budget.executePayment(generalAllowanceId, 0x328375e18E7db8F1CA9d9bA8bF3E9C94ee34136A, 3000e6, "Special bonus");
 
-        // trigger a share conversions
+        // trigger a share conversion
         captable.convert(1, 100_000);
 
         vm.stopBroadcast();

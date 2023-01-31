@@ -162,6 +162,4 @@ contract VestingControllerTest is AccountControllerTest {
         vm.expectRevert(abi.encodeWithSelector(AccountController.AccountDoesntExist.selector));
         vesting.revokeVesting(HOLDER, classId, 1);
     }
-
-
 }

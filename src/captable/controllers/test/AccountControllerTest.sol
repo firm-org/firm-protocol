@@ -3,22 +3,19 @@ pragma solidity 0.8.17;
 
 import {FirmTest} from "src/bases/test/lib/FirmTest.sol";
 import {SafeStub} from "src/bases/test/mocks/SafeStub.sol";
-import {AddressUint8FlagsLib} from "src/bases/utils/AddressUint8FlagsLib.sol";
 
 import "../../Captable.sol";
-import {EmbeddedBouncerType, EMBEDDED_BOUNCER_FLAG_TYPE} from "../../BouncerChecker.sol";
+import {bouncerFlag, EmbeddedBouncerType} from "../../test/lib/BouncerFlags.sol";
 import {AccountController} from "../AccountController.sol";
 
 abstract contract AccountControllerTest is FirmTest {
-    using AddressUint8FlagsLib for *;
-
     SafeStub safe;
     Captable captable;
     uint256 classId;
     EquityToken token;
     uint256 authorizedAmount = 1e6;
 
-    IBouncer ALLOW_ALL_BOUNCER = embeddedBouncer(EmbeddedBouncerType.AllowAll);
+    IBouncer ALLOW_ALL_BOUNCER = bouncerFlag(EmbeddedBouncerType.AllowAll);
 
     function setUp() public virtual {
         safe = new SafeStub();
@@ -35,9 +32,5 @@ abstract contract AccountControllerTest is FirmTest {
 
         assertEq(address(controller().safe()), address(safe));
         assertUnsStrg(address(controller()), "firm.safeaware.safe", address(safe));
-    }
-
-     function embeddedBouncer(EmbeddedBouncerType bouncerType) internal pure returns (IBouncer) {
-        return IBouncer(uint8(bouncerType).toFlag(EMBEDDED_BOUNCER_FLAG_TYPE));
     }
 }
