@@ -128,7 +128,7 @@ contract VestingControllerTest is AccountControllerTest {
     }
 
     function testRevokerCantRevokeInThePast() public {
-        (,uint40 cliffDate, uint40 endDate) = testCaptableAddsAccount();
+        (,uint40 cliffDate,) = testCaptableAddsAccount();
         vm.warp(cliffDate);
         vm.prank(REVOKER);
         vm.expectRevert(abi.encodeWithSelector(VestingController.EffectiveDateInThePast.selector));
