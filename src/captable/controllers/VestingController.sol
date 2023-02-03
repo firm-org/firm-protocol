@@ -31,6 +31,7 @@ contract VestingController is AccountController, RolesAuth {
     error InvalidVestingParameters();
     error UnauthorizedRevoker();
     error InvalidVestingState();
+    error EffectiveDateInThePast();
 
     function initialize(Captable captable_, IRoles _roles, address trustedForwarder_) public {
         initialize(captable_, trustedForwarder_);
@@ -103,17 +104,25 @@ contract VestingController is AccountController, RolesAuth {
     // VESTING MANAGEMENT
     ////////////////////////////////////////////////////////////////////////////////
 
+    function revokeVesting(address owner, uint256 classId) external {
+        revokeVesting(owner, classId, uint40(block.timestamp));
+    }
+
     /**
      * @notice Revoke vesting for an account, transferring unvested tokens to Safe
      * @param owner Address of the account owner
      * @param classId Class ID of the account
      * @param effectiveDate Date from which the vesting is revoked
      */
-    function revokeVesting(address owner, uint256 classId, uint40 effectiveDate) external {
+    function revokeVesting(address owner, uint256 classId, uint40 effectiveDate) public {
         Account storage account = accounts[owner][classId];
 
         if (account.amount == 0) {
             revert AccountDoesntExist();
+        }
+
+        if (effectiveDate < block.timestamp) {
+            revert EffectiveDateInThePast();
         }
 
         if (!_isAuthorized(_msgSender(), account.params.revoker)) {
@@ -121,7 +130,7 @@ contract VestingController is AccountController, RolesAuth {
         }
 
         uint256 unvestedAmount = calculateLockedAmount(account.amount, account.params, effectiveDate);
-        if (unvestedAmount == 0 || block.timestamp >= account.params.endDate) {
+        if (unvestedAmount == 0) {
             revert InvalidVestingState();
         }
 
