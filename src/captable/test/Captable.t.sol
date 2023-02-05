@@ -113,12 +113,16 @@ contract CaptableInitTest is BaseCaptableTest {
     }
 
     function testCannotCreateMoreClassesThanLimit() public {
-        uint256 CLASSES_LIMIT = 128;
+        assertEq(captable.numberOfClasses(), 0);
 
+        uint256 CLASSES_LIMIT = 128;
+        uint256 lastId;
         for (uint256 i = 0; i < CLASSES_LIMIT; i++) {
             vm.prank(address(safe));
-            captable.createClass("", "", 1, NO_CONVERSION_FLAG, 0, ALLOW_ALL_BOUNCER);
+            (lastId,) = captable.createClass("", "", 1, NO_CONVERSION_FLAG, 0, ALLOW_ALL_BOUNCER);
+            assertEq(lastId, i);
         }
+        assertEq(lastId, CLASSES_LIMIT - 1);
         assertEq(captable.numberOfClasses(), CLASSES_LIMIT);
 
         vm.prank(address(safe));
