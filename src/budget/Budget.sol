@@ -138,8 +138,7 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
 
         if (parentAllowanceId == NO_PARENT_ID) {
             // Top-level allowances can only be created by the Safe
-            // Safe to use msg.sender instead of _msgSender() here because the Safe can't use meta-txs
-            if (msg.sender != address(safe())) {
+            if (_msgSender() != address(safe())) {
                 revert UnauthorizedNotSafe();
             }
 

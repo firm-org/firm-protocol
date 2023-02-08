@@ -28,7 +28,7 @@ abstract contract ERC2771Context is SafeAware {
         return _trustedForwarders()[forwarder];
     }
 
-    function _msgSender() internal view virtual returns (address sender) {
+    function _msgSender() internal view virtual override returns (address sender) {
         if (isTrustedForwarder(msg.sender)) {
             // The assembly code is more direct than the Solidity version using `abi.decode`.
             /// @solidity memory-safe-assembly

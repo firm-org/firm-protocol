@@ -146,6 +146,7 @@ contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
         token = EquityToken(equityTokenImpl.clone());
         token.initialize(this, uint32(classId));
 
+        address safe = _msgSender(); // since the onlySafe modifier is used, this is the safe address
         Class storage class = classes[classId];
         class.token = token;
         class.votingWeight = votingWeight;
@@ -154,10 +155,10 @@ contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
         class.ticker = ticker;
         class.convertsToClassId = convertsToClassId;
         class.bouncer = bouncer;
-        class.isManager[msg.sender] = true; // safe addr is set as manager for class (use msg.sender directly as no metatxs here)
+        class.isManager[safe] = true; // safe addr is set as manager for class
 
         emit ClassCreated(classId, token, className, ticker, authorized, convertsToClassId, votingWeight, bouncer);
-        emit ClassManagerSet(classId, msg.sender, true);
+        emit ClassManagerSet(classId, safe, true);
     }
 
     /**

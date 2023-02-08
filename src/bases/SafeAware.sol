@@ -48,13 +48,13 @@ abstract contract SafeAware {
      * @dev Modifier to be used by derived contracts to limit access control to priviledged
      * functions so they can only be called by the Safe
      */
-
     modifier onlySafe() {
-        // 'safe' is intended to always be a safe and never use metatxs, so we use msg.sender directly as an optimization
-        if (msg.sender != address(safe())) {
+        if (_msgSender() != address(safe())) {
             revert UnauthorizedNotSafe();
         }
 
         _;
     }
+
+    function _msgSender() internal view virtual returns (address sender); 
 }
