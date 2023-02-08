@@ -14,6 +14,7 @@ import {Captable, EquityToken, IBouncer, NO_CONVERSION_FLAG} from "src/captable/
 import {Voting} from "src/voting/Voting.sol";
 import {EmbeddedBouncerType, EMBEDDED_BOUNCER_FLAG_TYPE} from "src/captable/BouncerChecker.sol";
 import {AddressUint8FlagsLib} from "src/bases/utils/AddressUint8FlagsLib.sol";
+import {EIP1967Upgradeable} from "src/bases/EIP1967Upgradeable.sol";
 
 import {FirmRelayer} from "src/metatx/FirmRelayer.sol";
 import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsDateTimeLibrary.sol";
@@ -168,12 +169,20 @@ contract FirmFactoryIntegrationTest is FirmTest {
         assertEq(token.balanceOf(receiver), 15);
     }
 
-    function testModuleUpgrades() public {
+    function testModuleUpgradesViaRelayedSafeCall() public {
         (GnosisSafe safe, Budget budget,) = createBarebonesFirm(address(this));
 
         ModuleMock newImpl = new ModuleMock(1);
+        FirmRelayer.Call[] memory calls = new FirmRelayer.Call[](1);
+        calls[0] = FirmRelayer.Call({
+            to: address(budget),
+            data: abi.encodeCall(EIP1967Upgradeable.upgrade, (newImpl)),
+            assertionIndex: 0,
+            value: 0,
+            gas: 1_000_000
+        });
         vm.prank(address(safe));
-        budget.upgrade(newImpl);
+        relayer.selfRelay(calls, new FirmRelayer.Assertion[](0));
 
         assertEq(ModuleMock(address(budget)).foo(), 1);
     }
