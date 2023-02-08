@@ -245,6 +245,14 @@ contract CaptableOneClassTest is BaseCaptableTest {
         assertVesting(amount, vestingParams);
     }
 
+    function testManagerCantAddControllerToNonHolder() public {
+        VestingController.VestingParams memory vestingParams;
+
+        vm.prank(ISSUER);
+        vm.expectRevert(abi.encodeWithSelector(Captable.AccountIsNonHolder.selector, HOLDER1, classId));
+        captable.setController(HOLDER1, classId, vesting, abi.encode(vestingParams));
+    }
+
     function assertVesting(uint256 amount, VestingController.VestingParams memory vestingParams) internal {
         assertEq(token.balanceOf(HOLDER1), amount);
 
