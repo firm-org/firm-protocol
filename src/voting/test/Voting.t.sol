@@ -20,7 +20,7 @@ contract VotingTest is BaseCaptableTest {
     uint256 constant VOTING_PERIOD = 10;
     uint256 constant PROPOSAL_THRESHOLD = 1;
 
-    uint256 constant INITIAL_AUTHORIZED = 10000;
+    uint128 constant INITIAL_AUTHORIZED = 10000;
 
     function setUp() public virtual override {
         vm.roll(1);

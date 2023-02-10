@@ -93,7 +93,7 @@ contract CaptableInitTest is BaseCaptableTest {
             EquityToken token_,
             uint64 votingWeight,
             uint32 convertsToClassId,
-            uint256 authorized,
+            uint128 authorized,
             uint256 convertible,
             string memory name,
             string memory ticker,
@@ -143,7 +143,7 @@ contract CaptableOneClassTest is BaseCaptableTest {
     EquityToken token;
     uint256 classId;
 
-    uint256 constant INITIAL_AUTHORIZED = 10000;
+    uint128 constant INITIAL_AUTHORIZED = 10000;
 
     function setUp() public virtual override {
         super.setUp();
@@ -190,7 +190,7 @@ contract CaptableOneClassTest is BaseCaptableTest {
     }
 
     function testCanChangeAuthorized() public {
-        uint256 newAuthorized = INITIAL_AUTHORIZED + 1000;
+        uint128 newAuthorized = INITIAL_AUTHORIZED + 1000;
         vm.prank(address(safe));
         captable.setAuthorized(classId, newAuthorized);
         assertEq(captable.authorizedFor(classId), newAuthorized);
@@ -330,7 +330,7 @@ contract CaptableOneClassTest is BaseCaptableTest {
 contract CaptableFrozenTest is BaseCaptableTest {
     uint256 classId;
     EquityToken token;
-    uint256 constant INITIAL_AUTHORIZED = 1000;
+    uint128 constant INITIAL_AUTHORIZED = 1000;
 
     function setUp() public override {
         super.setUp();
@@ -420,13 +420,13 @@ contract CaptableFrozenTest is BaseCaptableTest {
 contract CaptableMulticlassTest is BaseCaptableTest {
     uint256 classId1;
     EquityToken token1;
-    uint64 weight1 = 1;
-    uint256 authorized1 = 2000;
+    uint16 weight1 = 1;
+    uint128 authorized1 = 2000;
 
     uint256 classId2;
     EquityToken token2;
-    uint64 weight2 = 5;
-    uint256 authorized2 = 1000;
+    uint16 weight2 = 5;
+    uint128 authorized2 = 1000;
 
     uint256 holder1InitialBalance1 = 100;
     uint256 holder1InitialBalance2 = 100;
@@ -528,17 +528,17 @@ contract CaptableMulticlassTest is BaseCaptableTest {
 
     function testChangingAuthorizedUpdatesConvertibleToLimit()
         public
-        returns (uint256 newAuthorized1, uint256 newAuthorized2)
+        returns (uint128 newAuthorized1, uint128 newAuthorized2)
     {
         // authorize to the limit
-        newAuthorized2 = holder1InitialBalance2 + holder2InitialBalance2;
-        newAuthorized1 = newAuthorized2 + holder1InitialBalance1 + holder2InitialBalance1;
+        newAuthorized2 = uint128(holder1InitialBalance2 + holder2InitialBalance2);
+        newAuthorized1 = uint128(holder1InitialBalance1 + holder2InitialBalance1) + newAuthorized2;
         vm.prank(address(safe));
         captable.setAuthorized(classId2, newAuthorized2);
         vm.prank(address(safe));
         captable.setAuthorized(classId1, newAuthorized1);
-        (,,, uint256 _authorized1, uint256 convertible1,,,,) = captable.classes(classId1);
-        (,,, uint256 _authorized2, uint256 convertible2,,,,) = captable.classes(classId2);
+        (,,, uint128 _authorized1, uint128 convertible1,,,,) = captable.classes(classId1);
+        (,,, uint128 _authorized2, uint128 convertible2,,,,) = captable.classes(classId2);
 
         assertEq(_authorized1, newAuthorized1);
         assertEq(_authorized2, newAuthorized2);
@@ -547,14 +547,14 @@ contract CaptableMulticlassTest is BaseCaptableTest {
     }
 
     function testWhenOnConvertibleLimitCantAuthorizeLessOnConverting() public {
-        (uint256 newAuthorized1,) = testChangingAuthorizedUpdatesConvertibleToLimit();
+        (uint128 newAuthorized1,) = testChangingAuthorizedUpdatesConvertibleToLimit();
         vm.prank(address(safe));
         vm.expectRevert(abi.encodeWithSelector(Captable.IssuedOverAuthorized.selector, classId1));
         captable.setAuthorized(classId1, newAuthorized1 - 1);
     }
 
     function testWhenOnConvertibleLimitCantAuthorizeMoreOnConverter() public {
-        (, uint256 newAuthorized2) = testChangingAuthorizedUpdatesConvertibleToLimit();
+        (, uint128 newAuthorized2) = testChangingAuthorizedUpdatesConvertibleToLimit();
         vm.prank(address(safe));
         vm.expectRevert(abi.encodeWithSelector(Captable.ConvertibleOverAuthorized.selector, classId1));
         captable.setAuthorized(classId2, newAuthorized2 + 1);
@@ -597,7 +597,7 @@ contract CaptableMulticlassTest is BaseCaptableTest {
 
 contract CaptableClassLimit1Test is BaseCaptableTest {
     uint256 constant classesLimit = 128;
-    uint256 constant transfersLimit = 64;
+    uint128 constant transfersLimit = 64;
 
     // Holder gets token in each of the classes
     function setUp() public override {
@@ -644,7 +644,7 @@ contract CaptableClassLimit1Test is BaseCaptableTest {
 
 contract CaptableClassLimit2Test is BaseCaptableTest {
     uint256 constant classesLimit = 128;
-    uint256 constant transfersLimit = 64;
+    uint128 constant transfersLimit = 64;
 
     // Holder just has tokens in one class
     function setUp() public override {

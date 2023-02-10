@@ -36,10 +36,10 @@ contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
 
     struct Class {
         EquityToken token;
-        uint64 votingWeight;
+        uint16 votingWeight;
         uint32 convertsToClassId;
-        uint256 authorized;
-        uint256 convertible;
+        uint128 authorized;
+        uint128 convertible;
         string name;
         string ticker;
         IBouncer bouncer;
@@ -57,6 +57,7 @@ contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
     // Above this limit, voting power getters that iterate through all tokens become
     // very expensive. See `CaptableClassLimitTest` tests for worst-case benchmarks
     uint32 internal constant CLASSES_LIMIT = 128;
+
     address internal immutable equityTokenImpl;
 
     event ClassCreated(
@@ -64,13 +65,13 @@ contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
         EquityToken indexed token,
         string name,
         string ticker,
-        uint256 authorized,
+        uint128 authorized,
         uint32 convertsToClassId,
-        uint64 votingWeight,
+        uint16 votingWeight,
         IBouncer indexed bouncer
     );
-    event AuthorizedChanged(uint256 indexed classId, uint256 authorized);
-    event ConvertibleChanged(uint256 indexed classId, uint256 convertible);
+    event AuthorizedChanged(uint256 indexed classId, uint128 authorized);
+    event ConvertibleChanged(uint256 indexed classId, uint128 convertible);
     event ClassManagerSet(uint256 indexed classId, address indexed manager, bool isManager);
     event ClassFrozen(uint256 indexed classId);
     event BouncerChanged(uint256 indexed classId, IBouncer indexed bouncer);
@@ -120,9 +121,9 @@ contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
     function createClass(
         string calldata className,
         string calldata ticker,
-        uint256 authorized,
+        uint128 authorized,
         uint32 convertsToClassId,
-        uint64 votingWeight,
+        uint16 votingWeight,
         IBouncer bouncer
     ) external onlySafe returns (uint256 classId, EquityToken token) {
         if (authorized == 0 || address(bouncer) == address(0)) {
@@ -167,7 +168,7 @@ contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
      * @param classId ID of the class
      * @param newAuthorized New authorized amount
      */
-    function setAuthorized(uint256 classId, uint256 newAuthorized) external onlySafe {
+    function setAuthorized(uint256 classId, uint128 newAuthorized) external onlySafe {
         if (newAuthorized == 0) {
             revert BadInput();
         }
@@ -175,7 +176,7 @@ contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
         Class storage class = _getClass(classId);
         _ensureClassNotFrozen(class, classId);
 
-        uint256 oldAuthorized = class.authorized;
+        uint128 oldAuthorized = class.authorized;
         bool isDecreasing = newAuthorized < oldAuthorized;
 
         // When decreasing the authorized amount, make sure that the issued amount
@@ -188,7 +189,7 @@ contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
 
         // If the class converts into another class, update the convertible amount of that class
         if (class.convertsToClassId != NO_CONVERSION_FLAG) {
-            uint256 delta = isDecreasing ? oldAuthorized - newAuthorized : newAuthorized - oldAuthorized;
+            uint128 delta = isDecreasing ? oldAuthorized - newAuthorized : newAuthorized - oldAuthorized;
             _changeConvertibleAmount(class.convertsToClassId, delta, !isDecreasing);
         }
 
@@ -197,9 +198,9 @@ contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
         emit AuthorizedChanged(classId, newAuthorized);
     }
 
-    function _changeConvertibleAmount(uint256 classId, uint256 amount, bool isIncrease) internal {
+    function _changeConvertibleAmount(uint256 classId, uint128 amount, bool isIncrease) internal {
         Class storage class = _getClass(classId);
-        uint256 newConvertible = isIncrease ? class.convertible + amount : class.convertible - amount;
+        uint128 newConvertible = isIncrease ? class.convertible + amount : class.convertible - amount;
 
         // Ensure that there's enough authorized space for the new convertible if we are increasing
         if (isIncrease && _issuedFor(class) + newConvertible > class.authorized) {
@@ -443,8 +444,8 @@ contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
         // Class conversions cannot be blocked by class bouncer, as token
         // ownership doesn't change (always goes from sender to sender)
 
-        fromClass.authorized -= amount;
-        toClass.convertible -= amount;
+        fromClass.authorized -= uint128(amount);
+        toClass.convertible -= uint128(amount);
 
         fromClass.token.burn(sender, amount);
         toClass.token.mint(sender, amount);
