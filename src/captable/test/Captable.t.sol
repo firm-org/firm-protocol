@@ -115,15 +115,15 @@ contract CaptableInitTest is BaseCaptableTest {
     function testCannotCreateMoreClassesThanLimit() public {
         uint256 CLASSES_LIMIT = 128;
 
+        vm.startPrank(address(safe));
         for (uint256 i = 0; i < CLASSES_LIMIT; i++) {
-            vm.prank(address(safe));
             captable.createClass("", "", 1, NO_CONVERSION_FLAG, 0, ALLOW_ALL_BOUNCER);
         }
         assertEq(captable.numberOfClasses(), CLASSES_LIMIT);
 
-        vm.prank(address(safe));
         vm.expectRevert(abi.encodeWithSelector(Captable.ClassCreationAboveLimit.selector));
         captable.createClass("", "", 1, NO_CONVERSION_FLAG, 0, ALLOW_ALL_BOUNCER);
+        vm.stopPrank();
     }
 
     function testCantCreateClassWithZeroAuthorized() public {
@@ -136,6 +136,28 @@ contract CaptableInitTest is BaseCaptableTest {
         vm.prank(address(safe));
         vm.expectRevert(abi.encodeWithSelector(Captable.BadInput.selector));
         captable.createClass("", "", 1, NO_CONVERSION_FLAG, 0, IBouncer(address(0)));
+    }
+
+    function testNoOverflowsOnLimit() public {
+        uint256 CLASSES_LIMIT = 128;
+        uint128 maxAuthorizable = type(uint128).max;
+        uint16 maxVotingWeight = type(uint16).max;
+
+        for (uint256 i = 0; i < CLASSES_LIMIT; i++) {
+            vm.prank(address(safe));
+            (uint256 classId, EquityToken token) = captable.createClass("", "", maxAuthorizable, NO_CONVERSION_FLAG, maxVotingWeight, ALLOW_ALL_BOUNCER);
+
+            vm.prank(address(safe));
+            captable.issue(HOLDER1, classId, maxAuthorizable);
+            
+            vm.prank(address(HOLDER1));
+            token.delegate(HOLDER1);
+        }
+
+        uint256 holderVotes = CLASSES_LIMIT * maxAuthorizable * maxVotingWeight;
+        assertEq(captable.numberOfClasses(), CLASSES_LIMIT);
+        assertEq(captable.getVotes(HOLDER1), holderVotes);
+        assertEq(captable.getTotalVotes(), holderVotes);
     }
 }
 
