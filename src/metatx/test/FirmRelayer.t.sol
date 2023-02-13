@@ -104,26 +104,33 @@ contract FirmRelayerTest is FirmTest {
         relayer.relay(request, _signPacked(hash, USER_PK));
     }
 
-    function testRevertOnTargetBadSender() public {
+    function testExecutionCallRevertsAllCalls() public {
         (address otherUser, uint256 otherUserPk) = accountAndKey("other user");
 
-        FirmRelayer.Call memory call = _defaultCallWithData(address(target), abi.encodeCall(target.onlySender, (USER)));
-        FirmRelayer.RelayRequest memory request = _defaultRequestWithCall(call);
+        FirmRelayer.Call memory call1 = _defaultCallWithData(address(target), abi.encodeCall(target.onlySender, (otherUser)));
+        FirmRelayer.Call memory call2 = _defaultCallWithData(address(target), abi.encodeCall(target.onlySender, (USER)));
+
+        FirmRelayer.RelayRequest memory request = _defaultRequestWithCall(call1);
+        request.calls = new FirmRelayer.Call[](2);
+        request.calls[0] = call1;
+        request.calls[1] = call2;
         request.from = otherUser;
         bytes32 hash = relayer.requestTypedDataHash(request);
 
         bytes memory targetError = abi.encodeWithSelector(RelayTarget.BadSender.selector, USER, otherUser);
         assertFailureEvent(
             otherUser,
-            abi.encodeWithSelector(FirmRelayer.CallExecutionFailed.selector, 0, address(target), targetError)
+            abi.encodeWithSelector(FirmRelayer.CallExecutionFailed.selector, 1, address(target), targetError)
         );
         relayer.relay(request, _signPacked(hash, otherUserPk));
 
         // Nonce should have been incremented
         assertEq(relayer.getNonce(otherUser), 1);
+        // Successful call on target should have been reverted
+        assertEq(target.lastSender(), address(0));
     }
 
-    function testRevertOnAssertionFailure() public {
+    function testExecutionRevertOnAssertionFailure() public {
         bytes32 actualReturnValue = bytes32(abi.encode(USER));
         bytes32 badExpectedValue = bytes32(uint256(0));
 
@@ -140,7 +147,7 @@ contract FirmRelayerTest is FirmTest {
         assertEq(relayer.getNonce(USER), 1);
     }
 
-    function testRevertOnAssertionOutOfBounds() public {
+    function testExecutionRevertOnAssertionOutOfBounds() public {
         FirmRelayer.Call memory call = _defaultCallWithData(address(target), abi.encodeCall(target.onlySender, (USER)));
         FirmRelayer.Assertion memory assertion = FirmRelayer.Assertion(1, bytes32(abi.encode(USER)));
         FirmRelayer.RelayRequest memory request = _defaultRequestWithCallAndAssertion(call, assertion);
@@ -153,7 +160,7 @@ contract FirmRelayerTest is FirmTest {
         assertEq(relayer.getNonce(USER), 1);
     }
 
-    function testRevertOnBadAssertionIndex() public {
+    function testExecutionRevertOnBadAssertionIndex() public {
         FirmRelayer.Call memory call = _defaultCallWithData(address(target), abi.encodeCall(target.onlySender, (USER)));
         FirmRelayer.Assertion memory assertion = FirmRelayer.Assertion(0, bytes32(abi.encode(USER)));
         FirmRelayer.RelayRequest memory request = _defaultRequestWithCallAndAssertion(call, assertion);
@@ -165,6 +172,27 @@ contract FirmRelayerTest is FirmTest {
 
         // Nonce should have been incremented
         assertEq(relayer.getNonce(USER), 1);
+    }
+
+    function testRevertOnInsufficientGas() public {
+        FirmRelayer.Call memory call = _defaultCallWithData(address(target), abi.encodeCall(target.onlySender, (USER)));
+        FirmRelayer.RelayRequest memory request = _defaultRequestWithCall(call);
+        bytes memory sig = _signPacked(relayer.requestTypedDataHash(request), USER_PK);
+
+        vm.expectRevert(abi.encodeWithSelector(FirmRelayer.InsufficientGas.selector));
+        relayer.relay{ gas: call.gas - 100 }(request, sig);
+
+        // Nonce not incremented, can relay the same request again
+        assertEq(relayer.getNonce(USER), 0);
+
+        // Relay should succeed with enough gas (account for buffer)
+        relayer.relay{ gas: call.gas + 40000 }(request, sig);
+        assertEq(target.lastSender(), USER);
+    }
+
+    function testRevertOnExternalSelfExecute() public {
+        vm.expectRevert(abi.encodeWithSelector(FirmRelayer.BadExecutionContext.selector));
+        relayer.__externalSelfCall_execute(address(this), new FirmRelayer.Call[](0), new FirmRelayer.Assertion[](0));
     }
 
     function testSelfRelay() public {
@@ -193,7 +221,7 @@ contract FirmRelayerTest is FirmTest {
         call.to = to;
         call.data = data;
         call.value = 0;
-        call.gas = 10_000_000; // random big value for testing
+        call.gas = 200_000; // random big value for testing
         call.assertionIndex = 0;
     }
 
