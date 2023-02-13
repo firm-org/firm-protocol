@@ -57,6 +57,7 @@ contract FirmRelayer is EIP712 {
 
     uint256 internal constant ASSERTION_WORD_SIZE = 32;
     uint256 internal constant RELAY_GAS_BUFFER = 10000;
+    uint256 internal constant MAX_REVERT_DATA = 320;
 
     mapping(address => uint256) public getNonce;
 
@@ -162,10 +163,28 @@ contract FirmRelayer is EIP712 {
         for (uint256 i = 0; i < calls.length;) {
             Call calldata call = calls[i];
 
+            address to = call.to;
+            uint256 value = call.value;
+            uint256 callGas = call.gas;
             bytes memory payload = abi.encodePacked(call.data, asSender);
-            (bool success, bytes memory returnData) = call.to.call{value: call.value, gas: call.gas}(payload);
+            uint256 returnDataSize;
+            bool success;
+
+            /// @solidity memory-safe-assembly
+            assembly {
+                success := call(callGas, to, value, add(payload, 0x20), mload(payload), 0, 0)
+                returnDataSize := returndatasize()
+            }
+
             if (!success) {
-                revert CallExecutionFailed(i, call.to, returnData);
+                // Prevent revert data from being too large
+                uint256 revertDataSize = returnDataSize > MAX_REVERT_DATA ? MAX_REVERT_DATA : returnDataSize;
+                bytes memory revertData = new bytes(revertDataSize);
+                /// @solidity memory-safe-assembly
+                assembly {
+                    returndatacopy(add(revertData, 0x20), 0, revertDataSize)
+                }
+                revert CallExecutionFailed(i, call.to, revertData);
             }
 
             uint256 assertionIndex = call.assertionIndex;
@@ -175,17 +194,18 @@ contract FirmRelayer is EIP712 {
                 }
 
                 Assertion calldata assertion = assertions[assertionIndex - 1];
-                uint256 returnDataMinLength = assertion.position + ASSERTION_WORD_SIZE;
-                if (returnDataMinLength > returnData.length) {
-                    revert AssertionPositionOutOfBounds(i, returnData.length);
+                uint256 assertionPosition = assertion.position;
+                if (assertion.position + ASSERTION_WORD_SIZE > returnDataSize) {
+                    revert AssertionPositionOutOfBounds(i, returnDataSize);
                 }
 
+                // Only copy the return data word we need to check
                 bytes32 returnValue;
                 /// @solidity memory-safe-assembly
                 assembly {
-                    // Position in memory for the value to be read is returnData + 0x20 + position
-                    // so we can reuse returnDataMinLength (position + 32) from above as an optimization
-                    returnValue := mload(add(returnData, returnDataMinLength))
+                    let copyPosition := mload(0x40)
+                    returndatacopy(copyPosition, assertionPosition, ASSERTION_WORD_SIZE)
+                    returnValue := mload(copyPosition)
                 }
                 if (returnValue != assertion.expectedValue) {
                     revert UnexpectedReturnValue(i, returnValue, assertion.expectedValue);
