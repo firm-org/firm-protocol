@@ -110,7 +110,7 @@ contract Roles is FirmBase, IRoles {
      * @param roleAdmins Bitmap of roles that can perform admin actions on this role
      */
     function setRoleAdmins(uint8 roleId, bytes32 roleAdmins) external {
-        if (roleAdmins == NO_ROLE_ADMINS && roleId != ROOT_ROLE_ID || !_roleAdminsAreExistingRoles(roleAdmins, roleCount)) {
+        if ((roleAdmins == NO_ROLE_ADMINS && roleId != ROOT_ROLE_ID) || !_roleAdminsAreExistingRoles(roleAdmins, roleCount)) {
             revert InvalidRoleAdmins();
         }
 
