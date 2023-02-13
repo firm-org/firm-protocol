@@ -56,6 +56,7 @@ contract FirmRelayer is EIP712 {
     bytes32 internal constant ZERO_HASH = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
 
     uint256 internal constant ASSERTION_WORD_SIZE = 32;
+    uint256 internal constant RELAY_GAS_BUFFER = 10000;
 
     mapping(address => uint256) public getNonce;
 
@@ -64,11 +65,14 @@ contract FirmRelayer is EIP712 {
     error CallExecutionFailed(uint256 callIndex, address to, bytes revertData);
     error BadAssertionIndex(uint256 callIndex);
     error AssertionPositionOutOfBounds(uint256 callIndex, uint256 returnDataLenght);
-    error AssertionFailed(uint256 callIndex, bytes32 actualValue, bytes32 expectedValue);
+    error UnexpectedReturnValue(uint256 callIndex, bytes32 actualValue, bytes32 expectedValue);
     error UnauthorizedSenderNotFrom();
+    error InsufficientGas();
+    error BadExecutionContext();
 
     event Relayed(address indexed relayer, address indexed signer, uint256 nonce, uint256 numCalls);
     event SelfRelayed(address indexed sender, uint256 numCalls);
+    event RelayExecutionFailed(address indexed relayer, address indexed signer, uint256 nonce, bytes revertData);
 
     constructor() EIP712("Firm Relayer", "0.0.1") {}
 
@@ -100,9 +104,35 @@ contract FirmRelayer is EIP712 {
         }
         getNonce[signer] = request.nonce + 1;
 
-        _execute(signer, request.calls, request.assertions);
+        // We check how much gas all calls are going to use and make sure we have enough
+        // This is to ensure that the external execute call will not fail due to OOG
+        // which would allow to block the request by forcing it to fail
+        uint256 callsGas = 0;
+        uint256 callsLength = request.calls.length;
+        for (uint256 i = 0; i < callsLength;) {
+            callsGas += request.calls[i].gas;
+            unchecked {
+                i++;
+            }
+        }
 
-        emit Relayed(msg.sender, signer, request.nonce, request.calls.length);
+        if (gasleft() < callsGas + RELAY_GAS_BUFFER) {
+            revert InsufficientGas();
+        }
+
+        // We perform the execution as an external call so if the execution fails,
+        // everything that happened in that sub-call is reverted, but not this
+        // top-level call. This is important because we don't want to revert the
+        // nonce increase if the execution fails.
+        (bool ok, bytes memory returnData) = address(this).call(
+            abi.encodeWithSelector(this.__externalSelfCall_execute.selector, signer, request.calls, request.assertions)
+        );
+
+        if (ok) {
+            emit Relayed(msg.sender, signer, request.nonce, request.calls.length);
+        } else {
+            emit RelayExecutionFailed(msg.sender, signer, request.nonce, returnData);
+        }
     }
 
     /**
@@ -118,6 +148,14 @@ contract FirmRelayer is EIP712 {
         _execute(msg.sender, calls, assertions);
 
         emit SelfRelayed(msg.sender, calls.length);
+    }
+
+    function __externalSelfCall_execute(address asSender, Call[] calldata calls, Assertion[] calldata assertions) external {
+        if (msg.sender != address(this)) {
+            revert BadExecutionContext();
+        }
+
+        _execute(asSender, calls, assertions);
     }
 
     function _execute(address asSender, Call[] calldata calls, Assertion[] calldata assertions) internal {
@@ -150,7 +188,7 @@ contract FirmRelayer is EIP712 {
                     returnValue := mload(add(returnData, returnDataMinLength))
                 }
                 if (returnValue != assertion.expectedValue) {
-                    revert AssertionFailed(i, returnValue, assertion.expectedValue);
+                    revert UnexpectedReturnValue(i, returnValue, assertion.expectedValue);
                 }
             }
             unchecked {

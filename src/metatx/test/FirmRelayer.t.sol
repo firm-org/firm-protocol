@@ -113,10 +113,14 @@ contract FirmRelayerTest is FirmTest {
         bytes32 hash = relayer.requestTypedDataHash(request);
 
         bytes memory targetError = abi.encodeWithSelector(RelayTarget.BadSender.selector, USER, otherUser);
-        vm.expectRevert(
+        assertFailureEvent(
+            otherUser,
             abi.encodeWithSelector(FirmRelayer.CallExecutionFailed.selector, 0, address(target), targetError)
         );
         relayer.relay(request, _signPacked(hash, otherUserPk));
+
+        // Nonce should have been incremented
+        assertEq(relayer.getNonce(otherUser), 1);
     }
 
     function testRevertOnAssertionFailure() public {
@@ -128,10 +132,12 @@ contract FirmRelayerTest is FirmTest {
         FirmRelayer.RelayRequest memory request = _defaultRequestWithCallAndAssertion(call, assertion);
 
         bytes32 hash = relayer.requestTypedDataHash(request);
-        vm.expectRevert(
-            abi.encodeWithSelector(FirmRelayer.AssertionFailed.selector, 0, actualReturnValue, badExpectedValue)
-        );
+
+        assertFailureEvent(USER, abi.encodeWithSelector(FirmRelayer.UnexpectedReturnValue.selector, 0, actualReturnValue, badExpectedValue));
         relayer.relay(request, _signPacked(hash, USER_PK));
+
+        // Nonce should have been incremented
+        assertEq(relayer.getNonce(USER), 1);
     }
 
     function testRevertOnAssertionOutOfBounds() public {
@@ -140,8 +146,11 @@ contract FirmRelayerTest is FirmTest {
         FirmRelayer.RelayRequest memory request = _defaultRequestWithCallAndAssertion(call, assertion);
 
         bytes32 hash = relayer.requestTypedDataHash(request);
-        vm.expectRevert(abi.encodeWithSelector(FirmRelayer.AssertionPositionOutOfBounds.selector, 0, 32));
+        assertFailureEvent(USER, abi.encodeWithSelector(FirmRelayer.AssertionPositionOutOfBounds.selector, 0, 32));
         relayer.relay(request, _signPacked(hash, USER_PK));
+        
+        // Nonce should have been incremented
+        assertEq(relayer.getNonce(USER), 1);
     }
 
     function testRevertOnBadAssertionIndex() public {
@@ -151,8 +160,11 @@ contract FirmRelayerTest is FirmTest {
         request.calls[0].assertionIndex = 2;
 
         bytes32 hash = relayer.requestTypedDataHash(request);
-        vm.expectRevert(abi.encodeWithSelector(FirmRelayer.BadAssertionIndex.selector, 0));
+        assertFailureEvent(USER, abi.encodeWithSelector(FirmRelayer.BadAssertionIndex.selector, 0));
         relayer.relay(request, _signPacked(hash, USER_PK));
+
+        // Nonce should have been incremented
+        assertEq(relayer.getNonce(USER), 1);
     }
 
     function testSelfRelay() public {
@@ -205,6 +217,17 @@ contract FirmRelayerTest is FirmTest {
         request.assertions = new FirmRelayer.Assertion[](1);
         request.assertions[0] = assertion;
         request.calls[0].assertionIndex = 1;
+    }
+
+    event RelayExecutionFailed(address indexed relayer, address indexed signer, uint256 nonce, bytes revertData);
+    function assertFailureEvent(address sender, bytes memory revertData) internal {
+        vm.expectEmit(true, true, true, true, address(relayer));
+        emit RelayExecutionFailed(
+            address(this),
+            sender,
+            0,
+            revertData
+        );
     }
 
     // For this test we need to fix both the address of FirmRelayer and chainId so that the hash
