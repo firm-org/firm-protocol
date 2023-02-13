@@ -40,6 +40,8 @@ contract Roles is FirmBase, IRoles {
     error RoleLimitReached();
     error InvalidRoleAdmins();
 
+    bytes32 internal constant SAFE_OWNER_ROLE_MASK = ~bytes32(uint256(1) << SAFE_OWNER_ROLE_ID);
+
     ////////////////////////////////////////////////////////////////////////////////
     // INITIALIZATION
     ////////////////////////////////////////////////////////////////////////////////
@@ -86,7 +88,7 @@ contract Roles is FirmBase, IRoles {
             revert RoleLimitReached();
         }
 
-        if (roleAdmins == NO_ROLE_ADMINS || (roleId_ != 0 && !_roleAdminsAreExistingRoles(roleAdmins, roleId_))) {
+        if (roleAdmins == NO_ROLE_ADMINS || (roleId_ != 0 && !_roleAdminsAreExistingRoles(roleAdmins, roleId_ + 1))) {
             revert InvalidRoleAdmins();
         }
 
@@ -295,6 +297,6 @@ contract Roles is FirmBase, IRoles {
 
     function _roleAdminsAreExistingRoles(bytes32 roleAdmins, uint256 _roleCount) internal pure returns (bool) {
         // Since the last roleId always exists, we remove that bit from the roleAdmins
-        return (uint256(roleAdmins << 1)) < (1 << (_roleCount + 1));
+        return uint256(roleAdmins & SAFE_OWNER_ROLE_MASK) < (1 << _roleCount);
     }
 }
