@@ -106,6 +106,15 @@ contract RolesTest is FirmTest {
 
         vm.expectRevert(abi.encodeWithSelector(Roles.RoleLimitReached.selector));
         roles.createRole(ONLY_ROOT_ROLE_AS_ADMIN, "");
+
+        vm.stopPrank();
+    }
+
+    function testCanToggleAllRolesAsAdminsWhenAllExist() public {
+        testCanOnlyHave255RegularRoles();
+
+        vm.prank(address(safe));
+        roles.setRoleAdmins(254, ~bytes32(0));
     }
 
     function testAdminCanGrantAndRevokeRoles() public {
