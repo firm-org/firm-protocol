@@ -88,7 +88,7 @@ contract Roles is FirmBase, IRoles {
             revert RoleLimitReached();
         }
 
-        if (roleAdmins == NO_ROLE_ADMINS || (roleId_ != 0 && !_roleAdminsAreExistingRoles(roleAdmins, roleId_ + 1))) {
+        if (roleAdmins == NO_ROLE_ADMINS || !_roleAdminsAreExistingRoles(roleAdmins, roleId_ + 1)) {
             revert InvalidRoleAdmins();
         }
 
