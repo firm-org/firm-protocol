@@ -88,7 +88,7 @@ contract Roles is FirmBase, IRoles {
             revert RoleLimitReached();
         }
 
-        if (roleAdmins == NO_ROLE_ADMINS || !_roleAdminsAreExistingRoles(roleAdmins, roleId_ + 1)) {
+        if (roleAdmins == NO_ROLE_ADMINS || !_allRoleAdminsExist(roleAdmins, roleId_ + 1)) {
             revert InvalidRoleAdmins();
         }
 
@@ -110,7 +110,7 @@ contract Roles is FirmBase, IRoles {
      * @param roleAdmins Bitmap of roles that can perform admin actions on this role
      */
     function setRoleAdmins(uint8 roleId, bytes32 roleAdmins) external {
-        if ((roleAdmins == NO_ROLE_ADMINS && roleId != ROOT_ROLE_ID) || !_roleAdminsAreExistingRoles(roleAdmins, roleCount)) {
+        if ((roleAdmins == NO_ROLE_ADMINS && roleId != ROOT_ROLE_ID) || !_allRoleAdminsExist(roleAdmins, roleCount)) {
             revert InvalidRoleAdmins();
         }
 
@@ -295,7 +295,7 @@ contract Roles is FirmBase, IRoles {
         return uint256(userRoles) & 1 != 0;
     }
 
-    function _roleAdminsAreExistingRoles(bytes32 roleAdmins, uint256 _roleCount) internal pure returns (bool) {
+    function _allRoleAdminsExist(bytes32 roleAdmins, uint256 _roleCount) internal pure returns (bool) {
         // Since the last roleId always exists, we remove that bit from the roleAdmins
         return uint256(roleAdmins & SAFE_OWNER_ROLE_MASK) < (1 << _roleCount);
     }
