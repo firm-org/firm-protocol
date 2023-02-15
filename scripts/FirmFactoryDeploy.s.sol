@@ -3,8 +3,8 @@ pragma solidity 0.8.17;
 
 import "forge-std/Test.sol";
 
-import {GnosisSafe} from "gnosis-safe/GnosisSafe.sol";
-import {GnosisSafeProxyFactory} from "gnosis-safe/proxies/GnosisSafeProxyFactory.sol";
+import {GnosisSafe} from "safe/GnosisSafe.sol";
+import {GnosisSafeProxyFactory} from "safe/proxies/GnosisSafeProxyFactory.sol";
 
 import {FirmFactory, UpgradeableModuleProxyFactory} from "src/factory/FirmFactory.sol";
 import {FirmRelayer} from "src/metatx/FirmRelayer.sol";

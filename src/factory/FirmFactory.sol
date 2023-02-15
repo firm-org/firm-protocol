@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.17;
 
-import {GnosisSafe} from "gnosis-safe/GnosisSafe.sol";
-import {GnosisSafeProxyFactory} from "gnosis-safe/proxies/GnosisSafeProxyFactory.sol";
+import {GnosisSafe} from "safe/GnosisSafe.sol";
+import {GnosisSafeProxyFactory} from "safe/proxies/GnosisSafeProxyFactory.sol";
 
 import {FirmRelayer} from "../metatx/FirmRelayer.sol";
 
