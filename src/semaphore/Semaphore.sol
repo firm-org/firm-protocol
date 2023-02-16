@@ -180,9 +180,9 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
 
         bytes4 sig = data.length >= 4 ? bytes4(data[:4]) : bytes4(0);
         return
-            s.numSigExceptions > 0 && sigExceptions[from][sig] ||
-            s.numTargetExceptions > 0 && targetExceptions[from][target] ||
-            s.numTargetSigExceptions > 0 && targetSigExceptions[from][target][sig];
+            (s.numSigExceptions > 0 && sigExceptions[from][sig]) ||
+            (s.numTargetExceptions > 0 && targetExceptions[from][target]) ||
+            (s.numTargetSigExceptions > 0 && targetSigExceptions[from][target][sig]);
     }
 
     ////////////////////////////////////////////////////////////////////////////////
