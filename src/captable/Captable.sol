@@ -92,6 +92,7 @@ contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
     error IssuedOverAuthorized(uint256 classId);
     error ConvertibleOverAuthorized(uint256 classId);
     error UnauthorizedNotManager(uint256 classId);
+    error AccountIsNonHolder(address account, uint256 classId);
 
     constructor() {
         initialize("", IMPL_INIT_NOOP_SAFE, IMPL_INIT_NOOP_ADDR);
@@ -340,9 +341,19 @@ contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
     ) external {
         Class storage class = _getClass(classId);
         _ensureSenderIsManager(class, classId);
-        _setController(account, classId, class.token.balanceOf(account), controller, controllerParams);
+
+        uint256 classBalance = class.token.balanceOf(account);
+        if (classBalance == 0) {
+            revert AccountIsNonHolder(account, classId);
+        }
+        
+        _setController(account, classId, classBalance, controller, controllerParams);
     }
 
+    /**
+     * @dev This function assumes that the caller has already checked that the sender is a manager
+     * and that the balance in the class for the account is non-zero
+     */
     function _setController(
         address account,
         uint256 classId,
