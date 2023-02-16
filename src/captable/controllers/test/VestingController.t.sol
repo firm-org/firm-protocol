@@ -105,13 +105,34 @@ contract VestingControllerTest is AccountControllerTest {
         assertTrue(vesting.isTransferAllowed(HOLDER, HOLDER, classId, issuedAmount));
     }
 
-    function testRevokerCanRevokeRetroactively() public {
-        (,uint40 cliffDate, uint40 endDate) = testCaptableAddsAccount();
-        vm.warp(endDate - 1);
+    function testRevokerCanRevokeAtThisTime() public {
+        (,uint40 cliffDate,) = testCaptableAddsAccount();
+        vm.warp(cliffDate);
+        vm.prank(REVOKER);
+        vesting.revokeVesting(HOLDER, classId);
+        
+        assertEq(captable.balanceOf(HOLDER, classId), issuedAmount / 2);
+
+        assertAccountWasCleanedUp();
+    }
+
+    function testRevokerCanRevokeInTheFuture() public {
+        (uint40 startDate, uint40 cliffDate,) = testCaptableAddsAccount();
+        vm.warp(startDate);
         vm.prank(REVOKER);
         vesting.revokeVesting(HOLDER, classId, cliffDate);
+        
         assertEq(captable.balanceOf(HOLDER, classId), issuedAmount / 2);
+
         assertAccountWasCleanedUp();
+    }
+
+    function testRevokerCantRevokeInThePast() public {
+        (,uint40 cliffDate,) = testCaptableAddsAccount();
+        vm.warp(cliffDate);
+        vm.prank(REVOKER);
+        vm.expectRevert(abi.encodeWithSelector(VestingController.EffectiveDateInThePast.selector));
+        vesting.revokeVesting(HOLDER, classId, cliffDate - 1);
     }
 
     function testRevokerCantRevokeAfterVestingEnded() public {
@@ -120,7 +141,7 @@ contract VestingControllerTest is AccountControllerTest {
         vm.warp(endDate);
         vm.prank(REVOKER);
         vm.expectRevert(abi.encodeWithSelector(VestingController.InvalidVestingState.selector));
-        vesting.revokeVesting(HOLDER, classId, endDate - 1);
+        vesting.revokeVesting(HOLDER, classId);
     }
 
     function testAnyoneCanCleanupAfterVestingEnds() public {
