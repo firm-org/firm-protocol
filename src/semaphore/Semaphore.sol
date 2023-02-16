@@ -5,10 +5,7 @@ import {BaseGuard, Enum} from "safe/base/GuardManager.sol";
 
 import {FirmBase, ISafe, IMPL_INIT_NOOP_ADDR, IMPL_INIT_NOOP_SAFE} from "../bases/FirmBase.sol";
 
-interface ISemaphore {
-    function canPerform(address caller, address target, uint256 value, bytes calldata data, bool isDelegateCall) external view returns (bool);
-    function canPerformMany(address caller, address[] calldata targets, uint256[] calldata values, bytes[] calldata calldatas, bool isDelegateCall) external view returns (bool);
-}
+import {ISemaphore} from "./interfaces/ISemaphore.sol";
 
 contract Semaphore is FirmBase, BaseGuard, ISemaphore {
     string public constant moduleId = "org.firm.semaphore";
