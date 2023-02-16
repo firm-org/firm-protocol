@@ -98,12 +98,15 @@ contract FirmFactoryIntegrationTest is FirmTest {
 
         FirmFactory.CaptableConfig memory captableConfig;
         FirmFactory.VotingConfig memory votingConfig;
+        FirmFactory.SemaphoreConfig memory semaphoreConfig;
         FirmFactory.FirmConfig memory firmConfig = FirmFactory.FirmConfig({
             withCaptableAndVoting: false,
+            withSemaphore: false,
             budgetConfig: FirmFactory.BudgetConfig(allowances),
             rolesConfig: FirmFactory.RolesConfig(rolesCreationInput),
             captableConfig: captableConfig,
-            votingConfig: votingConfig
+            votingConfig: votingConfig,
+            semaphoreConfig: semaphoreConfig
         });
 
         return getFirmAddresses(factory.createFirm(safeConfig, firmConfig, 1));
@@ -280,12 +283,15 @@ contract FirmFactoryIntegrationTest is FirmTest {
             ""
         );
         FirmFactory.RoleCreationInput[] memory noRolesInput = new FirmFactory.RoleCreationInput[](0);
+        FirmFactory.SemaphoreConfig memory semaphoreConfig;
         FirmFactory.FirmConfig memory firmConfig = FirmFactory.FirmConfig({
             withCaptableAndVoting: true,
+            withSemaphore: false,
             budgetConfig: FirmFactory.BudgetConfig(allowances),
             rolesConfig: FirmFactory.RolesConfig(noRolesInput),
             captableConfig: captableConfig,
-            votingConfig: votingConfig
+            votingConfig: votingConfig,
+            semaphoreConfig: semaphoreConfig
         });
         return getFirmAddressesWithCaptableVoting(factory.createFirm(safeConfig, firmConfig, 1));
     }
