@@ -48,14 +48,14 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
     // caller => state
     mapping (address => SemaphoreState) public state;
     // caller => sig => bool (whether executing functions with this sig on any target is an exception to caller's defaultMode)
-    mapping (address => mapping (bytes4 => bool)) sigExceptions;
+    mapping (address => mapping (bytes4 => bool)) public sigExceptions;
     // caller => target => bool (whether calling this target is an exception to caller's defaultMode)
-    mapping (address => mapping (address => bool)) targetExceptions;
+    mapping (address => mapping (address => bool)) public targetExceptions;
     // caller => target => sig => bool (whether executing functions with this sig on this target is an exception to caller's defaultMode)
-    mapping (address => mapping (address => mapping (bytes4 => bool))) targetSigExceptions;
+    mapping (address => mapping (address => mapping (bytes4 => bool))) public targetSigExceptions;
 
     event SemaphoreStateSet(address indexed caller, DefaultMode defaultMode, bool allowsDelegateCalls, bool allowsValueCalls);
-    event ExceptionModified(address indexed caller, bool add, ExceptionType exceptionType, address target, bytes4 sig);
+    event ExceptionSet(address indexed caller, bool added, ExceptionType exceptionType, address target, bytes4 sig);
 
     error SemaphoreDisallowed();
     error ExceptionAlreadySet(ExceptionInput exception);
@@ -92,7 +92,7 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
         emit SemaphoreStateSet(caller, defaultMode, allowsDelegateCalls, allowsValueCalls);
     }
 
-    function modifyExceptions(ExceptionInput[] calldata exceptions) external onlySafe {
+    function setExceptions(ExceptionInput[] calldata exceptions) external onlySafe {
         for (uint256 i = 0; i < exceptions.length;) {
             ExceptionInput memory e = exceptions[i];
             SemaphoreState storage s = state[e.caller];
@@ -119,7 +119,7 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
 
             s.numTotalExceptions = e.add ? s.numTotalExceptions + 1 : s.numTotalExceptions - 1;
 
-            emit ExceptionModified(e.caller, e.add, e.exceptionType, e.target, e.sig);
+            emit ExceptionSet(e.caller, e.add, e.exceptionType, e.target, e.sig);
 
             unchecked {
                 i++;
