@@ -260,7 +260,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
         return getFirmAddressesWithCaptableVoting(factory.createFirm(safeConfig, firmConfig, 1));
     }
 
-    function firmConfigWithCaptableVotingAndAllowance() internal returns (FirmFactory.SafeConfig memory safeConfig, FirmFactory.FirmConfig memory firmConfig) {
+    function firmConfigWithCaptableVotingAndAllowance() internal view returns (FirmFactory.SafeConfig memory safeConfig, FirmFactory.FirmConfig memory firmConfig) {
         address[] memory safeOwners = new address[](1);
         safeOwners[0] = address(this);
         safeConfig = FirmFactory.SafeConfig(safeOwners, 1);
