@@ -63,6 +63,19 @@ contract RolesTest is FirmTest {
         roles.createRole(NO_ROLE_ADMINS, "");
     }
 
+    function testCannotCreateRoleWithNonExistentAdmin() public {
+        vm.startPrank(address(safe));
+        uint256 roleCount = roles.roleCount();
+
+        // Can't create a role that would be admined by a role that doesn't exist
+        vm.expectRevert(abi.encodeWithSelector(Roles.InvalidRoleAdmins.selector));
+        roles.createRole(bytes32(1 << (roleCount + 1)), "");
+
+        // Can't create a role that would be admined by itself (the next role to exist)
+        roles.createRole(bytes32(1 << roleCount), "");
+        vm.stopPrank();
+    }
+
     function testSomeoneWithPermissionCanCreateRolesUntilRevoked() public {
         vm.prank(address(safe));
         roles.setRole(SOMEONE, ROLE_MANAGER_ROLE_ID, true);
@@ -80,13 +93,28 @@ contract RolesTest is FirmTest {
 
     function testCanOnlyHave255RegularRoles() public {
         vm.startPrank(address(safe));
+
+        // We set all initial existing roles as admins of the new role to test that
+        // all existing roles can be admins of the new role
+        bytes32 roleAdmins = ONLY_ROOT_ROLE_AS_ADMIN | bytes32(1 << ROLE_MANAGER_ROLE_ID) | bytes32(1 << SAFE_OWNER_ROLE_ID);
         for (uint256 i = 0; i < 253; i++) {
-            roles.createRole(ONLY_ROOT_ROLE_AS_ADMIN, "");
+            uint8 roleId = roles.createRole(roleAdmins, "");
+            // We add the new role as an admin to all roles to be created
+            roleAdmins = roleAdmins | bytes32(1 << roleId);
         }
         assertEq(roles.roleCount(), 255);
 
         vm.expectRevert(abi.encodeWithSelector(Roles.RoleLimitReached.selector));
         roles.createRole(ONLY_ROOT_ROLE_AS_ADMIN, "");
+
+        vm.stopPrank();
+    }
+
+    function testCanToggleAllRolesAsAdminsWhenAllExist() public {
+        testCanOnlyHave255RegularRoles();
+
+        vm.prank(address(safe));
+        roles.setRoleAdmins(254, ~bytes32(0));
     }
 
     function testAdminCanGrantAndRevokeRoles() public {
@@ -183,6 +211,16 @@ contract RolesTest is FirmTest {
         vm.prank(SOMEONE);
         vm.expectRevert(abi.encodeWithSelector(Roles.UnauthorizedNoRole.selector, ROLE_MANAGER_ROLE_ID));
         roles.setRoleName(newRoleId, "Some name");
+    }
+
+    function testCannotHaveNonExistentRoleAdmin() public {
+        vm.startPrank(address(safe));
+        uint8 newRoleId = roles.createRole(ONLY_ROOT_ROLE_AS_ADMIN, "");
+        vm.expectRevert(abi.encodeWithSelector(Roles.InvalidRoleAdmins.selector));
+        roles.setRoleAdmins(newRoleId, bytes32(1 << newRoleId + 1)); // fails to set it to a non-existent role (next one)
+
+        roles.setRoleAdmins(newRoleId, bytes32(1 << newRoleId)); // succeeds to set it to itself (last one)
+        vm.stopPrank();
     }
 
     function testCannotChangeRoleAdminToNoAdmin() public {
