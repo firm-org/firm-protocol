@@ -373,9 +373,10 @@ contract FirmFactory {
         }
 
         uint256 exceptionsLength = config.semaphoreExceptions.length;
+        // TODO: add voting exceptions otherwise voting parameter changes will not be possible
         Semaphore.ExceptionInput[] memory exceptions = new Semaphore.ExceptionInput[](exceptionsLength * 2);
 
-        for (uint256 i = 0; i < exceptionsLength; i++) {
+        for (uint256 i = 0; i < exceptionsLength;) {
             SemaphoreException memory exception = config.semaphoreExceptions[i];
 
             address target = exception.target;
