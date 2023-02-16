@@ -249,7 +249,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
         classes[0] = FirmFactory.ClassCreationInput({
             className: "Common",
             ticker: "TST-A",
-            authorized: shareholder1Shares + shareholder2Shares,
+            authorized: uint128(shareholder1Shares + shareholder2Shares),
             convertsToClassId: NO_CONVERSION_FLAG,
             votingWeight: 1,
             bouncer: IBouncer(uint8(EmbeddedBouncerType.AllowAll).toFlag(EMBEDDED_BOUNCER_FLAG_TYPE))

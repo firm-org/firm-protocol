@@ -13,7 +13,7 @@ abstract contract AccountControllerTest is FirmTest {
     Captable captable;
     uint256 classId;
     EquityToken token;
-    uint256 authorizedAmount = 1e6;
+    uint128 authorizedAmount = 1e6;
 
     IBouncer ALLOW_ALL_BOUNCER = bouncerFlag(EmbeddedBouncerType.AllowAll);
 

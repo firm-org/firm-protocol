@@ -95,9 +95,9 @@ contract FirmFactory {
     struct ClassCreationInput {
         string className;
         string ticker;
-        uint256 authorized;
+        uint128 authorized;
         uint32 convertsToClassId;
-        uint64 votingWeight;
+        uint16 votingWeight;
         IBouncer bouncer;
     }
 
