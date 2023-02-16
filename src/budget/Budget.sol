@@ -366,6 +366,8 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
     {
         Allowance storage allowance = _getAllowance(allowanceId);
         address actor = _msgSender();
+        address payable safeAddr = payable(address(safe()));
+        uint256 balanceDelta = 0;
 
         // Since funds are going to the safe which is trusted we don't need to follow checks-effects-interactions
         // A malicious token could re-enter, but it would only have effects in allowances for that bad token
@@ -375,16 +377,20 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
                 revert NativeValueMismatch();
             }
 
-            IERC20(allowance.token).safeTransferFrom(actor, address(safe()), amount);
+            IERC20 token = IERC20(allowance.token);
+            uint256 prevBalance = token.balanceOf(safeAddr);
+            token.safeTransferFrom(actor, safeAddr, amount);
+            balanceDelta = token.balanceOf(safeAddr) - prevBalance;
         } else {
             if (msg.value != amount) {
                 revert NativeValueMismatch();
             }
 
-            payable(address(safe())).transfer(amount);
+            safeAddr.transfer(amount);
+            balanceDelta = amount; // For native asset transfers, assume balance delta is the amount
         }
 
-        (nextResetTime,) = _checkAndUpdateAllowanceChain(allowanceId, amount, zeroCappedSub);
+        (nextResetTime,) = _checkAndUpdateAllowanceChain(allowanceId, balanceDelta, zeroCappedSub);
 
         emit AllowanceDebited(allowanceId, actor, allowance.token, amount, nextResetTime, description);
     }
