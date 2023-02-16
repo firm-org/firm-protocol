@@ -10,7 +10,7 @@ import {ISafe} from "../bases/interfaces/ISafe.sol";
 import {Roles} from "../roles/Roles.sol";
 import {Budget, EncodedTimeShift} from "../budget/Budget.sol";
 import {Captable, IBouncer} from "../captable/Captable.sol";
-import {Voting} from "../voting/Voting.sol";
+import {Voting, NO_SEMAPHORE} from "../voting/Voting.sol";
 
 import {UpgradeableModuleProxyFactory, LATEST_VERSION} from "./UpgradeableModuleProxyFactory.sol";
 
@@ -276,6 +276,7 @@ contract FirmFactory {
             Voting.initialize,
             (
                 ISafe(payable(address(this))),
+                NO_SEMAPHORE,
                 captable,
                 config.quorumNumerator,
                 config.votingDelay,
