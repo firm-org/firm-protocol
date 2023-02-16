@@ -6,6 +6,7 @@ import {ICaptableVotes} from "../captable/interfaces/ICaptableVotes.sol";
 
 import {FirmBase, ISafe, ERC2771Context, IMPL_INIT_NOOP_ADDR, IMPL_INIT_NOOP_SAFE} from "../bases/FirmBase.sol";
 import {SafeModule} from "../bases/SafeModule.sol";
+import {SafeAware} from "../bases/SafeAware.sol";
 
 /**
  * @title Voting
@@ -72,7 +73,7 @@ contract Voting is FirmBase, SafeModule, OZGovernor {
     // Since both OZGovernor and FirmBase use ERC-2771 contexts but use different implementations
     // we need to override the following functions to specify to use FirmBase's implementation
 
-    function _msgSender() internal view override(Context, ERC2771Context) returns (address) {
+    function _msgSender() internal view override(Context, ERC2771Context, SafeAware) returns (address) {
         return ERC2771Context._msgSender();
     }
 

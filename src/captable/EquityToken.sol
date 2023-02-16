@@ -26,6 +26,7 @@ contract EquityToken is ERC20Votes {
     error UnauthorizedNotCaptable();
 
     modifier onlyCaptable() {
+        // We use msg.sender directly here because Captable will never do meta-txs into this contract
         if (msg.sender != address(captable)) {
             revert UnauthorizedNotCaptable();
         }
