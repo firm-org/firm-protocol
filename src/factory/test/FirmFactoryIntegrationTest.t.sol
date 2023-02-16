@@ -12,6 +12,7 @@ import {TimeShift} from "src/budget/TimeShiftLib.sol";
 import {Roles, IRoles, ISafe, ONLY_ROOT_ROLE_AS_ADMIN, ROOT_ROLE_ID, SAFE_OWNER_ROLE_ID} from "src/roles/Roles.sol";
 import {Captable, EquityToken, IBouncer, NO_CONVERSION_FLAG} from "src/captable/Captable.sol";
 import {Voting} from "src/voting/Voting.sol";
+import {GovernorSettings} from "src/voting/OZGovernor.sol";
 import {Semaphore, ISemaphore} from "src/semaphore/Semaphore.sol";
 import {EmbeddedBouncerType, EMBEDDED_BOUNCER_FLAG_TYPE} from "src/captable/BouncerChecker.sol";
 import {EIP1967Upgradeable} from "src/bases/EIP1967Upgradeable.sol";
@@ -344,11 +345,10 @@ contract FirmFactoryIntegrationTest is FirmTest {
 
         (
             GnosisSafe safe,
-            Budget budget,
+            ,
             Roles roles,
             Voting voting,
             Captable captable,
-            Semaphore semaphore
         ) = getFirmAddressesWithSemaphore(factory.createFirm(safeConfig, firmConfig, 1));
 
         (EquityToken equityToken,,,,,,,,) = captable.classes(0);
@@ -383,6 +383,10 @@ contract FirmFactoryIntegrationTest is FirmTest {
         // Voting cannot do any other actions unless it has the exception
         vm.expectRevert(abi.encodeWithSelector(ISemaphore.SemaphoreDisallowed.selector));
         voting.propose(arr(address(captable)), arr(0), arr(abi.encodeCall(Captable.setAuthorized, (0, 100000))), "test");
+
+        // As Voting calls to self do not check the semaphore, they are allowed without the exception
+        _createAndExecuteProposal(voting, address(voting), 0, abi.encodeCall(GovernorSettings.setVotingDelay, (1000)));
+        assertEq(voting.votingDelay(), 1000);
     }
 
     function _createAndExecuteProposal(Voting voting, address to, uint256 value, bytes memory data) internal {

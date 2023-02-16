@@ -54,8 +54,16 @@ contract Voting is FirmBase, SafeModule, SemaphoreAuth, OZGovernor {
         bytes[] memory calldatas,
         string memory description
     ) public override returns (uint256) {
+        // Since Voting config functions can only be called by voting itself, we need to filter them out
+        // to avoid locking the voting module. Semaphore checks do not apply to these calls.
+        (
+            address[] memory checkingTargets,
+            uint256[] memory checkingValues,
+            bytes[] memory checkingCalldatas
+        ) = _filterCallsToSelf(targets, values, calldatas);
+
         // Will revert if one of the calls is not allowed by the semaphore
-        _semaphoreCheckCalls(targets, values, calldatas, false);
+        _semaphoreCheckCalls(checkingTargets, checkingValues, checkingCalldatas, false);
 
         return super.propose(targets, values, calldatas, description);
     }
@@ -94,5 +102,49 @@ contract Voting is FirmBase, SafeModule, SemaphoreAuth, OZGovernor {
 
     function _msgData() internal view override(Context, ERC2771Context) returns (bytes calldata) {
         return ERC2771Context._msgData();
+    }
+
+    function _filterCallsToSelf(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas
+    ) internal view returns (address[] memory, uint256[] memory, bytes[] memory) {
+        uint256 filteringCalls;
+        for (uint256 i = 0; i < targets.length;) {
+            if (targets[i] == address(this)) {
+                filteringCalls++;
+            }
+            unchecked {
+                i++;
+            }
+        }
+
+        if (filteringCalls == 0) {
+            return (targets, values, calldatas);
+        }
+
+        if (filteringCalls == targets.length) {
+            return (new address[](0), new uint256[](0), new bytes[](0));
+        }
+
+        uint256 filteredCalls = 0;
+
+        address[] memory filteredTargets = new address[](targets.length - filteringCalls);
+        uint256[] memory filteredValues = new uint256[](values.length - filteringCalls);
+        bytes[] memory filteredCalldatas = new bytes[](calldatas.length - filteringCalls);
+
+        for (uint256 i = 0; i < targets.length; i++) {
+            if (targets[i] == address(this)) {
+                continue;
+            }
+
+            filteredTargets[filteredCalls] = targets[i];
+            filteredValues[filteredCalls] = values[i];
+            filteredCalldatas[filteredCalls] = calldatas[i];
+
+            filteredCalls++;
+        }
+
+        return (filteredTargets, filteredValues, filteredCalldatas);
     }
 }
