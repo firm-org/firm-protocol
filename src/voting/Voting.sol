@@ -60,9 +60,9 @@ contract Voting is FirmBase, SafeModule, SemaphoreAuth, OZGovernor {
             address[] memory checkingTargets,
             uint256[] memory checkingValues,
             bytes[] memory checkingCalldatas
-        ) = _filterCallsToSelf(targets, values, calldatas);
+        ) = _filterCallsToVoting(targets, values, calldatas);
 
-        // Will revert if one of the calls is not allowed by the semaphore
+        // Will revert if one of the external calls in the proposal is not allowed by the semaphore
         _semaphoreCheckCalls(checkingTargets, checkingValues, checkingCalldatas, false);
 
         return super.propose(targets, values, calldatas, description);
@@ -104,7 +104,9 @@ contract Voting is FirmBase, SafeModule, SemaphoreAuth, OZGovernor {
         return ERC2771Context._msgData();
     }
 
-    function _filterCallsToSelf(
+    // Since calls to Voting aren't checked with Semaphore even if set,
+    // this function is used to filter all calls whose target is address(this)
+    function _filterCallsToVoting(
         address[] memory targets,
         uint256[] memory values,
         bytes[] memory calldatas
@@ -133,8 +135,11 @@ contract Voting is FirmBase, SafeModule, SemaphoreAuth, OZGovernor {
         uint256[] memory filteredValues = new uint256[](values.length - filteringCalls);
         bytes[] memory filteredCalldatas = new bytes[](calldatas.length - filteringCalls);
 
-        for (uint256 i = 0; i < targets.length; i++) {
+        for (uint256 i = 0; i < targets.length;) {
             if (targets[i] == address(this)) {
+                unchecked {
+                    i++;
+                }
                 continue;
             }
 
@@ -142,7 +147,10 @@ contract Voting is FirmBase, SafeModule, SemaphoreAuth, OZGovernor {
             filteredValues[filteredCalls] = values[i];
             filteredCalldatas[filteredCalls] = calldatas[i];
 
-            filteredCalls++;
+            unchecked {
+                i++;
+                filteredCalls++;
+            }
         }
 
         return (filteredTargets, filteredValues, filteredCalldatas);
