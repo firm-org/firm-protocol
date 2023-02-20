@@ -18,8 +18,8 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
     uint256 public constant moduleVersion = 1;
 
     enum DefaultMode {
-      Disallow,
-      Allow
+        Disallow,
+        Allow
     }
 
     enum ExceptionType {
@@ -29,14 +29,16 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
     }
 
     struct SemaphoreState {
-      DefaultMode defaultMode;
-      bool allowDelegateCalls;
-      bool allowValueCalls;
-
-      uint64 numTotalExceptions;
-      uint32 numSigExceptions;
-      uint32 numTargetExceptions;
-      uint32 numTargetSigExceptions;
+        // Configurable state
+        DefaultMode defaultMode;
+        bool allowDelegateCalls;
+        bool allowValueCalls;
+        
+        // Counters
+        uint64 numTotalExceptions;
+        uint32 numSigExceptions;
+        uint32 numTargetExceptions;
+        uint32 numTargetSigExceptions;
     } // 1 slot
 
     struct ExceptionInput {
