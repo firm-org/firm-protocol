@@ -15,23 +15,13 @@ import {FirmRelayer} from "../metatx/FirmRelayer.sol";
 
 import {UpgradeableModuleProxyFactory, LATEST_VERSION} from "./UpgradeableModuleProxyFactory.sol";
 import {AddressUint8FlagsLib} from "../bases/utils/AddressUint8FlagsLib.sol";
+import {FirmAddresses, SemaphoreTargetsFlag, SEMAPHORE_TARGETS_FLAG_TYPE, exceptionTargetFlagToAddress} from "./config/SemaphoreTargets.sol";
 
-string constant ROLES_MODULE_ID = "org.firm.roles";
-string constant BUDGET_MODULE_ID = "org.firm.budget";
-string constant CAPTABLE_MODULE_ID = "org.firm.captable";
-string constant VOTING_MODULE_ID = "org.firm.voting";
+string constant ROLES_MODULE_ID =     "org.firm.roles";
+string constant BUDGET_MODULE_ID =    "org.firm.budget";
+string constant CAPTABLE_MODULE_ID =  "org.firm.captable";
+string constant VOTING_MODULE_ID =    "org.firm.voting";
 string constant SEMAPHORE_MODULE_ID = "org.firm.semaphore";
-
-uint8 constant SEMAPHORE_TARGETS_FLAG_TYPE = 0x03;
-
-enum SemaphoreTargetsFlag {
-    Safe,
-    Voting,
-    Budget,
-    Roles,
-    Captable,
-    Semaphore
-}
 
 contract FirmFactory {
     using AddressUint8FlagsLib for address;
@@ -381,15 +371,6 @@ contract FirmFactory {
         );
     }
 
-    struct FirmAddresses {
-        GnosisSafe safe;
-        Semaphore semaphore;
-        Voting voting;
-        Budget budget;
-        Roles roles;
-        Captable captable;
-    }
-
     function configSemaphore(SemaphoreConfig calldata config, FirmAddresses memory firmAddresses) internal {
         Semaphore semaphore = firmAddresses.semaphore;
         Voting voting = firmAddresses.voting;
@@ -411,7 +392,7 @@ contract FirmFactory {
             address target = exception.target;
 
             if (target.isFlag(SEMAPHORE_TARGETS_FLAG_TYPE)) {
-                target = _exceptionTargetFlagToAddress(firmAddresses, exception.target.flagValue());
+                target = exceptionTargetFlagToAddress(firmAddresses, exception.target.flagValue());
             }
 
             exceptions[i * 2] = Semaphore.ExceptionInput(true, exception.exceptionType, address(voting), target, exception.sig);
@@ -423,23 +404,5 @@ contract FirmFactory {
         }
 
         semaphore.setExceptions(exceptions);
-    }
-
-    function _exceptionTargetFlagToAddress(FirmAddresses memory firmAddresses, uint8 flagValue) internal pure returns (address) {
-        SemaphoreTargetsFlag targetFlag = SemaphoreTargetsFlag(flagValue);
-
-        if (targetFlag == SemaphoreTargetsFlag.Safe) {
-            return address(firmAddresses.safe);
-        } else if (targetFlag == SemaphoreTargetsFlag.Semaphore) {
-            return address(firmAddresses.semaphore);
-        } else if (targetFlag == SemaphoreTargetsFlag.Captable) {
-            return address(firmAddresses.captable);
-        } else if (targetFlag == SemaphoreTargetsFlag.Voting) {
-            return address(firmAddresses.voting);
-        } else if (targetFlag == SemaphoreTargetsFlag.Roles) {
-            return address(firmAddresses.roles);
-        } else if (targetFlag == SemaphoreTargetsFlag.Budget) {
-            return address(firmAddresses.budget);
-        }
     }
 }
