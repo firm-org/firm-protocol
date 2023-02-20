@@ -7,6 +7,12 @@ import {FirmBase, ISafe, IMPL_INIT_NOOP_ADDR, IMPL_INIT_NOOP_SAFE} from "../base
 
 import {ISemaphore} from "./interfaces/ISemaphore.sol";
 
+/**
+ * @title Semaphore
+ * @author Firm (engineering@firm.org)
+ * @notice Simple access control system intended to balance permissions between pairs of accounts
+ * Compliant with the Safe Guard interface and designed to limit power of Safe owners via multisig txs
+ */
 contract Semaphore is FirmBase, BaseGuard, ISemaphore {
     string public constant moduleId = "org.firm.semaphore";
     uint256 public constant moduleVersion = 1;
@@ -24,10 +30,9 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
 
     struct SemaphoreState {
       DefaultMode defaultMode;
-      bool allowsDelegateCalls;
-      bool allowsValueCalls;
+      bool allowDelegateCalls;
+      bool allowValueCalls;
 
-      // Counters for efficient checks
       uint64 numTotalExceptions;
       uint32 numSigExceptions;
       uint32 numTargetExceptions;
@@ -39,7 +44,7 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
         ExceptionType exceptionType;
         address caller;
         address target;  // only used for Target and TargetSig (ignored for Sig)
-        bytes4 sig;       // only used for Sig and TargetSig (ignored for Target)
+        bytes4 sig;      // only used for Sig and TargetSig (ignored for Target)
     }
 
     // caller => state
@@ -51,7 +56,7 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
     // caller => target => sig => bool (whether executing functions with this sig on this target is an exception to caller's defaultMode)
     mapping (address => mapping (address => mapping (bytes4 => bool))) public targetSigExceptions;
 
-    event SemaphoreStateSet(address indexed caller, DefaultMode defaultMode, bool allowsDelegateCalls, bool allowsValueCalls);
+    event SemaphoreStateSet(address indexed caller, DefaultMode defaultMode, bool allowDelegateCalls, bool allowValueCalls);
     event ExceptionSet(address indexed caller, bool added, ExceptionType exceptionType, address target, bytes4 sig);
 
     error SemaphoreDisallowed();
@@ -76,19 +81,31 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
     // STATE AND EXCEPTIONS MANAGEMENT
     ////////////////////////////////////////////////////////////////////////////////
 
-    function setSemaphoreState(address caller, DefaultMode defaultMode, bool allowsDelegateCalls, bool allowsValueCalls) external onlySafe {
-        _setSemaphoreState(caller, defaultMode, allowsDelegateCalls, allowsValueCalls);
+    /**
+     * @notice Sets the base state for a caller
+     * @dev Note: Use with extreme caution on live organizations, can lead to irreversible loss of access and funds
+     * @param defaultMode Whether calls from this caller are allowed by default
+     * @param allowDelegateCalls Whether this caller is allowed to perform delegatecalls
+     * @param allowValueCalls Whether this caller is allowed to perform calls with non-zero value (native asset transfers)
+     */
+    function setSemaphoreState(address caller, DefaultMode defaultMode, bool allowDelegateCalls, bool allowValueCalls) external onlySafe {
+        _setSemaphoreState(caller, defaultMode, allowDelegateCalls, allowValueCalls);
     }
 
-    function _setSemaphoreState(address caller, DefaultMode defaultMode, bool allowsDelegateCalls, bool allowsValueCalls) internal {
+    function _setSemaphoreState(address caller, DefaultMode defaultMode, bool allowDelegateCalls, bool allowValueCalls) internal {
         SemaphoreState storage s = state[caller];
         s.defaultMode = defaultMode;
-        s.allowsDelegateCalls = allowsDelegateCalls;
-        s.allowsValueCalls = allowsValueCalls;
+        s.allowDelegateCalls = allowDelegateCalls;
+        s.allowValueCalls = allowValueCalls;
 
-        emit SemaphoreStateSet(caller, defaultMode, allowsDelegateCalls, allowsValueCalls);
+        emit SemaphoreStateSet(caller, defaultMode, allowDelegateCalls, allowValueCalls);
     }
 
+    /**
+     * @notice Adds expections to the default mode for calls
+     * @dev Note: Use with extreme caution on live organizations, can lead to irreversible loss of access and funds
+     * @param exceptions Array of new exceptions to be applied
+     */
     function setExceptions(ExceptionInput[] calldata exceptions) external onlySafe {
         for (uint256 i = 0; i < exceptions.length;) {
             ExceptionInput memory e = exceptions[i];
@@ -114,6 +131,11 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
                 s.numTargetSigExceptions = e.add ? s.numTargetSigExceptions + 1 : s.numTargetSigExceptions - 1;
             }
 
+            // A local counter for the specific exception type + the global exception type is added for the caller
+            // Since per caller we need 1 slot of storage for its config, we can keep these counters within that same slot
+            // As exception checking will be much more frequent and there will be many cases without exceptions,
+            // it allows us to perform checks by just reading 1 slot if there are no exceptions and 2 if there's one
+            // instead of always having to read 3 different slots (different mappings) for each possible exception that could be set
             s.numTotalExceptions = e.add ? s.numTotalExceptions + 1 : s.numTotalExceptions - 1;
 
             emit ExceptionSet(e.caller, e.add, e.exceptionType, e.target, e.sig);
@@ -131,11 +153,12 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
     function canPerform(address caller, address target, uint256 value, bytes calldata data, bool isDelegateCall) public view returns (bool) {
         SemaphoreState memory s = state[caller];
 
-        if ((isDelegateCall && !s.allowsDelegateCalls) ||
-            (value > 0 && !s.allowsValueCalls)) {
+        if ((isDelegateCall && !s.allowDelegateCalls) ||
+            (value > 0 && !s.allowValueCalls)) {
             return false;
         }
 
+        // If there's an exception for this call, we flip the default mode for the caller
         return isException(s, caller, target, data)
             ? s.defaultMode == DefaultMode.Disallow
             : s.defaultMode == DefaultMode.Allow;
@@ -148,12 +171,12 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
         
         SemaphoreState memory s = state[caller];
 
-        if (isDelegateCall && !s.allowsDelegateCalls) {
+        if (isDelegateCall && !s.allowDelegateCalls) {
             return false;
         }
         
         for (uint256 i = 0; i < targets.length;) {
-            if (values[i] > 0 && !s.allowsValueCalls) {
+            if (values[i] > 0 && !s.allowValueCalls) {
                 return false;
             }
 
