@@ -24,11 +24,12 @@ import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsD
 
 import {LlamaPayStreams, BudgetModule, IERC20, ForwarderLib} from "src/budget/modules/streams/LlamaPayStreams.sol";
 
-import {FirmFactory, UpgradeableModuleProxyFactory, LATEST_VERSION, SAFE_ADDR_FLAG} from "../FirmFactory.sol";
+import {FirmFactory, UpgradeableModuleProxyFactory, SemaphoreTargetsFlag, LATEST_VERSION} from "../FirmFactory.sol";
 import {FirmFactoryDeployLive, FirmFactoryDeployLocal, FirmFactoryDeploy} from "scripts/FirmFactoryDeploy.s.sol";
 
 import {TestnetERC20 as ERC20Token} from "../../testnet/TestnetTokenFaucet.sol";
 import {IUSDCMinting} from "./lib/IUSDCMinting.sol";
+import {semaphoreTargetFlag} from "./lib/SemaphoreTargetFlags.sol";
 
 string constant LLAMAPAYSTREAMS_MODULE_ID = "org.firm.budget.llamapay-streams";
 
@@ -337,7 +338,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
         FirmFactory.SemaphoreException[] memory semaphoreExceptions = new FirmFactory.SemaphoreException[](2);
         // All upgrade calls (to any module) and all calls to the safe are exceptions (can only be done by Voting)
         semaphoreExceptions[0] = FirmFactory.SemaphoreException(Semaphore.ExceptionType.Sig, address(0), EIP1967Upgradeable.upgrade.selector);
-        semaphoreExceptions[1] = FirmFactory.SemaphoreException(Semaphore.ExceptionType.Target, SAFE_ADDR_FLAG, bytes4(0));
+        semaphoreExceptions[1] = FirmFactory.SemaphoreException(Semaphore.ExceptionType.Target, semaphoreTargetFlag(SemaphoreTargetsFlag.Safe), bytes4(0));
 
         firmConfig.withSemaphore = true;
         firmConfig.semaphoreConfig.safeDefaultAllowAll = true;

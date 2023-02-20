@@ -4,7 +4,6 @@ pragma solidity 0.8.17;
 import {GnosisSafe} from "safe/GnosisSafe.sol";
 import {GnosisSafeProxyFactory} from "safe/proxies/GnosisSafeProxyFactory.sol";
 
-
 import {ISafe} from "../bases/interfaces/ISafe.sol";
 import {Roles} from "../roles/Roles.sol";
 import {Budget, EncodedTimeShift} from "../budget/Budget.sol";
@@ -15,6 +14,7 @@ import {Semaphore, ISemaphore} from "../semaphore/Semaphore.sol";
 import {FirmRelayer} from "../metatx/FirmRelayer.sol";
 
 import {UpgradeableModuleProxyFactory, LATEST_VERSION} from "./UpgradeableModuleProxyFactory.sol";
+import {AddressUint8FlagsLib} from "../bases/utils/AddressUint8FlagsLib.sol";
 
 string constant ROLES_MODULE_ID = "org.firm.roles";
 string constant BUDGET_MODULE_ID = "org.firm.budget";
@@ -22,10 +22,20 @@ string constant CAPTABLE_MODULE_ID = "org.firm.captable";
 string constant VOTING_MODULE_ID = "org.firm.voting";
 string constant SEMAPHORE_MODULE_ID = "org.firm.semaphore";
 
-address constant SAFE_ADDR_FLAG =   address(0x5afe);
-address constant VOTING_ADDR_FLAG = address(0x701e);
+uint8 constant SEMAPHORE_TARGETS_FLAG_TYPE = 0x03;
+
+enum SemaphoreTargetsFlag {
+    Safe,
+    Voting,
+    Budget,
+    Roles,
+    Captable,
+    Semaphore
+}
 
 contract FirmFactory {
+    using AddressUint8FlagsLib for address;
+
     GnosisSafeProxyFactory public immutable safeFactory;
     address public immutable safeImpl;
 
@@ -196,7 +206,15 @@ contract FirmFactory {
             return;
         }
 
-        configSemaphore(config.semaphoreConfig, Semaphore(address(semaphore)), voting);
+        FirmAddresses memory firmAddresses = FirmAddresses({
+            semaphore: Semaphore(address(semaphore)),
+            safe: safe,
+            voting: voting,
+            budget: budget,
+            roles: roles,
+            captable: captable
+        });
+        configSemaphore(config.semaphoreConfig, firmAddresses);
         safe.setGuard(address(semaphore));
     }
 
@@ -363,7 +381,19 @@ contract FirmFactory {
         );
     }
 
-    function configSemaphore(SemaphoreConfig calldata config, Semaphore semaphore, Voting voting) internal {
+    struct FirmAddresses {
+        GnosisSafe safe;
+        Semaphore semaphore;
+        Voting voting;
+        Budget budget;
+        Roles roles;
+        Captable captable;
+    }
+
+    function configSemaphore(SemaphoreConfig calldata config, FirmAddresses memory firmAddresses) internal {
+        Semaphore semaphore = firmAddresses.semaphore;
+        Voting voting = firmAddresses.voting;
+
         if (!config.safeDefaultAllowAll) {
             semaphore.setSemaphoreState(address(voting), Semaphore.DefaultMode.Allow, false, config.votingAllowValueCalls);
             semaphore.setSemaphoreState(address(this), Semaphore.DefaultMode.Disallow, config.safeAllowDelegateCalls, true);
@@ -373,17 +403,15 @@ contract FirmFactory {
         }
 
         uint256 exceptionsLength = config.semaphoreExceptions.length;
-        // TODO: add voting exceptions otherwise voting parameter changes will not be possible
         Semaphore.ExceptionInput[] memory exceptions = new Semaphore.ExceptionInput[](exceptionsLength * 2);
 
         for (uint256 i = 0; i < exceptionsLength;) {
             SemaphoreException memory exception = config.semaphoreExceptions[i];
 
             address target = exception.target;
-            if (target == SAFE_ADDR_FLAG) {
-                target = address(this);
-            } else if (target == VOTING_ADDR_FLAG) {
-                target = address(voting);
+
+            if (target.isFlag(SEMAPHORE_TARGETS_FLAG_TYPE)) {
+                target = _exceptionTargetFlagToAddress(firmAddresses, exception.target.flagValue());
             }
 
             exceptions[i * 2] = Semaphore.ExceptionInput(true, exception.exceptionType, address(voting), target, exception.sig);
@@ -395,5 +423,23 @@ contract FirmFactory {
         }
 
         semaphore.setExceptions(exceptions);
+    }
+
+    function _exceptionTargetFlagToAddress(FirmAddresses memory firmAddresses, uint8 flagValue) internal pure returns (address) {
+        SemaphoreTargetsFlag targetFlag = SemaphoreTargetsFlag(flagValue);
+
+        if (targetFlag == SemaphoreTargetsFlag.Safe) {
+            return address(firmAddresses.safe);
+        } else if (targetFlag == SemaphoreTargetsFlag.Semaphore) {
+            return address(firmAddresses.semaphore);
+        } else if (targetFlag == SemaphoreTargetsFlag.Captable) {
+            return address(firmAddresses.captable);
+        } else if (targetFlag == SemaphoreTargetsFlag.Voting) {
+            return address(firmAddresses.voting);
+        } else if (targetFlag == SemaphoreTargetsFlag.Roles) {
+            return address(firmAddresses.roles);
+        } else if (targetFlag == SemaphoreTargetsFlag.Budget) {
+            return address(firmAddresses.budget);
+        }
     }
 }
