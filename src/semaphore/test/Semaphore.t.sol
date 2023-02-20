@@ -96,7 +96,7 @@ contract SemaphoreTest is FirmTest {
         exceptions[0] = Semaphore.ExceptionInput(true, Semaphore.ExceptionType.Sig, address(safe), anyTarget, sig);
         exceptions[1] = Semaphore.ExceptionInput(true, Semaphore.ExceptionType.Sig, OTHER_CALLER, anyTarget, sig);
         vm.prank(address(safe));
-        semaphore.setExceptions(exceptions);
+        semaphore.addExceptions(exceptions);
 
         assertCanPerform(false, address(safe), anyTarget, 0, abi.encodeWithSelector(sig), false);
         assertCanPerform(true, OTHER_CALLER, anyTarget, 0, abi.encodeWithSelector(sig), false);
@@ -131,7 +131,7 @@ contract SemaphoreTest is FirmTest {
         exceptions[1] = Semaphore.ExceptionInput(true, Semaphore.ExceptionType.Target, OTHER_CALLER, target, bytes4(0));
 
         vm.prank(address(safe));
-        semaphore.setExceptions(exceptions);
+        semaphore.addExceptions(exceptions);
 
         assertCanPerform(false, address(safe), target, 0, "", false);
         assertCanPerform(true, OTHER_CALLER, target, 0, "", false);
@@ -146,7 +146,7 @@ contract SemaphoreTest is FirmTest {
         exceptions[1] = Semaphore.ExceptionInput(true, Semaphore.ExceptionType.TargetSig, OTHER_CALLER, target, sig);
 
         vm.prank(address(safe));
-        semaphore.setExceptions(exceptions);
+        semaphore.addExceptions(exceptions);
 
         assertCanPerform(false, address(safe), target, 0, abi.encodeWithSelector(sig), false);
         assertCanPerform(true, OTHER_CALLER, target, 0, abi.encodeWithSelector(sig), false);
@@ -164,7 +164,7 @@ contract SemaphoreTest is FirmTest {
         exceptions[3] = Semaphore.ExceptionInput(true, Semaphore.ExceptionType.Target, OTHER_CALLER, target, bytes4(0));
 
         vm.prank(address(safe));
-        semaphore.setExceptions(exceptions);
+        semaphore.addExceptions(exceptions);
 
         assertCanPerform(false, address(safe), anyTarget, 0, abi.encodeWithSelector(sig), false);
         assertCanPerform(true, OTHER_CALLER, anyTarget, 0, abi.encodeWithSelector(sig), false);
@@ -181,7 +181,7 @@ contract SemaphoreTest is FirmTest {
         Semaphore.ExceptionInput[] memory exceptions = new Semaphore.ExceptionInput[](2);
         exceptions[0] = Semaphore.ExceptionInput(true, Semaphore.ExceptionType.Sig, address(safe), anyTarget, sig);
         exceptions[1] = Semaphore.ExceptionInput(true, Semaphore.ExceptionType.Sig, OTHER_CALLER, anyTarget, sig);
-        semaphore.setExceptions(exceptions);
+        semaphore.addExceptions(exceptions);
 
         assertCanPerform(false, address(safe), anyTarget, 0, abi.encodeWithSelector(sig), false);
         assertCanPerform(true, OTHER_CALLER, anyTarget, 0, abi.encodeWithSelector(sig), false);
@@ -189,7 +189,7 @@ contract SemaphoreTest is FirmTest {
         exceptions[0].add = false;
         exceptions[1].add = false;
 
-        semaphore.setExceptions(exceptions);
+        semaphore.addExceptions(exceptions);
 
         assertCanPerform(true, address(safe), anyTarget, 0, abi.encodeWithSelector(sig), false);
         assertCanPerform(false, OTHER_CALLER, anyTarget, 0, abi.encodeWithSelector(sig), false);
@@ -210,14 +210,14 @@ contract SemaphoreTest is FirmTest {
 
         // Cannot remove them again
         vm.expectRevert(abi.encodeWithSelector(Semaphore.ExceptionAlreadySet.selector, exceptions[0]));
-        semaphore.setExceptions(exceptions);
+        semaphore.addExceptions(exceptions);
 
         vm.stopPrank();
     }
 
-    function testNonSafeCannotSetExceptions() public {
+    function testNonSafeCannotaddExceptions() public {
         vm.expectRevert(abi.encodeWithSelector(SafeAware.UnauthorizedNotSafe.selector));
-        semaphore.setExceptions(new Semaphore.ExceptionInput[](0));
+        semaphore.addExceptions(new Semaphore.ExceptionInput[](0));
     }
 
     function testCannotSetExistingExceptions() public {
@@ -227,20 +227,20 @@ contract SemaphoreTest is FirmTest {
         exceptions[2] = Semaphore.ExceptionInput(true, Semaphore.ExceptionType.TargetSig, address(safe), address(safe), bytes4(0));
 
         vm.startPrank(address(safe));
-        semaphore.setExceptions(exceptions);
+        semaphore.addExceptions(exceptions);
 
         vm.expectRevert(abi.encodeWithSelector(Semaphore.ExceptionAlreadySet.selector, exceptions[0]));
-        semaphore.setExceptions(exceptions);
+        semaphore.addExceptions(exceptions);
 
         // Flip the first exception so it errors on the second
         exceptions[0] = Semaphore.ExceptionInput(false, Semaphore.ExceptionType.Sig, address(safe), address(safe), bytes4(0));
         vm.expectRevert(abi.encodeWithSelector(Semaphore.ExceptionAlreadySet.selector, exceptions[1]));
-        semaphore.setExceptions(exceptions);
+        semaphore.addExceptions(exceptions);
 
         // Flip the second exception so it errors on the third
         exceptions[1] = Semaphore.ExceptionInput(false, Semaphore.ExceptionType.Target, address(safe), address(safe), bytes4(0));
         vm.expectRevert(abi.encodeWithSelector(Semaphore.ExceptionAlreadySet.selector, exceptions[2]));
-        semaphore.setExceptions(exceptions);
+        semaphore.addExceptions(exceptions);
 
         vm.stopPrank();
     }

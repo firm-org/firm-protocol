@@ -403,6 +403,6 @@ contract FirmFactory {
             }
         }
 
-        semaphore.setExceptions(exceptions);
+        semaphore.addExceptions(exceptions);
     }
 }

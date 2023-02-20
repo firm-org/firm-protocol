@@ -107,7 +107,7 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
      * @dev Note: Use with extreme caution on live organizations, can lead to irreversible loss of access and funds
      * @param exceptions Array of new exceptions to be applied
      */
-    function setExceptions(ExceptionInput[] calldata exceptions) external onlySafe {
+    function addExceptions(ExceptionInput[] calldata exceptions) external onlySafe {
         for (uint256 i = 0; i < exceptions.length;) {
             ExceptionInput memory e = exceptions[i];
             SemaphoreState storage s = state[e.caller];
