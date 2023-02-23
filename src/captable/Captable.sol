@@ -544,7 +544,7 @@ contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
     }
 
     function nameFor(uint256 classId) public view returns (string memory) {
-        return string(abi.encodePacked(name, bytes(": "), _getClass(classId).name));
+        return string(abi.encodePacked(name, bytes(" "), _getClass(classId).name));
     }
 
     function tickerFor(uint256 classId) public view returns (string memory) {

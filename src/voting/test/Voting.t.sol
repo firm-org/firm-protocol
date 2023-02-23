@@ -51,7 +51,7 @@ contract VotingTest is BaseCaptableTest {
 
         vm.startPrank(address(safe));
         (uint256 classId, EquityToken token) =
-            captable.createClass("Common", "TST-A", INITIAL_AUTHORIZED, NO_CONVERSION_FLAG, 1, ALLOW_ALL_BOUNCER);
+            captable.createClass("Common", "TST.A", INITIAL_AUTHORIZED, NO_CONVERSION_FLAG, 1, ALLOW_ALL_BOUNCER);
         captable.setManager(classId, ISSUER, true);
         vm.stopPrank();
         vm.startPrank(ISSUER);
