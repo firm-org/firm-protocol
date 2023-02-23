@@ -257,7 +257,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
         FirmFactory.ClassCreationInput[] memory classes = new FirmFactory.ClassCreationInput[](1);
         classes[0] = FirmFactory.ClassCreationInput({
             className: "Common",
-            ticker: "TST-A",
+            ticker: "TST.A",
             authorized: uint128(shareholder1Shares + shareholder2Shares),
             convertsToClassId: NO_CONVERSION_FLAG,
             votingWeight: 1,

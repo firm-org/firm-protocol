@@ -16,7 +16,7 @@ contract EquityTokenTest is BaseCaptableTest {
         super.setUp();
 
         vm.startPrank(address(safe));
-        (classId, token) = captable.createClass("Common", "TST-A", 10000, NO_CONVERSION_FLAG, 1, ALLOW_ALL_BOUNCER);
+        (classId, token) = captable.createClass("Common", "TST.A", 10000, NO_CONVERSION_FLAG, 1, ALLOW_ALL_BOUNCER);
         captable.issue(HOLDER1, classId, HOLDER_BALANCE);
         vm.stopPrank();
     }

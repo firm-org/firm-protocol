@@ -81,11 +81,11 @@ contract CaptableInitTest is BaseCaptableTest {
     function testCreateClass() public {
         vm.prank(address(safe));
         (uint256 id, EquityToken token) =
-            captable.createClass("Common", "TST-A", 100, NO_CONVERSION_FLAG, 1, ALLOW_ALL_BOUNCER);
+            captable.createClass("Common", "TST.A", 100, NO_CONVERSION_FLAG, 1, ALLOW_ALL_BOUNCER);
         assertEq(id, 0);
 
-        assertEq(token.name(), "TestCo: Common");
-        assertEq(token.symbol(), "TST-A");
+        assertEq(token.name(), "TestCo Common");
+        assertEq(token.symbol(), "TST.A");
         assertEq(token.totalSupply(), 0);
         assertEq(token.decimals(), 18);
 
@@ -106,7 +106,7 @@ contract CaptableInitTest is BaseCaptableTest {
         assertEq(authorized, 100);
         assertEq(convertible, 0);
         assertEq(name, "Common");
-        assertEq(ticker, "TST-A");
+        assertEq(ticker, "TST.A");
         assertEq(address(bouncer), address(ALLOW_ALL_BOUNCER));
         assertEq(address(bouncer), 0x0000000000000000000000000000000000000102);
         assertEq(isFrozen, false);
@@ -172,7 +172,7 @@ contract CaptableOneClassTest is BaseCaptableTest {
 
         vm.startPrank(address(safe));
         (classId, token) =
-            captable.createClass("Common", "TST-A", INITIAL_AUTHORIZED, NO_CONVERSION_FLAG, 1, ALLOW_ALL_BOUNCER);
+            captable.createClass("Common", "TST.A", INITIAL_AUTHORIZED, NO_CONVERSION_FLAG, 1, ALLOW_ALL_BOUNCER);
         captable.setManager(classId, ISSUER, true);
         vm.stopPrank();
     }
@@ -367,7 +367,7 @@ contract CaptableFrozenTest is BaseCaptableTest {
 
         vm.startPrank(address(safe));
         (classId, token) =
-            captable.createClass("Common", "TST-A", INITIAL_AUTHORIZED, NO_CONVERSION_FLAG, 1, ALLOW_ALL_BOUNCER);
+            captable.createClass("Common", "TST.A", INITIAL_AUTHORIZED, NO_CONVERSION_FLAG, 1, ALLOW_ALL_BOUNCER);
         captable.setManager(classId, ISSUER, true);
         captable.freeze(classId);
         vm.stopPrank();
@@ -469,7 +469,7 @@ contract CaptableMulticlassTest is BaseCaptableTest {
 
         vm.startPrank(address(safe));
         (classId1, token1) =
-            captable.createClass("Common", "TST-A", authorized1, NO_CONVERSION_FLAG, weight1, ALLOW_ALL_BOUNCER);
+            captable.createClass("Common", "TST.A", authorized1, NO_CONVERSION_FLAG, weight1, ALLOW_ALL_BOUNCER);
         (classId2, token2) =
             captable.createClass("Founder", "TST-B", authorized2, uint32(classId1), weight2, ALLOW_ALL_BOUNCER);
         captable.setManager(classId1, ISSUER, true);
