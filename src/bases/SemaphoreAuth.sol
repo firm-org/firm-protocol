@@ -32,7 +32,7 @@ abstract contract SemaphoreAuth is SafeAware {
     function _semaphoreCheckCall(address target, uint256 value, bytes memory data, bool isDelegateCall) internal view {
         ISemaphore semaphore_ = semaphore();
         if (semaphore_ != NO_SEMAPHORE &&
-            !semaphore_.canPerform(msg.sender, target, value, data, isDelegateCall)
+            !semaphore_.canPerform(address(this), target, value, data, isDelegateCall)
         ) {
             revert ISemaphore.SemaphoreDisallowed();
         }
