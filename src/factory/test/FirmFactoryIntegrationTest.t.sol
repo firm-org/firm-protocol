@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.17;
 
-import {GnosisSafe, OwnerManager} from "gnosis-safe/GnosisSafe.sol";
+import {GnosisSafe, OwnerManager} from "safe/GnosisSafe.sol";
 
 import {FirmTest} from "src/bases/test/lib/FirmTest.sol";
 import {roleFlag} from "src/bases/test/lib/RolesAuthFlags.sol";

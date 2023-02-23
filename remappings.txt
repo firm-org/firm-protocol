@@ -1,5 +1,5 @@
 openzeppelin/=lib/zeppelin-solidity/contracts/
-gnosis-safe/=lib/safe-contracts/contracts
+safe/=lib/safe-contracts/contracts
 datetime/=lib/BokkyPooBahsDateTimeLibrary/contracts
 llamapay/=lib/llamapay/contracts
 @gnosis.pm/safe-contracts/=lib/safe-contracts/

@@ -3,7 +3,7 @@ pragma solidity 0.8.17;
 
 import {Test} from "forge-std/Test.sol";
 
-import {GnosisSafe} from "gnosis-safe/GnosisSafe.sol";
+import {GnosisSafe} from "safe/GnosisSafe.sol";
 import {Roles, IRoles, ISafe, ONLY_ROOT_ROLE_AS_ADMIN, ROOT_ROLE_ID} from "src/roles/Roles.sol";
 import {Budget, TimeShiftLib, NO_PARENT_ID, NATIVE_ASSET} from "src/budget/Budget.sol";
 import {Captable, NO_CONVERSION_FLAG} from "src/captable/Captable.sol";

@@ -45,6 +45,16 @@ contract Voting is FirmBase, SafeModule, OZGovernor {
         return address(safe());
     }
 
+    function propose(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        string memory description
+    ) public override returns (uint256) {
+        // TODO: check with semaphore if all calls are allowed previous to creating the proposal
+        return super.propose(targets, values, calldatas, description);
+    }
+
     function _execute(
         uint256 proposalId,
         address[] memory targets,

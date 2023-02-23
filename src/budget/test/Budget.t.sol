@@ -6,7 +6,6 @@ import {RolesStub} from "../../bases/test/mocks/RolesStub.sol";
 import {roleFlag} from "../../bases/test/lib/RolesAuthFlags.sol";
 import {SafeStub} from "../../bases/test/mocks/SafeStub.sol";
 import {TestnetERC20 as ERC20Token} from "../../testnet/TestnetTokenFaucet.sol";
-import {UpgradeableModuleProxyFactory} from "../../factory/UpgradeableModuleProxyFactory.sol";
 
 import {TimeShift, DateTimeLib} from "../../budget/TimeShiftLib.sol";
 import {SafeAware} from "../../bases/SafeAware.sol";
@@ -25,7 +24,7 @@ abstract contract BudgetTest is FirmTest {
     function setUp() public virtual {
         safe = new SafeStub();
         roles = new RolesStub();
-        budget = Budget(createProxy(new Budget(), abi.encodeCall(Budget.initialize, (safe, roles, token))));
+        budget = Budget(createProxy(new Budget(), abi.encodeCall(Budget.initialize, (safe, roles, address(0)))));
     }
 
     function testInitialState() public {
@@ -35,7 +34,7 @@ abstract contract BudgetTest is FirmTest {
 
     function testCannotReinit() public {
         vm.expectRevert(abi.encodeWithSelector(SafeAware.AlreadyInitialized.selector));
-        budget.initialize(safe, roles, token);
+        budget.initialize(safe, roles, address(0));
     }
 
     function testCreateAllowance() public returns (uint256 allowanceId) {
