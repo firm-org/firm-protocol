@@ -22,12 +22,6 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
         Allow
     }
 
-    enum ExceptionType {
-        Sig,
-        Target,
-        TargetSig
-    }
-
     struct SemaphoreState {
         // Configurable state
         DefaultMode defaultMode;
@@ -40,6 +34,12 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
         uint32 numTargetExceptions;
         uint32 numTargetSigExceptions;
     } // 1 slot
+
+    enum ExceptionType {
+        Sig,
+        Target,
+        TargetSig
+    }
 
     struct ExceptionInput {
         bool add;
