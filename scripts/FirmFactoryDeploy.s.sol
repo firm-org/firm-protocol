@@ -19,6 +19,8 @@ import {VestingController} from "src/captable/controllers/VestingController.sol"
 
 import {Voting} from "src/voting/Voting.sol";
 
+import {Semaphore} from "src/semaphore/Semaphore.sol";
+
 abstract contract FirmFactoryDeploy is Test {
     function baseContracts() internal virtual returns (address safeProxyFactory, address safeImpl, address llamaPayFactory);
 
@@ -37,6 +39,7 @@ abstract contract FirmFactoryDeploy is Test {
         moduleFactory.register(new Captable());
         moduleFactory.register(new VestingController());
         moduleFactory.register(new Voting());
+        moduleFactory.register(new Semaphore());
         
         factory = new FirmFactory(
             GnosisSafeProxyFactory(safeProxyFactory),

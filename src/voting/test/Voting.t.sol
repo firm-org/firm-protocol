@@ -8,7 +8,7 @@ import {TargetV1 as Target} from "../../factory/test/lib/TestTargets.sol";
 import {FirmRelayer} from "../../metatx/FirmRelayer.sol";
 import {SafeAware} from "../../bases/SafeAware.sol";
 
-import {Voting, SafeModule} from "../Voting.sol";
+import {Voting, SafeModule, NO_SEMAPHORE} from "../Voting.sol";
 
 contract VotingTest is BaseCaptableTest {
     Voting voting;
@@ -37,6 +37,7 @@ contract VotingTest is BaseCaptableTest {
                         Voting.initialize,
                         (
                             safe,
+                            NO_SEMAPHORE,
                             captable,
                             QUORUM_NUMERATOR,
                             VOTING_DELAY,
@@ -74,7 +75,7 @@ contract VotingTest is BaseCaptableTest {
     function testCantReinit() public {
         vm.expectRevert(abi.encodeWithSelector(SafeAware.AlreadyInitialized.selector));
         voting.initialize(
-            safe, captable, QUORUM_NUMERATOR, VOTING_DELAY, VOTING_PERIOD, PROPOSAL_THRESHOLD, address(relayer)
+            safe, NO_SEMAPHORE, captable, QUORUM_NUMERATOR, VOTING_DELAY, VOTING_PERIOD, PROPOSAL_THRESHOLD, address(relayer)
         );
     }
 

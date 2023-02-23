@@ -61,7 +61,6 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
     event SemaphoreStateSet(address indexed caller, DefaultMode defaultMode, bool allowDelegateCalls, bool allowValueCalls);
     event ExceptionSet(address indexed caller, bool added, ExceptionType exceptionType, address target, bytes4 sig);
 
-    error SemaphoreDisallowed();
     error ExceptionAlreadySet(ExceptionInput exception);
 
     constructor() {
@@ -108,7 +107,7 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
      * @dev Note: Use with extreme caution on live organizations, can lead to irreversible loss of access and funds
      * @param exceptions Array of new exceptions to be applied
      */
-    function setExceptions(ExceptionInput[] calldata exceptions) external onlySafe {
+    function addExceptions(ExceptionInput[] calldata exceptions) external onlySafe {
         for (uint256 i = 0; i < exceptions.length;) {
             ExceptionInput memory e = exceptions[i];
             SemaphoreState storage s = state[e.caller];
@@ -222,7 +221,7 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
         uint256, uint256, uint256, address, address payable, bytes memory, address
     ) external view {
         if (!canPerform(msg.sender, to, value, data, operation == Enum.Operation.DelegateCall)) {
-            revert SemaphoreDisallowed();
+            revert ISemaphore.SemaphoreDisallowed();
         }
     }
 

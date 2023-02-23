@@ -6,6 +6,7 @@ import {ICaptableVotes} from "../captable/interfaces/ICaptableVotes.sol";
 
 import {FirmBase, ISafe, ERC2771Context, IMPL_INIT_NOOP_ADDR, IMPL_INIT_NOOP_SAFE} from "../bases/FirmBase.sol";
 import {SafeModule} from "../bases/SafeModule.sol";
+import {SemaphoreAuth, ISemaphore, NO_SEMAPHORE} from "../bases/SemaphoreAuth.sol";
 import {SafeAware} from "../bases/SafeAware.sol";
 
 /**
@@ -14,7 +15,7 @@ import {SafeAware} from "../bases/SafeAware.sol";
  * @notice Voting module wrapping OpenZeppelin's Governor compatible with Firm's Captable
  * https://docs.openzeppelin.com/contracts/4.x/api/governance
  */
-contract Voting is FirmBase, SafeModule, OZGovernor {
+contract Voting is FirmBase, SafeModule, SemaphoreAuth, OZGovernor {
     string public constant moduleId = "org.firm.voting";
     uint256 public constant moduleVersion = 1;
 
@@ -23,12 +24,13 @@ contract Voting is FirmBase, SafeModule, OZGovernor {
     constructor() {
         // Initialize with impossible values in constructor so impl base cannot be used
         initialize(
-            IMPL_INIT_NOOP_SAFE, ICaptableVotes(IMPL_INIT_NOOP_ADDR), quorumDenominator(), 0, 1, 1, IMPL_INIT_NOOP_ADDR
+            IMPL_INIT_NOOP_SAFE, NO_SEMAPHORE, ICaptableVotes(IMPL_INIT_NOOP_ADDR), quorumDenominator(), 0, 1, 1, IMPL_INIT_NOOP_ADDR
         );
     }
 
     function initialize(
         ISafe safe_,
+        ISemaphore semaphore_,
         ICaptableVotes token_,
         uint256 quorumNumerator_,
         uint256 votingDelay_,
@@ -38,6 +40,7 @@ contract Voting is FirmBase, SafeModule, OZGovernor {
     ) public {
         // calls SafeAware.__init_setSafe which reverts on reinitialization
         __init_firmBase(safe_, trustedForwarder_);
+        _setSemaphore(semaphore_);
         _setupGovernor(token_, quorumNumerator_, votingDelay_, votingPeriod_, proposalThreshold_);
     }
 
@@ -51,7 +54,17 @@ contract Voting is FirmBase, SafeModule, OZGovernor {
         bytes[] memory calldatas,
         string memory description
     ) public override returns (uint256) {
-        // TODO: check with semaphore if all calls are allowed previous to creating the proposal
+        // Since Voting config functions can only be called by voting itself, we need to filter them out
+        // to avoid locking the voting module. Semaphore checks do not apply to these calls.
+        (
+            address[] memory checkingTargets,
+            uint256[] memory checkingValues,
+            bytes[] memory checkingCalldatas
+        ) = _filterCallsToTarget(address(this), targets, values, calldatas);
+
+        // Will revert if one of the external calls in the proposal is not allowed by the semaphore
+        _semaphoreCheckCalls(checkingTargets, checkingValues, checkingCalldatas, false);
+
         return super.propose(targets, values, calldatas, description);
     }
 

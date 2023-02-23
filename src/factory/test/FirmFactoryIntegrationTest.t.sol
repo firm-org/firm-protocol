@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.17;
 
-import {GnosisSafe, OwnerManager} from "safe/GnosisSafe.sol";
+import {GnosisSafe, OwnerManager, Enum} from "safe/GnosisSafe.sol";
 
 import {FirmTest} from "src/bases/test/lib/FirmTest.sol";
 import {roleFlag} from "src/bases/test/lib/RolesAuthFlags.sol";
@@ -12,7 +12,10 @@ import {TimeShift} from "src/budget/TimeShiftLib.sol";
 import {Roles, IRoles, ISafe, ONLY_ROOT_ROLE_AS_ADMIN, ROOT_ROLE_ID, SAFE_OWNER_ROLE_ID} from "src/roles/Roles.sol";
 import {Captable, EquityToken, IBouncer, NO_CONVERSION_FLAG} from "src/captable/Captable.sol";
 import {Voting} from "src/voting/Voting.sol";
+import {GovernorSettings} from "src/voting/OZGovernor.sol";
+import {Semaphore, ISemaphore} from "src/semaphore/Semaphore.sol";
 import {EmbeddedBouncerType, EMBEDDED_BOUNCER_FLAG_TYPE} from "src/captable/BouncerChecker.sol";
+import {EIP1967Upgradeable} from "src/bases/EIP1967Upgradeable.sol";
 import {AddressUint8FlagsLib} from "src/bases/utils/AddressUint8FlagsLib.sol";
 import {EIP1967Upgradeable} from "src/bases/EIP1967Upgradeable.sol";
 
@@ -21,11 +24,12 @@ import {BokkyPooBahsDateTimeLibrary as DateTimeLib} from "datetime/BokkyPooBahsD
 
 import {LlamaPayStreams, BudgetModule, IERC20, ForwarderLib} from "src/budget/modules/streams/LlamaPayStreams.sol";
 
-import {FirmFactory, UpgradeableModuleProxyFactory, LATEST_VERSION} from "../FirmFactory.sol";
+import {FirmFactory, UpgradeableModuleProxyFactory, SemaphoreTargetsFlag, LATEST_VERSION} from "../FirmFactory.sol";
 import {FirmFactoryDeployLive, FirmFactoryDeployLocal, FirmFactoryDeploy} from "scripts/FirmFactoryDeploy.s.sol";
 
 import {TestnetERC20 as ERC20Token} from "../../testnet/TestnetTokenFaucet.sol";
 import {IUSDCMinting} from "./lib/IUSDCMinting.sol";
+import {semaphoreTargetFlag} from "./lib/SemaphoreTargetFlags.sol";
 
 string constant LLAMAPAYSTREAMS_MODULE_ID = "org.firm.budget.llamapay-streams";
 
@@ -98,12 +102,15 @@ contract FirmFactoryIntegrationTest is FirmTest {
 
         FirmFactory.CaptableConfig memory captableConfig;
         FirmFactory.VotingConfig memory votingConfig;
+        FirmFactory.SemaphoreConfig memory semaphoreConfig;
         FirmFactory.FirmConfig memory firmConfig = FirmFactory.FirmConfig({
             withCaptableAndVoting: false,
+            withSemaphore: false,
             budgetConfig: FirmFactory.BudgetConfig(allowances),
             rolesConfig: FirmFactory.RolesConfig(rolesCreationInput),
             captableConfig: captableConfig,
-            votingConfig: votingConfig
+            votingConfig: votingConfig,
+            semaphoreConfig: semaphoreConfig
         });
 
         return getFirmAddresses(factory.createFirm(safeConfig, firmConfig, 1));
@@ -250,9 +257,14 @@ contract FirmFactoryIntegrationTest is FirmTest {
         internal
         returns (GnosisSafe safe, Budget budget, Roles roles, Voting voting, Captable captable)
     {
+        (FirmFactory.SafeConfig memory safeConfig, FirmFactory.FirmConfig memory firmConfig) = firmConfigWithCaptableVotingAndAllowance();
+        return getFirmAddressesWithCaptableVoting(factory.createFirm(safeConfig, firmConfig, 1));
+    }
+
+    function firmConfigWithCaptableVotingAndAllowance() internal view returns (FirmFactory.SafeConfig memory safeConfig, FirmFactory.FirmConfig memory firmConfig) {
         address[] memory safeOwners = new address[](1);
         safeOwners[0] = address(this);
-        FirmFactory.SafeConfig memory safeConfig = FirmFactory.SafeConfig(safeOwners, 1);
+        safeConfig = FirmFactory.SafeConfig(safeOwners, 1);
 
         FirmFactory.ClassCreationInput[] memory classes = new FirmFactory.ClassCreationInput[](1);
         classes[0] = FirmFactory.ClassCreationInput({
@@ -280,14 +292,16 @@ contract FirmFactoryIntegrationTest is FirmTest {
             ""
         );
         FirmFactory.RoleCreationInput[] memory noRolesInput = new FirmFactory.RoleCreationInput[](0);
-        FirmFactory.FirmConfig memory firmConfig = FirmFactory.FirmConfig({
+        FirmFactory.SemaphoreConfig memory semaphoreConfig;
+        firmConfig = FirmFactory.FirmConfig({
             withCaptableAndVoting: true,
+            withSemaphore: false,
             budgetConfig: FirmFactory.BudgetConfig(allowances),
             rolesConfig: FirmFactory.RolesConfig(noRolesInput),
             captableConfig: captableConfig,
-            votingConfig: votingConfig
+            votingConfig: votingConfig,
+            semaphoreConfig: semaphoreConfig
         });
-        return getFirmAddressesWithCaptableVoting(factory.createFirm(safeConfig, firmConfig, 1));
     }
 
     function testExecutingProposalsFromVoting() public {
@@ -318,6 +332,64 @@ contract FirmFactoryIntegrationTest is FirmTest {
         assertEq(token.balanceOf(shareholder2), 1);
     }
 
+    function testSemaphoreBalancingPowerBetweenSafeAndVoting() public {
+        (FirmFactory.SafeConfig memory safeConfig, FirmFactory.FirmConfig memory firmConfig) = firmConfigWithCaptableVotingAndAllowance();
+
+        FirmFactory.SemaphoreException[] memory semaphoreExceptions = new FirmFactory.SemaphoreException[](2);
+        // All upgrade calls (to any module) and all calls to the safe are exceptions (can only be done by Voting)
+        semaphoreExceptions[0] = FirmFactory.SemaphoreException(Semaphore.ExceptionType.Sig, address(0), EIP1967Upgradeable.upgrade.selector);
+        semaphoreExceptions[1] = FirmFactory.SemaphoreException(Semaphore.ExceptionType.Target, semaphoreTargetFlag(SemaphoreTargetsFlag.Safe), bytes4(0));
+
+        firmConfig.withSemaphore = true;
+        firmConfig.semaphoreConfig.safeDefaultAllowAll = true;
+        firmConfig.semaphoreConfig.semaphoreExceptions = semaphoreExceptions;
+
+        (
+            GnosisSafe safe,
+            ,
+            Roles roles,
+            Voting voting,
+            Captable captable,
+        ) = getFirmAddressesWithSemaphore(factory.createFirm(safeConfig, firmConfig, 1));
+
+        (EquityToken equityToken,,,,,,,,) = captable.classes(0);
+
+        // Prepare shareholders for voting
+        vm.prank(shareholder1);
+        equityToken.delegate(shareholder1);
+        vm.prank(shareholder2);
+        equityToken.delegate(shareholder2);
+        blocktravel(1);
+
+        Roles newRolesImpl = new Roles();
+        // Safe cannot upgrade contracts because of exception
+        vm.expectRevert(abi.encodeWithSelector(ISemaphore.SemaphoreDisallowed.selector));
+        _executeSafeMultisig(safe, address(roles), 0, abi.encodeCall(EIP1967Upgradeable.upgrade, (newRolesImpl)));
+
+        // Voting is one of the actions it can do due to the exception
+        _createAndExecuteProposal(voting, address(roles), 0, abi.encodeCall(EIP1967Upgradeable.upgrade, (newRolesImpl)));
+        assertUnsStrg(address(roles), "eip1967.proxy.implementation", address(newRolesImpl));
+
+        // Safe cannot do actions on the safe because of the exception
+        vm.expectRevert(abi.encodeWithSelector(ISemaphore.SemaphoreDisallowed.selector));
+        _executeSafeMultisig(safe, address(safe), 0, abi.encodeCall(OwnerManager.addOwnerWithThreshold, (shareholder1, 1)));
+
+        // Voting can do actions on the safe because of the exception
+        _createAndExecuteProposal(voting, address(safe), 0, abi.encodeCall(OwnerManager.addOwnerWithThreshold, (shareholder1, 1)));
+        assertTrue(safe.isOwner(shareholder1));
+
+        // Safe can do any other actions
+        _executeSafeMultisig(safe, address(captable), 0, abi.encodeCall(Captable.setAuthorized, (0, 100000)));
+
+        // Voting cannot do any other actions unless it has the exception
+        vm.expectRevert(abi.encodeWithSelector(ISemaphore.SemaphoreDisallowed.selector));
+        voting.propose(arr(address(captable)), arr(0), arr(abi.encodeCall(Captable.setAuthorized, (0, 100000))), "test");
+
+        // As Voting calls to self do not check the semaphore, they are allowed without the exception
+        _createAndExecuteProposal(voting, address(voting), 0, abi.encodeCall(GovernorSettings.setVotingDelay, (1000)));
+        assertEq(voting.votingDelay(), 1000);
+    }
+
     function _createAndExecuteProposal(Voting voting, address to, uint256 value, bytes memory data) internal {
         blocktravel(1);
         vm.prank(shareholder1);
@@ -334,6 +406,19 @@ contract FirmFactoryIntegrationTest is FirmTest {
         blocktravel(2);
 
         voting.execute(arr(address(to)), arr(value), arr(data), keccak256(bytes(description)));
+    }
+
+    function _executeSafeMultisig(GnosisSafe safe, address to, uint256 value, bytes memory data) internal {
+        // Safe signature for msg.sender check: r = sender addr, s = 0, v = 1
+        bytes memory signature = abi.encodePacked(uint256(uint160(bytes20(address(this)))), uint256(0), uint8(1));
+        safe.execTransaction(
+            to,
+            value,
+            data,
+            Enum.Operation.Call,
+            0, 0, 0, address(0), payable(0),
+            signature
+        );
     }
 
     function createBarebonesFirm(address owner) internal returns (GnosisSafe safe, Budget budget, Roles roles) {
@@ -365,6 +450,16 @@ contract FirmFactoryIntegrationTest is FirmTest {
         vm.label(address(roles), "RolesProxy");
         vm.label(address(voting), "VotingProxy");
         vm.label(address(captable), "CaptableProxy");
+    }
+
+    function getFirmAddressesWithSemaphore(GnosisSafe safe)
+        internal
+        returns (GnosisSafe _safe, Budget budget, Roles roles, Voting voting, Captable captable, Semaphore semaphore)
+    {
+        (_safe, budget, roles, voting, captable) = getFirmAddressesWithCaptableVoting(safe);
+        semaphore = Semaphore(address(voting.semaphore()));
+
+        vm.label(address(semaphore), "SemaphoreProxy");
     }
 
     function _signPacked(bytes32 hash, uint256 pk) internal pure returns (bytes memory sig) {
