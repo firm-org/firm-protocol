@@ -60,7 +60,7 @@ contract Voting is FirmBase, SafeModule, SemaphoreAuth, OZGovernor {
             address[] memory checkingTargets,
             uint256[] memory checkingValues,
             bytes[] memory checkingCalldatas
-        ) = _filterCallsToVoting(targets, values, calldatas);
+        ) = _filterCallsToTarget(address(this), targets, values, calldatas);
 
         // Will revert if one of the external calls in the proposal is not allowed by the semaphore
         _semaphoreCheckCalls(checkingTargets, checkingValues, checkingCalldatas, false);
@@ -102,57 +102,5 @@ contract Voting is FirmBase, SafeModule, SemaphoreAuth, OZGovernor {
 
     function _msgData() internal view override(Context, ERC2771Context) returns (bytes calldata) {
         return ERC2771Context._msgData();
-    }
-
-    // Since calls to Voting aren't checked with Semaphore even if set,
-    // this function is used to filter all calls whose target is address(this)
-    function _filterCallsToVoting(
-        address[] memory targets,
-        uint256[] memory values,
-        bytes[] memory calldatas
-    ) internal view returns (address[] memory, uint256[] memory, bytes[] memory) {
-        uint256 filteringCalls;
-        for (uint256 i = 0; i < targets.length;) {
-            if (targets[i] == address(this)) {
-                filteringCalls++;
-            }
-            unchecked {
-                i++;
-            }
-        }
-
-        if (filteringCalls == 0) {
-            return (targets, values, calldatas);
-        }
-
-        if (filteringCalls == targets.length) {
-            return (new address[](0), new uint256[](0), new bytes[](0));
-        }
-
-        uint256 filteredCalls = 0;
-
-        address[] memory filteredTargets = new address[](targets.length - filteringCalls);
-        uint256[] memory filteredValues = new uint256[](values.length - filteringCalls);
-        bytes[] memory filteredCalldatas = new bytes[](calldatas.length - filteringCalls);
-
-        for (uint256 i = 0; i < targets.length;) {
-            if (targets[i] == address(this)) {
-                unchecked {
-                    i++;
-                }
-                continue;
-            }
-
-            filteredTargets[filteredCalls] = targets[i];
-            filteredValues[filteredCalls] = values[i];
-            filteredCalldatas[filteredCalls] = calldatas[i];
-
-            unchecked {
-                i++;
-                filteredCalls++;
-            }
-        }
-
-        return (filteredTargets, filteredValues, filteredCalldatas);
     }
 }

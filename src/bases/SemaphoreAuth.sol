@@ -46,4 +46,55 @@ abstract contract SemaphoreAuth is SafeAware {
             revert ISemaphore.SemaphoreDisallowed();
         }
     }
+
+    function _filterCallsToTarget(
+        address filteredTarget,
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas
+    ) internal pure returns (address[] memory, uint256[] memory, bytes[] memory) {
+        uint256 filteringCalls;
+        for (uint256 i = 0; i < targets.length;) {
+            if (targets[i] == filteredTarget) {
+                filteringCalls++;
+            }
+            unchecked {
+                i++;
+            }
+        }
+
+        if (filteringCalls == 0) {
+            return (targets, values, calldatas);
+        }
+
+        if (filteringCalls == targets.length) {
+            return (new address[](0), new uint256[](0), new bytes[](0));
+        }
+
+        uint256 filteredCalls = 0;
+
+        address[] memory filteredTargets = new address[](targets.length - filteringCalls);
+        uint256[] memory filteredValues = new uint256[](values.length - filteringCalls);
+        bytes[] memory filteredCalldatas = new bytes[](calldatas.length - filteringCalls);
+
+        for (uint256 i = 0; i < targets.length;) {
+            if (targets[i] == filteredTarget) {
+                unchecked {
+                    i++;
+                }
+                continue;
+            }
+
+            filteredTargets[filteredCalls] = targets[i];
+            filteredValues[filteredCalls] = values[i];
+            filteredCalldatas[filteredCalls] = calldatas[i];
+
+            unchecked {
+                i++;
+                filteredCalls++;
+            }
+        }
+
+        return (filteredTargets, filteredValues, filteredCalldatas);
+    }
 }
