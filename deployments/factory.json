@@ -8,6 +8,11 @@
             "firmFactory": "0x5d48aBF587A188676059Fe2928BBd5E751464474",
             "modulesFactory": "0x03c9408Fc9B70b06b289E216e463d0928e376cd7",
             "blockNumber": 15845714
+        },
+        "v1.0.0": {
+            "firmFactory": "0xFbeC16EECD4558297FB3deA9934A162Ef76b14bd",
+            "modulesFactory": "0x8EBa12de23C24D27469a748904CA6ba16aff6803",
+            "blockNumber": 16696970
         }
     },
     "5": {
@@ -28,6 +33,11 @@
             "firmFactory": "0x757BfeA33a67412a1099BD00f431153509E0e1BC",
             "modulesFactory": "0x7feED33B89605C5171bfF6051F64954a892Af043",
             "blockNumber": 8331988
+        },
+        "v1.0.0": {
+            "firmFactory": "0x1Ce5621D386B2801f5600F1dBe29522805b8AC11",
+            "modulesFactory": "0x159200D27301776D5412D52Ed2605b7c5371AcFe",
+            "blockNumber": 8546358
         }
     },
     "137": {
@@ -45,6 +55,11 @@
             "firmFactory": "0x9aC87d21984F5a42A549eDC0306a5b4813626843",
             "modulesFactory": "0x4a04206FCe29faB48D3195F9a2892A6d02D4aC6e",
             "blockNumber": 38227123
+        },
+        "v1.0.0": {
+            "firmFactory": "0xaC722c66312fC581Bc57Ee4141871Fe0bf22fA08",
+            "modulesFactory": "0x6232B169db8e0f5A1FD1eEC3B802aa3FFC430bB4",
+            "blockNumber": 39648134
         }
     }
 }

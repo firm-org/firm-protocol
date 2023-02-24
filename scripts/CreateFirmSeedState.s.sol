@@ -34,10 +34,10 @@ contract CreateFirmSeedState is Test {
     function run() public returns (GnosisSafe safe) {
         if (block.chainid == 5) { // goerli
             faucet = TestnetTokenFaucet(0x88A135e2f78C6Ef38E1b72A4B75Ad835fBd50CCE);
-            factory = FirmFactory(0x757BfeA33a67412a1099BD00f431153509E0e1BC); // v0.5
+            factory = FirmFactory(0x1Ce5621D386B2801f5600F1dBe29522805b8AC11); // v1.0
         } else if (block.chainid == 137) { // matic
             faucet = TestnetTokenFaucet(0xA1dD2A67E26DC400b6dd31354bA653ea4EeF86F5);
-            factory = FirmFactory(0x9aC87d21984F5a42A549eDC0306a5b4813626843); // v0.5
+            factory = FirmFactory(0xaC722c66312fC581Bc57Ee4141871Fe0bf22fA08); // v1.0
         } else if (block.chainid == 31337) { // anvil
             faucet = (new TestnetFaucetDeploy()).run();
             factory = FirmFactory(0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE);
