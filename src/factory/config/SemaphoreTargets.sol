@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.17;
 
+import {AddressUint8FlagsLib} from "../../bases/utils/AddressUint8FlagsLib.sol";
+
 import {GnosisSafe} from "safe/GnosisSafe.sol";
 import {Roles} from "../../roles/Roles.sol";
 import {Budget} from "../../budget/Budget.sol";
@@ -29,19 +31,19 @@ struct FirmAddresses {
 }
 
 function exceptionTargetFlagToAddress(FirmAddresses memory firmAddresses, uint8 flagValue) pure returns (address) {
-    SemaphoreTargetsFlag targetFlag = SemaphoreTargetsFlag(flagValue);
+    SemaphoreTargetsFlag flag = SemaphoreTargetsFlag(flagValue);
 
-    if (targetFlag == SemaphoreTargetsFlag.Safe) {
+    if (flag == SemaphoreTargetsFlag.Safe) {
         return address(firmAddresses.safe);
-    } else if (targetFlag == SemaphoreTargetsFlag.Semaphore) {
+    } else if (flag == SemaphoreTargetsFlag.Semaphore) {
         return address(firmAddresses.semaphore);
-    } else if (targetFlag == SemaphoreTargetsFlag.Captable) {
+    } else if (flag == SemaphoreTargetsFlag.Captable) {
         return address(firmAddresses.captable);
-    } else if (targetFlag == SemaphoreTargetsFlag.Voting) {
+    } else if (flag == SemaphoreTargetsFlag.Voting) {
         return address(firmAddresses.voting);
-    } else if (targetFlag == SemaphoreTargetsFlag.Roles) {
+    } else if (flag == SemaphoreTargetsFlag.Roles) {
         return address(firmAddresses.roles);
-    } else if (targetFlag == SemaphoreTargetsFlag.Budget) {
+    } else if (flag == SemaphoreTargetsFlag.Budget) {
         return address(firmAddresses.budget);
     } else {
         assert(false); // if-else should be exhaustive and we should never reach here
@@ -49,3 +51,7 @@ function exceptionTargetFlagToAddress(FirmAddresses memory firmAddresses, uint8 
     }
 }
 
+// Only used for testing/scripts
+function targetFlag(SemaphoreTargetsFlag targetType) pure returns (address) {
+    return AddressUint8FlagsLib.toFlag(uint8(targetType), SEMAPHORE_TARGETS_FLAG_TYPE);
+}

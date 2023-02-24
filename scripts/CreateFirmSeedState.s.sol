@@ -8,8 +8,10 @@ import {Roles, IRoles, ISafe, ONLY_ROOT_ROLE_AS_ADMIN, ROOT_ROLE_ID} from "src/r
 import {Budget, TimeShiftLib, NO_PARENT_ID, NATIVE_ASSET} from "src/budget/Budget.sol";
 import {Captable, NO_CONVERSION_FLAG} from "src/captable/Captable.sol";
 import {Voting} from "src/voting/Voting.sol";
+import {Semaphore} from "src/semaphore/Semaphore.sol";
 import {TimeShift} from "src/budget/TimeShiftLib.sol";
 import {roleFlag} from "src/bases/test/lib/RolesAuthFlags.sol";
+import {targetFlag, SemaphoreTargetsFlag} from "src/factory/config/SemaphoreTargets.sol";
 import {bouncerFlag, EmbeddedBouncerType} from "src/captable/test/lib/BouncerFlags.sol";
 import {TestnetTokenFaucet} from "src/testnet/TestnetTokenFaucet.sol";
 
@@ -172,12 +174,29 @@ contract CreateFirmSeedState is Test {
             proposalThreshold: 1 // Any shareholder can start a vote
         });
 
+        FirmFactory.SemaphoreException[] memory semaphoreExceptions = new FirmFactory.SemaphoreException[](1);
+        semaphoreExceptions[0] = FirmFactory.SemaphoreException({
+            exceptionType: Semaphore.ExceptionType.Target,
+            target: targetFlag(SemaphoreTargetsFlag.Safe),
+            sig: bytes4(0)
+        });
+
+        // Semaphore config
+        FirmFactory.SemaphoreConfig memory semaphoreConfig = FirmFactory.SemaphoreConfig({
+            safeDefaultAllowAll: true,
+            safeAllowDelegateCalls: true,
+            votingAllowValueCalls: false,
+            semaphoreExceptions: semaphoreExceptions
+        });
+
         return FirmFactory.FirmConfig({
             withCaptableAndVoting: true,
+            withSemaphore: true,
             rolesConfig: FirmFactory.RolesConfig(roles),
             budgetConfig: FirmFactory.BudgetConfig(allowances),
             captableConfig: FirmFactory.CaptableConfig("Seed Company, Inc.", classes, issuances),
-            votingConfig: votingConfig
+            votingConfig: votingConfig,
+            semaphoreConfig: semaphoreConfig
         });
     }
 }
