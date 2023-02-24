@@ -52,8 +52,8 @@
             "blockNumber": 38227123
         },
         "v1.0.0": {
-            "firmFactory": "0xe214Ca721720019A81c889a59124F168Be632e94",
-            "modulesFactory": "0xA81B0328F83CF903242d60e29F028c8ad94594c1",
+            "firmFactory": "0xaC722c66312fC581Bc57Ee4141871Fe0bf22fA08",
+            "modulesFactory": "0x6232B169db8e0f5A1FD1eEC3B802aa3FFC430bB4",
             "blockNumber": 39648134
         }
     }
