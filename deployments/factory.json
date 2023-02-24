@@ -8,6 +8,11 @@
             "firmFactory": "0x5d48aBF587A188676059Fe2928BBd5E751464474",
             "modulesFactory": "0x03c9408Fc9B70b06b289E216e463d0928e376cd7",
             "blockNumber": 15845714
+        },
+        "v1.0.0": {
+            "firmFactory": "0xFbeC16EECD4558297FB3deA9934A162Ef76b14bd",
+            "modulesFactory": "0x8EBa12de23C24D27469a748904CA6ba16aff6803",
+            "blockNumber": 16696970
         }
     },
     "5": {
