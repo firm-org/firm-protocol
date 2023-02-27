@@ -27,6 +27,8 @@ Firm's new protocol for internet-native companies.
     - [Build and test](#build-and-test)
     - [Local environment](#local-environment)
   - [Live deployments](#live-deployments)
+  - [Audits](#audits)
+  - [License](#license)
   
 ## Background
 Firm protocol is our interpretation of what the software core of internet-native companies should be. The protocol is non-custodial and allows founders to create and run a company whose basic rules and rights are controlled and enforced with code.
@@ -83,3 +85,9 @@ Use `FirmFactoryDeploy` script to deploy to a live network (add flags to `forge 
 ```
 forge script scripts/FirmFactoryDeploy.s.sol:FirmFactoryDeployLive --broadcast --fork-url [JSON-RPC for network to deploy to]
 ```
+
+## Audits
+TODO
+
+## License
+[GPL 3.0][license-link]
