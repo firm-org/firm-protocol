@@ -1,4 +1,37 @@
+![Firm Protocol][banner-image]
+
+[![Version][version-badge]][version-link]
+[![Test CI][ci-badge]][ci-link]
+[![License][license-badge]][license-link]
+[![Documentation][docs-badge]][docs-link]
+
+[banner-image]: .github/img/Firm-banner.png
+[version-badge]: https://img.shields.io/github/v/release/firm-org/firm-protocol
+[version-link]: https://github.com/firm-org/firm-protocol/releases
+[ci-badge]: https://github.com/firm-org/firm-protocol/actions/workflows/ci.yml/badge.svg
+[ci-link]: https://github.com/firm-org/firm-protocol/actions/workflows/ci.yml
+[license-badge]: https://img.shields.io/github/license/firm-org/firm-protocol
+[license-link]: https://github.com/firm-org/firm-protocol/blob/master/LICENSE
+[docs-badge]: https://img.shields.io/badge/Firm%20Protocol-documentation-blue
+[docs-link]: https://docs.firm.org
+
 # Firm Protocol
+Firm's new protocol for internet-native companies.
+
+## Table of Contents
+- [Firm Protocol](#firm-protocol)
+  - [Table of Contents](#table-of-contents)
+  - [Background](#background)
+  - [Development](#development)
+    - [Install Foundry](#install-foundry)
+    - [Build and test](#build-and-test)
+    - [Local environment](#local-environment)
+  - [Live deployments](#live-deployments)
+  
+## Background
+Firm protocol is our interpretation of what the software core of internet-native companies should be. The protocol is non-custodial and allows founders to create and run a company whose basic rules and rights are controlled and enforced with code.
+
+See the full [protocol documentation][docs-link].
 
 ## Development
 
