@@ -3,11 +3,11 @@
 <div align="center">
   <!-- Releases -->
   <a href="https://github.com/firm-org/firm-protocol/releases">
-    <img src="https://img.shields.io/github/v/release/firm-org/firm-protocol?style=flat-square" alt="Version" />
+    <img src="https://img.shields.io/github/v/release/firm-org/firm-protocol" alt="Version" />
   </a>
   <!-- Security -->
-  <a href="audits">
-    <img src="https://img.shields.io/badge/security-audited-green?style=flat-square" alt="Security" />
+  <a href="https://docs.firm.org/firm-protocol-v1/security">
+    <img src="https://img.shields.io/badge/security-audited-green" alt="Security" />
   </a>
   <!-- CI -->
   <a href="https://github.com/firm-org/firm-protocol/actions/workflows/ci.yml">
@@ -34,11 +34,6 @@
     </a>
   </h4>
 </div>
-
-[![Version][version-badge]][version-link]
-[![Test CI][ci-badge]][ci-link]
-[![License][license-badge]][license-link]
-[![Documentation][docs-badge]][docs-link]
 
 [banner-image]: .github/img/Firm-banner.png
 [version-badge]: https://img.shields.io/github/v/release/firm-org/firm-protocol
@@ -110,7 +105,7 @@ forge script scripts/FirmFactoryDeploy.s.sol:FirmFactoryDeployLive --broadcast -
 ```
 
 ## Audits
-TODO
+Firm protocol v1 has been audited prior to release. See [audits](audits) directory.
 
 ## License
 [GPL 3.0][license-link]

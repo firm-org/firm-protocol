@@ -1,6 +1,6 @@
 on: [push]
 
-name: Firm Procotol CI
+name: CI
 
 jobs:
   check:
