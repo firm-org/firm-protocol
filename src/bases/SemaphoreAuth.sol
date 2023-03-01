@@ -6,6 +6,7 @@ import {SafeAware} from "./SafeAware.sol";
 import {ISemaphore} from "../semaphore/interfaces/ISemaphore.sol";
 
 ISemaphore constant NO_SEMAPHORE = ISemaphore(address(0));
+
 abstract contract SemaphoreAuth is SafeAware {
     // SEMAPHORE_SLOT = keccak256("firm.semaphoreauth.semaphore") - 1
     bytes32 internal constant SEMAPHORE_SLOT = 0x3e4ab72c2ecd29625ea852b1de3f6381681f0f5fb2b0bab359fabdd96dbc1b94;
@@ -31,17 +32,21 @@ abstract contract SemaphoreAuth is SafeAware {
 
     function _semaphoreCheckCall(address target, uint256 value, bytes memory data, bool isDelegateCall) internal view {
         ISemaphore semaphore_ = semaphore();
-        if (semaphore_ != NO_SEMAPHORE &&
-            !semaphore_.canPerform(address(this), target, value, data, isDelegateCall)
-        ) {
+        if (semaphore_ != NO_SEMAPHORE && !semaphore_.canPerform(address(this), target, value, data, isDelegateCall)) {
             revert ISemaphore.SemaphoreDisallowed();
         }
     }
 
-    function _semaphoreCheckCalls(address[] memory targets, uint256[] memory values, bytes[] memory datas, bool isDelegateCall) internal view {
+    function _semaphoreCheckCalls(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory datas,
+        bool isDelegateCall
+    ) internal view {
         ISemaphore semaphore_ = semaphore();
-        if (semaphore_ != NO_SEMAPHORE &&
-            !semaphore_.canPerformMany(address(this), targets, values, datas, isDelegateCall)
+        if (
+            semaphore_ != NO_SEMAPHORE
+                && !semaphore_.canPerformMany(address(this), targets, values, datas, isDelegateCall)
         ) {
             revert ISemaphore.SemaphoreDisallowed();
         }

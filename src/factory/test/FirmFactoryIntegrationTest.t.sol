@@ -257,11 +257,16 @@ contract FirmFactoryIntegrationTest is FirmTest {
         internal
         returns (GnosisSafe safe, Budget budget, Roles roles, Voting voting, Captable captable)
     {
-        (FirmFactory.SafeConfig memory safeConfig, FirmFactory.FirmConfig memory firmConfig) = firmConfigWithCaptableVotingAndAllowance();
+        (FirmFactory.SafeConfig memory safeConfig, FirmFactory.FirmConfig memory firmConfig) =
+            firmConfigWithCaptableVotingAndAllowance();
         return getFirmAddressesWithCaptableVoting(factory.createFirm(safeConfig, firmConfig, 1));
     }
 
-    function firmConfigWithCaptableVotingAndAllowance() internal view returns (FirmFactory.SafeConfig memory safeConfig, FirmFactory.FirmConfig memory firmConfig) {
+    function firmConfigWithCaptableVotingAndAllowance()
+        internal
+        view
+        returns (FirmFactory.SafeConfig memory safeConfig, FirmFactory.FirmConfig memory firmConfig)
+    {
         address[] memory safeOwners = new address[](1);
         safeOwners[0] = address(this);
         safeConfig = FirmFactory.SafeConfig(safeOwners, 1);
@@ -306,8 +311,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
 
     function testExecutingProposalsFromVoting() public {
         vm.roll(1);
-        (GnosisSafe safe, Budget budget,, Voting voting, Captable captable) =
-            createFirmWithCaptableVotingAndAllowance();
+        (GnosisSafe safe, Budget budget,, Voting voting, Captable captable) = createFirmWithCaptableVotingAndAllowance();
         token.mint(address(safe), 100);
 
         (EquityToken equityToken,,,,,,,,) = captable.classes(0);
@@ -333,24 +337,23 @@ contract FirmFactoryIntegrationTest is FirmTest {
     }
 
     function testSemaphoreBalancingPowerBetweenSafeAndVoting() public {
-        (FirmFactory.SafeConfig memory safeConfig, FirmFactory.FirmConfig memory firmConfig) = firmConfigWithCaptableVotingAndAllowance();
+        (FirmFactory.SafeConfig memory safeConfig, FirmFactory.FirmConfig memory firmConfig) =
+            firmConfigWithCaptableVotingAndAllowance();
 
         FirmFactory.SemaphoreException[] memory semaphoreExceptions = new FirmFactory.SemaphoreException[](2);
         // All upgrade calls (to any module) and all calls to the safe are exceptions (can only be done by Voting)
-        semaphoreExceptions[0] = FirmFactory.SemaphoreException(Semaphore.ExceptionType.Sig, address(0), EIP1967Upgradeable.upgrade.selector);
-        semaphoreExceptions[1] = FirmFactory.SemaphoreException(Semaphore.ExceptionType.Target, semaphoreTargetFlag(SemaphoreTargetsFlag.Safe), bytes4(0));
+        semaphoreExceptions[0] =
+            FirmFactory.SemaphoreException(Semaphore.ExceptionType.Sig, address(0), EIP1967Upgradeable.upgrade.selector);
+        semaphoreExceptions[1] = FirmFactory.SemaphoreException(
+            Semaphore.ExceptionType.Target, semaphoreTargetFlag(SemaphoreTargetsFlag.Safe), bytes4(0)
+        );
 
         firmConfig.withSemaphore = true;
         firmConfig.semaphoreConfig.safeDefaultAllowAll = true;
         firmConfig.semaphoreConfig.semaphoreExceptions = semaphoreExceptions;
 
-        (
-            GnosisSafe safe,
-            ,
-            Roles roles,
-            Voting voting,
-            Captable captable,
-        ) = getFirmAddressesWithSemaphore(factory.createFirm(safeConfig, firmConfig, 1));
+        (GnosisSafe safe,, Roles roles, Voting voting, Captable captable,) =
+            getFirmAddressesWithSemaphore(factory.createFirm(safeConfig, firmConfig, 1));
 
         (EquityToken equityToken,,,,,,,,) = captable.classes(0);
 
@@ -372,10 +375,14 @@ contract FirmFactoryIntegrationTest is FirmTest {
 
         // Safe cannot do actions on the safe because of the exception
         vm.expectRevert(abi.encodeWithSelector(ISemaphore.SemaphoreDisallowed.selector));
-        _executeSafeMultisig(safe, address(safe), 0, abi.encodeCall(OwnerManager.addOwnerWithThreshold, (shareholder1, 1)));
+        _executeSafeMultisig(
+            safe, address(safe), 0, abi.encodeCall(OwnerManager.addOwnerWithThreshold, (shareholder1, 1))
+        );
 
         // Voting can do actions on the safe because of the exception
-        _createAndExecuteProposal(voting, address(safe), 0, abi.encodeCall(OwnerManager.addOwnerWithThreshold, (shareholder1, 1)));
+        _createAndExecuteProposal(
+            voting, address(safe), 0, abi.encodeCall(OwnerManager.addOwnerWithThreshold, (shareholder1, 1))
+        );
         assertTrue(safe.isOwner(shareholder1));
 
         // Safe can do any other actions
@@ -411,14 +418,7 @@ contract FirmFactoryIntegrationTest is FirmTest {
     function _executeSafeMultisig(GnosisSafe safe, address to, uint256 value, bytes memory data) internal {
         // Safe signature for msg.sender check: r = sender addr, s = 0, v = 1
         bytes memory signature = abi.encodePacked(uint256(uint160(bytes20(address(this)))), uint256(0), uint8(1));
-        safe.execTransaction(
-            to,
-            value,
-            data,
-            Enum.Operation.Call,
-            0, 0, 0, address(0), payable(0),
-            signature
-        );
+        safe.execTransaction(to, value, data, Enum.Operation.Call, 0, 0, 0, address(0), payable(0), signature);
     }
 
     function createBarebonesFirm(address owner) internal returns (GnosisSafe safe, Budget budget, Roles roles) {

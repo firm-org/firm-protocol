@@ -145,11 +145,12 @@ contract CaptableInitTest is BaseCaptableTest {
 
         for (uint256 i = 0; i < CLASSES_LIMIT; i++) {
             vm.prank(address(safe));
-            (uint256 classId, EquityToken token) = captable.createClass("", "", maxAuthorizable, NO_CONVERSION_FLAG, maxVotingWeight, ALLOW_ALL_BOUNCER);
+            (uint256 classId, EquityToken token) =
+                captable.createClass("", "", maxAuthorizable, NO_CONVERSION_FLAG, maxVotingWeight, ALLOW_ALL_BOUNCER);
 
             vm.prank(address(safe));
             captable.issue(HOLDER1, classId, maxAuthorizable);
-            
+
             vm.prank(address(HOLDER1));
             token.delegate(HOLDER1);
         }

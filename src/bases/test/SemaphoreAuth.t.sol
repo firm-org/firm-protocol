@@ -19,7 +19,11 @@ contract SemaphoreAuthTest is FirmTest {
     function setUp() public {
         safe = new SafeStub();
         semaphore = new SemaphoreStub();
-        semaphoreAuth = SemaphoreAuthMock(createProxy(new SemaphoreAuthMock(), abi.encodeCall(SemaphoreAuthMock.initialize, (ISafe(payable(safe)), semaphore))));
+        semaphoreAuth = SemaphoreAuthMock(
+            createProxy(
+                new SemaphoreAuthMock(), abi.encodeCall(SemaphoreAuthMock.initialize, (ISafe(payable(safe)), semaphore))
+            )
+        );
     }
 
     function testInitialState() public {
@@ -80,7 +84,8 @@ contract SemaphoreAuthTest is FirmTest {
         semaphoreAuth.semaphoreCheckCalls(targets, values, datas, false);
 
         // We filter some target (the one causing the revert) out
-        (address[] memory filteredTargets, uint256[] memory filteredValues, bytes[] memory filteredDatas) = semaphoreAuth.filterCallsToTarget(someTarget, targets, values, datas);
+        (address[] memory filteredTargets, uint256[] memory filteredValues, bytes[] memory filteredDatas) =
+            semaphoreAuth.filterCallsToTarget(someTarget, targets, values, datas);
 
         // And now it doesn't revert
         semaphoreAuth.semaphoreCheckCalls(filteredTargets, filteredValues, filteredDatas, false);
@@ -105,7 +110,8 @@ contract SemaphoreAuthTest is FirmTest {
         datas[0] = bytes("data1");
         datas[1] = bytes("data2");
 
-        (address[] memory filteredTargets, uint256[] memory filteredValues, bytes[] memory filteredDatas) = semaphoreAuth.filterCallsToTarget(someTarget, targets, values, datas);
+        (address[] memory filteredTargets, uint256[] memory filteredValues, bytes[] memory filteredDatas) =
+            semaphoreAuth.filterCallsToTarget(someTarget, targets, values, datas);
 
         assertEq(filteredTargets.length, 1);
         assertEq(filteredTargets[0], someOtherTarget);
@@ -130,7 +136,8 @@ contract SemaphoreAuthTest is FirmTest {
         datas[0] = bytes("data1");
         datas[1] = bytes("data2");
 
-        (address[] memory filteredTargets, uint256[] memory filteredValues, bytes[] memory filteredDatas) = semaphoreAuth.filterCallsToTarget(account("Another target"), targets, values, datas);
+        (address[] memory filteredTargets, uint256[] memory filteredValues, bytes[] memory filteredDatas) =
+            semaphoreAuth.filterCallsToTarget(account("Another target"), targets, values, datas);
 
         assertEq(filteredTargets.length, 2);
         assertEq(filteredTargets[0], someTarget);
@@ -158,7 +165,8 @@ contract SemaphoreAuthTest is FirmTest {
         datas[0] = bytes("data1");
         datas[1] = bytes("data2");
 
-        (address[] memory filteredTargets, uint256[] memory filteredValues, bytes[] memory filteredDatas) = semaphoreAuth.filterCallsToTarget(someTarget, targets, values, datas);
+        (address[] memory filteredTargets, uint256[] memory filteredValues, bytes[] memory filteredDatas) =
+            semaphoreAuth.filterCallsToTarget(someTarget, targets, values, datas);
 
         assertEq(filteredTargets.length, 0);
         assertEq(filteredValues.length, 0);

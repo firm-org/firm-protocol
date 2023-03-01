@@ -14,12 +14,17 @@ contract SemaphoreAuthMock is FirmBase, SemaphoreAuth {
     }
 
     // Make ISemaphore internal functions public for testing
-    
+
     function semaphoreCheckCall(address target, uint256 value, bytes memory data, bool isDelegateCall) public view {
         _semaphoreCheckCall(target, value, data, isDelegateCall);
     }
 
-    function semaphoreCheckCalls(address[] memory targets, uint256[] memory values, bytes[] memory datas, bool isDelegateCall) public view {
+    function semaphoreCheckCalls(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory datas,
+        bool isDelegateCall
+    ) public view {
         _semaphoreCheckCalls(targets, values, datas, isDelegateCall);
     }
 

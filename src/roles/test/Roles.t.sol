@@ -96,7 +96,8 @@ contract RolesTest is FirmTest {
 
         // We set all initial existing roles as admins of the new role to test that
         // all existing roles can be admins of the new role
-        bytes32 roleAdmins = ONLY_ROOT_ROLE_AS_ADMIN | bytes32(1 << ROLE_MANAGER_ROLE_ID) | bytes32(1 << SAFE_OWNER_ROLE_ID);
+        bytes32 roleAdmins =
+            ONLY_ROOT_ROLE_AS_ADMIN | bytes32(1 << ROLE_MANAGER_ROLE_ID) | bytes32(1 << SAFE_OWNER_ROLE_ID);
         for (uint256 i = 0; i < 253; i++) {
             uint8 roleId = roles.createRole(roleAdmins, "");
             // We add the new role as an admin to all roles to be created

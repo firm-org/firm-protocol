@@ -24,7 +24,14 @@ contract Voting is FirmBase, SafeModule, SemaphoreAuth, OZGovernor {
     constructor() {
         // Initialize with impossible values in constructor so impl base cannot be used
         initialize(
-            IMPL_INIT_NOOP_SAFE, NO_SEMAPHORE, ICaptableVotes(IMPL_INIT_NOOP_ADDR), quorumDenominator(), 0, 1, 1, IMPL_INIT_NOOP_ADDR
+            IMPL_INIT_NOOP_SAFE,
+            NO_SEMAPHORE,
+            ICaptableVotes(IMPL_INIT_NOOP_ADDR),
+            quorumDenominator(),
+            0,
+            1,
+            1,
+            IMPL_INIT_NOOP_ADDR
         );
     }
 
@@ -56,11 +63,8 @@ contract Voting is FirmBase, SafeModule, SemaphoreAuth, OZGovernor {
     ) public override returns (uint256) {
         // Since Voting config functions can only be called by voting itself, we need to filter them out
         // to avoid locking the voting module. Semaphore checks do not apply to these calls.
-        (
-            address[] memory checkingTargets,
-            uint256[] memory checkingValues,
-            bytes[] memory checkingCalldatas
-        ) = _filterCallsToTarget(address(this), targets, values, calldatas);
+        (address[] memory checkingTargets, uint256[] memory checkingValues, bytes[] memory checkingCalldatas) =
+            _filterCallsToTarget(address(this), targets, values, calldatas);
 
         // Will revert if one of the external calls in the proposal is not allowed by the semaphore
         _semaphoreCheckCalls(checkingTargets, checkingValues, checkingCalldatas, false);
