@@ -40,7 +40,7 @@ contract CreateFirmSeedState is Test {
             factory = FirmFactory(0xaC722c66312fC581Bc57Ee4141871Fe0bf22fA08); // v1.0
         } else if (block.chainid == 31337) { // anvil
             faucet = (new TestnetFaucetDeploy()).run();
-            factory = FirmFactory(0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE);
+            factory = FirmFactory(0x3Aa5ebB10DC797CAC828524e59A333d0A371443c);
             
             // On local env, deploy the factory if it hasn't been deployed yet
             if (address(factory).code.length == 0) {
