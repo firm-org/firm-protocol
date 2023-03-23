@@ -47,7 +47,7 @@ function exceptionTargetFlagToAddress(FirmAddresses memory firmAddresses, uint8 
         return address(firmAddresses.budget);
     } else {
         assert(false); // if-else should be exhaustive and we should never reach here
-        return address(0); // silence compiler warning, unreacheable 
+        return address(0); // silence compiler warning, unreacheable
     }
 }
 

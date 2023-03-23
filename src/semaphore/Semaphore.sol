@@ -27,7 +27,6 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
         DefaultMode defaultMode;
         bool allowDelegateCalls;
         bool allowValueCalls;
-        
         // Counters
         uint64 numTotalExceptions;
         uint32 numSigExceptions;
@@ -45,20 +44,22 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
         bool add;
         ExceptionType exceptionType;
         address caller;
-        address target;  // only used for Target and TargetSig (ignored for Sig)
-        bytes4 sig;      // only used for Sig and TargetSig (ignored for Target)
+        address target; // only used for Target and TargetSig (ignored for Sig)
+        bytes4 sig; // only used for Sig and TargetSig (ignored for Target)
     }
 
     // caller => state
-    mapping (address => SemaphoreState) public state;
+    mapping(address => SemaphoreState) public state;
     // caller => sig => bool (whether executing functions with this sig on any target is an exception to caller's defaultMode)
-    mapping (address => mapping (bytes4 => bool)) public sigExceptions;
+    mapping(address => mapping(bytes4 => bool)) public sigExceptions;
     // caller => target => bool (whether calling this target is an exception to caller's defaultMode)
-    mapping (address => mapping (address => bool)) public targetExceptions;
+    mapping(address => mapping(address => bool)) public targetExceptions;
     // caller => target => sig => bool (whether executing functions with this sig on this target is an exception to caller's defaultMode)
-    mapping (address => mapping (address => mapping (bytes4 => bool))) public targetSigExceptions;
+    mapping(address => mapping(address => mapping(bytes4 => bool))) public targetSigExceptions;
 
-    event SemaphoreStateSet(address indexed caller, DefaultMode defaultMode, bool allowDelegateCalls, bool allowValueCalls);
+    event SemaphoreStateSet(
+        address indexed caller, DefaultMode defaultMode, bool allowDelegateCalls, bool allowValueCalls
+    );
     event ExceptionSet(address indexed caller, bool added, ExceptionType exceptionType, address target, bytes4 sig);
 
     error ExceptionAlreadySet(ExceptionInput exception);
@@ -89,11 +90,16 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
      * @param allowDelegateCalls Whether this caller is allowed to perform delegatecalls
      * @param allowValueCalls Whether this caller is allowed to perform calls with non-zero value (native asset transfers)
      */
-    function setSemaphoreState(address caller, DefaultMode defaultMode, bool allowDelegateCalls, bool allowValueCalls) external onlySafe {
+    function setSemaphoreState(address caller, DefaultMode defaultMode, bool allowDelegateCalls, bool allowValueCalls)
+        external
+        onlySafe
+    {
         _setSemaphoreState(caller, defaultMode, allowDelegateCalls, allowValueCalls);
     }
 
-    function _setSemaphoreState(address caller, DefaultMode defaultMode, bool allowDelegateCalls, bool allowValueCalls) internal {
+    function _setSemaphoreState(address caller, DefaultMode defaultMode, bool allowDelegateCalls, bool allowValueCalls)
+        internal
+    {
         SemaphoreState storage s = state[caller];
         s.defaultMode = defaultMode;
         s.allowDelegateCalls = allowDelegateCalls;
@@ -151,11 +157,14 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
     // CALL CHECKS (ISEMAPHORE)
     ////////////////////////////////////////////////////////////////////////////////
 
-    function canPerform(address caller, address target, uint256 value, bytes calldata data, bool isDelegateCall) public view returns (bool) {
+    function canPerform(address caller, address target, uint256 value, bytes calldata data, bool isDelegateCall)
+        public
+        view
+        returns (bool)
+    {
         SemaphoreState memory s = state[caller];
 
-        if ((isDelegateCall && !s.allowDelegateCalls) ||
-            (value > 0 && !s.allowValueCalls)) {
+        if ((isDelegateCall && !s.allowDelegateCalls) || (value > 0 && !s.allowValueCalls)) {
             return false;
         }
 
@@ -165,17 +174,23 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
             : s.defaultMode == DefaultMode.Allow;
     }
 
-    function canPerformMany(address caller, address[] calldata targets, uint256[] calldata values, bytes[] calldata calldatas, bool isDelegateCall) public view returns (bool) {
+    function canPerformMany(
+        address caller,
+        address[] calldata targets,
+        uint256[] calldata values,
+        bytes[] calldata calldatas,
+        bool isDelegateCall
+    ) public view returns (bool) {
         if (targets.length != values.length || targets.length != calldatas.length) {
             return false;
         }
-        
+
         SemaphoreState memory s = state[caller];
 
         if (isDelegateCall && !s.allowDelegateCalls) {
             return false;
         }
-        
+
         for (uint256 i = 0; i < targets.length;) {
             if (values[i] > 0 && !s.allowValueCalls) {
                 return false;
@@ -197,16 +212,19 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
         return true;
     }
 
-    function isException(SemaphoreState memory s, address from, address target, bytes calldata data) internal view returns (bool) {
+    function isException(SemaphoreState memory s, address from, address target, bytes calldata data)
+        internal
+        view
+        returns (bool)
+    {
         if (s.numTotalExceptions == 0) {
             return false;
         }
 
         bytes4 sig = data.length >= 4 ? bytes4(data[:4]) : bytes4(0);
-        return
-            (s.numSigExceptions > 0 && sigExceptions[from][sig]) ||
-            (s.numTargetExceptions > 0 && targetExceptions[from][target]) ||
-            (s.numTargetSigExceptions > 0 && targetSigExceptions[from][target][sig]);
+        return (s.numSigExceptions > 0 && sigExceptions[from][sig])
+            || (s.numTargetExceptions > 0 && targetExceptions[from][target])
+            || (s.numTargetSigExceptions > 0 && targetSigExceptions[from][target][sig]);
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -218,7 +236,13 @@ contract Semaphore is FirmBase, BaseGuard, ISemaphore {
         uint256 value,
         bytes calldata data,
         Enum.Operation operation,
-        uint256, uint256, uint256, address, address payable, bytes memory, address
+        uint256,
+        uint256,
+        uint256,
+        address,
+        address payable,
+        bytes memory,
+        address
     ) external view {
         if (!canPerform(msg.sender, to, value, data, operation == Enum.Operation.DelegateCall)) {
             revert ISemaphore.SemaphoreDisallowed();

@@ -67,7 +67,7 @@ contract UpgradeableModuleProxyFactory is Ownable {
             revert FailedInitialization();
         }
     }
-    
+
     /**
      * @dev Proxy EVM code from factory/proxy-asm generated with ETK
      */

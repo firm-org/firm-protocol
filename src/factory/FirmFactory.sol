@@ -15,12 +15,17 @@ import {FirmRelayer} from "../metatx/FirmRelayer.sol";
 
 import {UpgradeableModuleProxyFactory, LATEST_VERSION} from "./UpgradeableModuleProxyFactory.sol";
 import {AddressUint8FlagsLib} from "../bases/utils/AddressUint8FlagsLib.sol";
-import {FirmAddresses, SemaphoreTargetsFlag, SEMAPHORE_TARGETS_FLAG_TYPE, exceptionTargetFlagToAddress} from "./config/SemaphoreTargets.sol";
+import {
+    FirmAddresses,
+    SemaphoreTargetsFlag,
+    SEMAPHORE_TARGETS_FLAG_TYPE,
+    exceptionTargetFlagToAddress
+} from "./config/SemaphoreTargets.sol";
 
-string constant ROLES_MODULE_ID =     "org.firm.roles";
-string constant BUDGET_MODULE_ID =    "org.firm.budget";
-string constant CAPTABLE_MODULE_ID =  "org.firm.captable";
-string constant VOTING_MODULE_ID =    "org.firm.voting";
+string constant ROLES_MODULE_ID = "org.firm.roles";
+string constant BUDGET_MODULE_ID = "org.firm.budget";
+string constant CAPTABLE_MODULE_ID = "org.firm.captable";
+string constant VOTING_MODULE_ID = "org.firm.voting";
 string constant SEMAPHORE_MODULE_ID = "org.firm.semaphore";
 
 contract FirmFactory {
@@ -365,7 +370,10 @@ contract FirmFactory {
             moduleFactory.deployUpgradeableModule(
                 SEMAPHORE_MODULE_ID,
                 LATEST_VERSION,
-                abi.encodeCall(Semaphore.initialize, (ISafe(payable(address(this))), config.safeAllowDelegateCalls, address(relayer))),
+                abi.encodeCall(
+                    Semaphore.initialize,
+                    (ISafe(payable(address(this))), config.safeAllowDelegateCalls, address(relayer))
+                ),
                 nonce
             )
         );
@@ -376,10 +384,16 @@ contract FirmFactory {
         Voting voting = firmAddresses.voting;
 
         if (!config.safeDefaultAllowAll) {
-            semaphore.setSemaphoreState(address(voting), Semaphore.DefaultMode.Allow, false, config.votingAllowValueCalls);
-            semaphore.setSemaphoreState(address(this), Semaphore.DefaultMode.Disallow, config.safeAllowDelegateCalls, true);
+            semaphore.setSemaphoreState(
+                address(voting), Semaphore.DefaultMode.Allow, false, config.votingAllowValueCalls
+            );
+            semaphore.setSemaphoreState(
+                address(this), Semaphore.DefaultMode.Disallow, config.safeAllowDelegateCalls, true
+            );
         } else {
-            semaphore.setSemaphoreState(address(voting), Semaphore.DefaultMode.Disallow, false, config.votingAllowValueCalls);
+            semaphore.setSemaphoreState(
+                address(voting), Semaphore.DefaultMode.Disallow, false, config.votingAllowValueCalls
+            );
             // Safe state is the same that was already set in the initializer, no need to set again
         }
 
@@ -395,8 +409,10 @@ contract FirmFactory {
                 target = exceptionTargetFlagToAddress(firmAddresses, exception.target.flagValue());
             }
 
-            exceptions[i * 2] = Semaphore.ExceptionInput(true, exception.exceptionType, address(voting), target, exception.sig);
-            exceptions[i * 2 + 1] = Semaphore.ExceptionInput(true, exception.exceptionType, address(this), target, exception.sig);
+            exceptions[i * 2] =
+                Semaphore.ExceptionInput(true, exception.exceptionType, address(voting), target, exception.sig);
+            exceptions[i * 2 + 1] =
+                Semaphore.ExceptionInput(true, exception.exceptionType, address(this), target, exception.sig);
 
             unchecked {
                 i++;

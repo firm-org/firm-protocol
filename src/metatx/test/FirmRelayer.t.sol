@@ -107,7 +107,8 @@ contract FirmRelayerTest is FirmTest {
     function testExecutionCallRevertsAllCalls() public {
         (address otherUser, uint256 otherUserPk) = accountAndKey("other user");
 
-        FirmRelayer.Call memory call1 = _defaultCallWithData(address(target), abi.encodeCall(target.onlySender, (otherUser)));
+        FirmRelayer.Call memory call1 =
+            _defaultCallWithData(address(target), abi.encodeCall(target.onlySender, (otherUser)));
         FirmRelayer.Call memory call2 = _defaultCallWithData(address(target), abi.encodeCall(target.onlySender, (USER)));
 
         FirmRelayer.RelayRequest memory request = _defaultRequestWithCall(call1);
@@ -119,8 +120,7 @@ contract FirmRelayerTest is FirmTest {
 
         bytes memory targetError = abi.encodeWithSelector(RelayTarget.BadSender.selector, USER, otherUser);
         assertFailureEvent(
-            otherUser,
-            abi.encodeWithSelector(FirmRelayer.CallExecutionFailed.selector, 1, address(target), targetError)
+            otherUser, abi.encodeWithSelector(FirmRelayer.CallExecutionFailed.selector, 1, address(target), targetError)
         );
         relayer.relay(request, _signPacked(hash, otherUserPk));
 
@@ -140,7 +140,10 @@ contract FirmRelayerTest is FirmTest {
 
         bytes32 hash = relayer.requestTypedDataHash(request);
 
-        assertFailureEvent(USER, abi.encodeWithSelector(FirmRelayer.UnexpectedReturnValue.selector, 0, actualReturnValue, badExpectedValue));
+        assertFailureEvent(
+            USER,
+            abi.encodeWithSelector(FirmRelayer.UnexpectedReturnValue.selector, 0, actualReturnValue, badExpectedValue)
+        );
         relayer.relay(request, _signPacked(hash, USER_PK));
 
         // Nonce should have been incremented
@@ -155,7 +158,7 @@ contract FirmRelayerTest is FirmTest {
         bytes32 hash = relayer.requestTypedDataHash(request);
         assertFailureEvent(USER, abi.encodeWithSelector(FirmRelayer.AssertionPositionOutOfBounds.selector, 0, 32));
         relayer.relay(request, _signPacked(hash, USER_PK));
-        
+
         // Nonce should have been incremented
         assertEq(relayer.getNonce(USER), 1);
     }
@@ -180,13 +183,13 @@ contract FirmRelayerTest is FirmTest {
         bytes memory sig = _signPacked(relayer.requestTypedDataHash(request), USER_PK);
 
         vm.expectRevert(abi.encodeWithSelector(FirmRelayer.InsufficientGas.selector));
-        relayer.relay{ gas: call.gas - 100 }(request, sig);
+        relayer.relay{gas: call.gas - 100}(request, sig);
 
         // Nonce not incremented, can relay the same request again
         assertEq(relayer.getNonce(USER), 0);
 
         // Relay should succeed with enough gas (account for buffer)
-        relayer.relay{ gas: call.gas + 40000 }(request, sig);
+        relayer.relay{gas: call.gas + 40000}(request, sig);
         assertEq(target.lastSender(), USER);
     }
 
@@ -248,14 +251,10 @@ contract FirmRelayerTest is FirmTest {
     }
 
     event RelayExecutionFailed(address indexed relayer, address indexed signer, uint256 nonce, bytes revertData);
+
     function assertFailureEvent(address sender, bytes memory revertData) internal {
         vm.expectEmit(true, true, true, true, address(relayer));
-        emit RelayExecutionFailed(
-            address(this),
-            sender,
-            0,
-            revertData
-        );
+        emit RelayExecutionFailed(address(this), sender, 0, revertData);
     }
 
     // For this test we need to fix both the address of FirmRelayer and chainId so that the hash

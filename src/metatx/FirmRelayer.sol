@@ -151,7 +151,9 @@ contract FirmRelayer is EIP712 {
         emit SelfRelayed(msg.sender, calls.length);
     }
 
-    function __externalSelfCall_execute(address asSender, Call[] calldata calls, Assertion[] calldata assertions) external {
+    function __externalSelfCall_execute(address asSender, Call[] calldata calls, Assertion[] calldata assertions)
+        external
+    {
         if (msg.sender != address(this)) {
             revert BadExecutionContext();
         }

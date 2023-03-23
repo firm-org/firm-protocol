@@ -4,8 +4,8 @@ pragma solidity 0.8.17;
 import {ISemaphore} from "src/semaphore/interfaces/ISemaphore.sol";
 
 contract SemaphoreStub is ISemaphore {
-    mapping (address => bool) public disallowedTargets;
-    mapping (address => bool) public disallowedCallers;
+    mapping(address => bool) public disallowedTargets;
+    mapping(address => bool) public disallowedCallers;
 
     function setDisallowed(address addr, bool targetOrCaller) external {
         if (targetOrCaller) {
@@ -25,7 +25,13 @@ contract SemaphoreStub is ISemaphore {
         return true;
     }
 
-    function canPerformMany(address caller, address[] calldata targets, uint256[] calldata values, bytes[] calldata calldatas, bool isDelegateCall) external view returns (bool) {
+    function canPerformMany(
+        address caller,
+        address[] calldata targets,
+        uint256[] calldata values,
+        bytes[] calldata calldatas,
+        bool isDelegateCall
+    ) external view returns (bool) {
         for (uint256 i = 0; i < targets.length; i++) {
             if (!canPerform(caller, targets[i], values[i], calldatas[i], isDelegateCall)) {
                 return false;

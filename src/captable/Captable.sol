@@ -347,7 +347,7 @@ contract Captable is FirmBase, BouncerChecker, ICaptableVotes {
         if (classBalance == 0) {
             revert AccountIsNonHolder(account, classId);
         }
-        
+
         _setController(account, classId, classBalance, controller, controllerParams);
     }
 

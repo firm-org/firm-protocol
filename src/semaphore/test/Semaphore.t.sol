@@ -14,7 +14,8 @@ contract SemaphoreTest is FirmTest {
 
     function setUp() public {
         safe = new SafeStub();
-        semaphore = Semaphore(createProxy(new Semaphore(), abi.encodeCall(Semaphore.initialize, (safe, true, address(0)))));
+        semaphore =
+            Semaphore(createProxy(new Semaphore(), abi.encodeCall(Semaphore.initialize, (safe, true, address(0)))));
     }
 
     function testInitialState(address target, uint256 value, bytes memory data) public {
@@ -51,12 +52,8 @@ contract SemaphoreTest is FirmTest {
         vm.assume(value > 0);
         vm.prank(address(safe));
         semaphore.setSemaphoreState(address(safe), Semaphore.DefaultMode.Disallow, false, false);
-        (
-            Semaphore.DefaultMode defaultMode,
-            bool allowsDelegateCalls,
-            bool allowsValueCalls,
-            ,,,
-        ) = semaphore.state(address(safe));
+        (Semaphore.DefaultMode defaultMode, bool allowsDelegateCalls, bool allowsValueCalls,,,,) =
+            semaphore.state(address(safe));
         assertEq(uint8(defaultMode), uint8(Semaphore.DefaultMode.Disallow));
         assertFalse(allowsDelegateCalls);
         assertFalse(allowsValueCalls);
@@ -66,14 +63,7 @@ contract SemaphoreTest is FirmTest {
 
         vm.prank(address(safe));
         semaphore.setSemaphoreState(OTHER_CALLER, Semaphore.DefaultMode.Allow, true, true);
-        (
-            defaultMode,
-            allowsDelegateCalls,
-            allowsValueCalls,
-            ,
-            ,
-            ,
-        ) = semaphore.state(OTHER_CALLER);
+        (defaultMode, allowsDelegateCalls, allowsValueCalls,,,,) = semaphore.state(OTHER_CALLER);
         assertEq(uint8(defaultMode), uint8(Semaphore.DefaultMode.Allow));
         assertTrue(allowsDelegateCalls);
         assertTrue(allowsValueCalls);
@@ -175,7 +165,7 @@ contract SemaphoreTest is FirmTest {
     function testCanRemoveExceptions() public {
         address anyTarget = account("Any target");
         bytes4 sig = this.testCanSetSigExceptions.selector;
-        
+
         vm.startPrank(address(safe));
 
         Semaphore.ExceptionInput[] memory exceptions = new Semaphore.ExceptionInput[](2);
@@ -194,17 +184,11 @@ contract SemaphoreTest is FirmTest {
         assertCanPerform(true, address(safe), anyTarget, 0, abi.encodeWithSelector(sig), false);
         assertCanPerform(false, OTHER_CALLER, anyTarget, 0, abi.encodeWithSelector(sig), false);
 
-        (,,,
-            uint64 numTotalExceptionsSafe,
-            uint32 numSigExceptionsSafe,
-        ,) = semaphore.state(address(safe));
+        (,,, uint64 numTotalExceptionsSafe, uint32 numSigExceptionsSafe,,) = semaphore.state(address(safe));
         assertEq(numTotalExceptionsSafe, 0);
         assertEq(numSigExceptionsSafe, 0);
-        
-        (,,,
-            uint64 numTotalExceptionsOther,
-            uint32 numSigExceptionsOther,
-        ,) = semaphore.state(OTHER_CALLER);
+
+        (,,, uint64 numTotalExceptionsOther, uint32 numSigExceptionsOther,,) = semaphore.state(OTHER_CALLER);
         assertEq(numTotalExceptionsOther, 0);
         assertEq(numSigExceptionsOther, 0);
 
@@ -222,9 +206,12 @@ contract SemaphoreTest is FirmTest {
 
     function testCannotSetExistingExceptions() public {
         Semaphore.ExceptionInput[] memory exceptions = new Semaphore.ExceptionInput[](3);
-        exceptions[0] = Semaphore.ExceptionInput(true, Semaphore.ExceptionType.Sig, address(safe), address(safe), bytes4(0));
-        exceptions[1] = Semaphore.ExceptionInput(true, Semaphore.ExceptionType.Target, address(safe), address(safe), bytes4(0));
-        exceptions[2] = Semaphore.ExceptionInput(true, Semaphore.ExceptionType.TargetSig, address(safe), address(safe), bytes4(0));
+        exceptions[0] =
+            Semaphore.ExceptionInput(true, Semaphore.ExceptionType.Sig, address(safe), address(safe), bytes4(0));
+        exceptions[1] =
+            Semaphore.ExceptionInput(true, Semaphore.ExceptionType.Target, address(safe), address(safe), bytes4(0));
+        exceptions[2] =
+            Semaphore.ExceptionInput(true, Semaphore.ExceptionType.TargetSig, address(safe), address(safe), bytes4(0));
 
         vm.startPrank(address(safe));
         semaphore.addExceptions(exceptions);
@@ -233,21 +220,30 @@ contract SemaphoreTest is FirmTest {
         semaphore.addExceptions(exceptions);
 
         // Flip the first exception so it errors on the second
-        exceptions[0] = Semaphore.ExceptionInput(false, Semaphore.ExceptionType.Sig, address(safe), address(safe), bytes4(0));
+        exceptions[0] =
+            Semaphore.ExceptionInput(false, Semaphore.ExceptionType.Sig, address(safe), address(safe), bytes4(0));
         vm.expectRevert(abi.encodeWithSelector(Semaphore.ExceptionAlreadySet.selector, exceptions[1]));
         semaphore.addExceptions(exceptions);
 
         // Flip the second exception so it errors on the third
-        exceptions[1] = Semaphore.ExceptionInput(false, Semaphore.ExceptionType.Target, address(safe), address(safe), bytes4(0));
+        exceptions[1] =
+            Semaphore.ExceptionInput(false, Semaphore.ExceptionType.Target, address(safe), address(safe), bytes4(0));
         vm.expectRevert(abi.encodeWithSelector(Semaphore.ExceptionAlreadySet.selector, exceptions[2]));
         semaphore.addExceptions(exceptions);
 
         vm.stopPrank();
     }
 
-    function assertCanPerform(bool expected, address caller, address target, uint256 value, bytes memory data, bool isDelegateCall) public {
+    function assertCanPerform(
+        bool expected,
+        address caller,
+        address target,
+        uint256 value,
+        bytes memory data,
+        bool isDelegateCall
+    ) public {
         assertEq(semaphore.canPerform(caller, target, value, data, isDelegateCall), expected);
-        
+
         address[] memory targets = new address[](1);
         targets[0] = target;
         uint256[] memory values = new uint256[](1);

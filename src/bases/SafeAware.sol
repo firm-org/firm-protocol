@@ -48,6 +48,7 @@ abstract contract SafeAware {
      * @dev Modifier to be used by derived contracts to limit access control to priviledged
      * functions so they can only be called by the Safe
      */
+
     modifier onlySafe() {
         if (_msgSender() != address(safe())) {
             revert UnauthorizedNotSafe();
@@ -56,5 +57,5 @@ abstract contract SafeAware {
         _;
     }
 
-    function _msgSender() internal view virtual returns (address sender); 
+    function _msgSender() internal view virtual returns (address sender);
 }

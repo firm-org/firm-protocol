@@ -19,9 +19,11 @@ abstract contract AccountControllerTest is FirmTest {
 
     function setUp() public virtual {
         safe = new SafeStub();
-        captable = Captable(createProxy(new Captable(), abi.encodeCall(Captable.initialize, ("TestCo", safe, address(0)))));
+        captable =
+            Captable(createProxy(new Captable(), abi.encodeCall(Captable.initialize, ("TestCo", safe, address(0)))));
         vm.prank(address(safe));
-        (classId, token) = captable.createClass("Common", "TST.A", authorizedAmount, NO_CONVERSION_FLAG, 1, ALLOW_ALL_BOUNCER);
+        (classId, token) =
+            captable.createClass("Common", "TST.A", authorizedAmount, NO_CONVERSION_FLAG, 1, ALLOW_ALL_BOUNCER);
     }
 
     function controller() internal view virtual returns (AccountController);

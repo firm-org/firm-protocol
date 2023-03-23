@@ -22,7 +22,11 @@ contract VestingControllerTest is AccountControllerTest {
         vm.warp(0);
 
         roles = new RolesStub();
-        vesting = VestingController(createProxy(new VestingController(), abi.encodeCall(VestingController.initialize, (captable, roles, address(0)))));
+        vesting = VestingController(
+            createProxy(
+                new VestingController(), abi.encodeCall(VestingController.initialize, (captable, roles, address(0)))
+            )
+        );
 
         roles.setRole(REVOKER, REVOKER_ROLE, true);
     }
@@ -65,22 +69,36 @@ contract VestingControllerTest is AccountControllerTest {
 
     function testCannotAddAccountWithInvalidParameters() public {
         vm.startPrank(address(captable));
-        
-        vm.expectRevert(abi.encodeWithSelector(VestingController.InvalidVestingParameters.selector));
-        vesting.addAccount(HOLDER, classId, authorizedAmount - 1, abi.encode(VestingController.VestingParams({
-            startDate: 21,
-            cliffDate: 20,
-            endDate: 30,
-            revoker: roleFlag(REVOKER_ROLE)
-        })));
 
         vm.expectRevert(abi.encodeWithSelector(VestingController.InvalidVestingParameters.selector));
-        vesting.addAccount(HOLDER, classId, authorizedAmount - 1, abi.encode(VestingController.VestingParams({
-            startDate: 10,
-            cliffDate: 31,
-            endDate: 30,
-            revoker: roleFlag(REVOKER_ROLE)
-        })));
+        vesting.addAccount(
+            HOLDER,
+            classId,
+            authorizedAmount - 1,
+            abi.encode(
+                VestingController.VestingParams({
+                    startDate: 21,
+                    cliffDate: 20,
+                    endDate: 30,
+                    revoker: roleFlag(REVOKER_ROLE)
+                })
+            )
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(VestingController.InvalidVestingParameters.selector));
+        vesting.addAccount(
+            HOLDER,
+            classId,
+            authorizedAmount - 1,
+            abi.encode(
+                VestingController.VestingParams({
+                    startDate: 10,
+                    cliffDate: 31,
+                    endDate: 30,
+                    revoker: roleFlag(REVOKER_ROLE)
+                })
+            )
+        );
 
         vm.stopPrank();
     }
@@ -106,11 +124,11 @@ contract VestingControllerTest is AccountControllerTest {
     }
 
     function testRevokerCanRevokeAtThisTime() public {
-        (,uint40 cliffDate,) = testCaptableAddsAccount();
+        (, uint40 cliffDate,) = testCaptableAddsAccount();
         vm.warp(cliffDate);
         vm.prank(REVOKER);
         vesting.revokeVesting(HOLDER, classId);
-        
+
         assertEq(captable.balanceOf(HOLDER, classId), issuedAmount / 2);
 
         assertAccountWasCleanedUp();
@@ -121,14 +139,14 @@ contract VestingControllerTest is AccountControllerTest {
         vm.warp(startDate);
         vm.prank(REVOKER);
         vesting.revokeVesting(HOLDER, classId, cliffDate);
-        
+
         assertEq(captable.balanceOf(HOLDER, classId), issuedAmount / 2);
 
         assertAccountWasCleanedUp();
     }
 
     function testRevokerCantRevokeInThePast() public {
-        (,uint40 cliffDate,) = testCaptableAddsAccount();
+        (, uint40 cliffDate,) = testCaptableAddsAccount();
         vm.warp(cliffDate);
         vm.prank(REVOKER);
         vm.expectRevert(abi.encodeWithSelector(VestingController.EffectiveDateInThePast.selector));

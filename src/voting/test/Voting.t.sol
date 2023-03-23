@@ -75,7 +75,14 @@ contract VotingTest is BaseCaptableTest {
     function testCantReinit() public {
         vm.expectRevert(abi.encodeWithSelector(SafeAware.AlreadyInitialized.selector));
         voting.initialize(
-            safe, NO_SEMAPHORE, captable, QUORUM_NUMERATOR, VOTING_DELAY, VOTING_PERIOD, PROPOSAL_THRESHOLD, address(relayer)
+            safe,
+            NO_SEMAPHORE,
+            captable,
+            QUORUM_NUMERATOR,
+            VOTING_DELAY,
+            VOTING_PERIOD,
+            PROPOSAL_THRESHOLD,
+            address(relayer)
         );
     }
 
@@ -213,12 +220,14 @@ contract VotingTest is BaseCaptableTest {
             assertionIndex: 0,
             gas: 1e6
         });
-        uint256 proposalId = voting.hashProposal(new address[](1), new uint256[](1), new bytes[](1), keccak256(bytes("Test")));
+        uint256 proposalId =
+            voting.hashProposal(new address[](1), new uint256[](1), new bytes[](1), keccak256(bytes("Test")));
 
         address nonShareholder = account("Non Shareholder");
 
         vm.prank(address(nonShareholder));
-        bytes memory votingError = abi.encodeWithSignature("Error(string)", "Governor: proposer votes below proposal threshold");
+        bytes memory votingError =
+            abi.encodeWithSignature("Error(string)", "Governor: proposer votes below proposal threshold");
         vm.expectRevert(
             abi.encodeWithSelector(FirmRelayer.CallExecutionFailed.selector, 0, address(voting), votingError)
         );

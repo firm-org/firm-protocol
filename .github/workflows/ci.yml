@@ -16,6 +16,9 @@ jobs:
         with:
           version: nightly
 
+      - name: Run Linter
+        run: forge fmt --check
+
       - name: Run tests
         run: forge test --force -vvv
 

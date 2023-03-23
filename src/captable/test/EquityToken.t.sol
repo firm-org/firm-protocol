@@ -45,13 +45,13 @@ contract EquityTokenTest is BaseCaptableTest {
         token.forcedTransfer(HOLDER2, HOLDER1, 1);
         assertEq(token.balanceOf(HOLDER1), HOLDER_BALANCE + 1);
         assertEq(token.balanceOf(HOLDER2), 0);
-        
+
         vm.stopPrank();
     }
 
     function testNonCaptableCannotPerformAdminActions() public {
         bytes memory onlyCaptableError = abi.encodeWithSelector(EquityToken.UnauthorizedNotCaptable.selector);
-        
+
         vm.startPrank(address(safe));
 
         vm.expectRevert(onlyCaptableError);
