@@ -455,6 +455,13 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
         }
     }
 
+    function updatedAndGetCurrentAllowanceState(uint256 allowanceId) public returns (Allowance memory allowance) {
+        // consider only allowing this to be called by a simulation address
+        _getAllowance(allowanceId); // Will revert if allowance doesn't exist
+        _checkAndUpdateAllowanceChain(allowanceId, 0, noop);
+        return allowances[allowanceId];
+    }
+
     function isAdminOnAllowance(uint256 allowanceId, address actor) public view returns (bool) {
         return _isAdminOnAllowance(_getAllowance(allowanceId), actor);
     }
@@ -524,5 +531,9 @@ contract Budget is FirmBase, SafeModule, RolesAuth {
 
     function zeroCappedSub(uint256 a, uint256 b) internal pure returns (uint256) {
         return a > b ? a - b : 0;
+    }
+
+    function noop(uint256 a, uint256) internal pure returns (uint256) {
+        return a;
     }
 }
