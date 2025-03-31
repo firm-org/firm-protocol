@@ -29,18 +29,19 @@ abstract contract FirmFactoryDeploy is Test {
 
         vm.startBroadcast();
 
-        // The account that runs the script is the initial owner of the UpgradeableModuleProxyFactory
-        // and therefore the only account that can create new modules/versions.
-        
         moduleFactory = new UpgradeableModuleProxyFactory();
         moduleFactory.register(new Roles());
         moduleFactory.register(new Budget());
-        moduleFactory.register(new LlamaPayStreams(LlamaPayFactory(llamaPayFactory)));
+
+        if (llamaPayFactory != address(0)) {
+            moduleFactory.register(new LlamaPayStreams(LlamaPayFactory(llamaPayFactory)));
+        }
+
         moduleFactory.register(new Captable());
         moduleFactory.register(new VestingController());
         moduleFactory.register(new Voting());
         moduleFactory.register(new Semaphore());
-        
+
         factory = new FirmFactory(
             GnosisSafeProxyFactory(safeProxyFactory),
             moduleFactory,
@@ -49,7 +50,8 @@ abstract contract FirmFactoryDeploy is Test {
         );
 
         vm.stopBroadcast();
-    }
+}
+
 }
 
 contract FirmFactoryDeployLive is FirmFactoryDeploy {
@@ -73,6 +75,10 @@ contract FirmFactoryDeployLive is FirmFactoryDeploy {
             safeProxyFactory = 0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2;
             safeImpl =         0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552;
             llamaPayFactory =  0xde1C04855c2828431ba637675B6929A684f84C7F;
+        } else if (block.chainid == 84532) { // Base Sepolia
+            safeProxyFactory = 0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2; 
+            safeImpl =         0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552;
+            llamaPayFactory =  address(0); // Not available
         } else {
             revert UnsupportedChain(block.chainid);
         }
