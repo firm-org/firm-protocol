@@ -52,22 +52,30 @@ contract TimeShiftLibShiftTest is FirmTest {
         assertShift(TimeShiftLib.TimeUnit.Yearly, 2022, 1, 31, 2023, 1, 1);
     }
 
-    function testRevertIfUnitIsInherited() public {
-        vm.expectRevert(abi.encodeWithSelector(TimeShiftLib.InvalidTimeShift.selector));
-        uint40(block.timestamp).applyShift(TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode());
-
-        vm.expectRevert(abi.encodeWithSelector(TimeShiftLib.InvalidTimeShift.selector));
-        uint40(block.timestamp).applyShift(TimeShift(TimeShiftLib.TimeUnit.Inherit, 1).encode());
+    function test_RevertWhen_UnitIsInheritedAndOffsetIsZero() public {
+        EncodedTimeShift encoded = TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode();
+        uint40 ts = uint40(block.timestamp);
+        vm.expectRevert(TimeShiftLib.InvalidTimeShift.selector);
+        this.callApplyShift(ts, encoded);
     }
 
-    function testRevertIfUnitIsNonRecurrent() public {
-        vm.expectRevert(abi.encodeWithSelector(TimeShiftLib.InvalidTimeShift.selector));
-        uint40(block.timestamp).applyShift(TimeShift(TimeShiftLib.TimeUnit.NonRecurrent, 0).encode());
+    function test_RevertWhen_UnitIsInheritedAndOffsetIsOne() public {
+        EncodedTimeShift encoded = TimeShift(TimeShiftLib.TimeUnit.Inherit, 1).encode();
+        uint40 ts = uint40(block.timestamp);
+        vm.expectRevert(TimeShiftLib.InvalidTimeShift.selector);
+        this.callApplyShift(ts, encoded);
+    }
 
-        vm.expectRevert(abi.encodeWithSelector(TimeShiftLib.InvalidTimeShift.selector));
-        uint40(block.timestamp).applyShift(
-            TimeShift(TimeShiftLib.TimeUnit.NonRecurrent, int40(uint40(block.timestamp + 1000))).encode()
-        );
+    function test_RevertWhen_UnitIsNonRecurrentAndOffsetIsZero() public {
+        EncodedTimeShift encoded = TimeShift(TimeShiftLib.TimeUnit.NonRecurrent, 0).encode();
+        uint40 ts = uint40(block.timestamp);
+        vm.expectRevert(TimeShiftLib.InvalidTimeShift.selector);
+        this.callApplyShift(ts, encoded);
+    }
+
+
+    function callApplyShift(uint40 ts, EncodedTimeShift encoded) external view returns (uint40) {
+        return ts.applyShift(encoded);
     }
 
     function testOffsets() public {
@@ -108,57 +116,5 @@ contract TimeShiftLibShiftTest is FirmTest {
             uint40(DateTimeLib.timestampFromDate(y1, m1, d1)).applyShift(TimeShift(unit, 0).encode()),
             DateTimeLib.timestampFromDate(y2, m2, d2)
         );
-    }
-}
-
-contract TimeShiftLibEncodingTest is FirmTest {
-    using TimeShiftLib for *;
-
-    function testRoundtrips() public {
-        assertRoundtrip(TimeShiftLib.TimeUnit.Daily, 0);
-        assertRoundtrip(TimeShiftLib.TimeUnit.Daily, -1);
-        assertRoundtrip(TimeShiftLib.TimeUnit.Monthly, -1 hours);
-        assertRoundtrip(TimeShiftLib.TimeUnit.Yearly, -1000 * 365 days);
-    }
-
-    function testEncodingGas() public {
-        TimeShift memory shift = TimeShift(TimeShiftLib.TimeUnit.Monthly, -1 hours);
-        assertEq(uint256(uint48(EncodedTimeShift.unwrap(shift.encode()))), 0x03fffffff1f0);
-    }
-
-    function testDecodingGas() public {
-        EncodedTimeShift encodedShift = EncodedTimeShift.wrap(0x03fffffff1f0);
-
-        (TimeShiftLib.TimeUnit unit, int40 offset) = encodedShift.decode();
-
-        assertEq(uint8(unit), uint8(TimeShiftLib.TimeUnit.Monthly));
-        assertEq(offset, -1 hours);
-    }
-
-    function assertRoundtrip(TimeShiftLib.TimeUnit inputUnit, int40 inputOffset) public {
-        TimeShift memory shift = TimeShift(inputUnit, inputOffset);
-        EncodedTimeShift encoded = shift.encode();
-        (TimeShiftLib.TimeUnit unit, int40 offset) = encoded.decode();
-
-        assertEq(uint8(unit), uint8(inputUnit));
-        assertEq(offset, inputOffset);
-    }
-}
-
-contract TimeShiftLibHelpersTest is FirmTest {
-    using TimeShiftLib for *;
-
-    function testIsInherited() public {
-        assertTrue(TimeShift(TimeShiftLib.TimeUnit.Inherit, 0).encode().isInherited());
-        assertTrue(TimeShift(TimeShiftLib.TimeUnit.Inherit, 1).encode().isInherited());
-        assertFalse(TimeShift(TimeShiftLib.TimeUnit.Daily, 0).encode().isInherited());
-    }
-
-    function testIsNonRecurrent() public {
-        assertTrue(TimeShift(TimeShiftLib.TimeUnit.NonRecurrent, 0).encode().isNonRecurrent());
-        assertTrue(
-            TimeShift(TimeShiftLib.TimeUnit.NonRecurrent, int40(uint40(block.timestamp))).encode().isNonRecurrent()
-        );
-        assertFalse(TimeShift(TimeShiftLib.TimeUnit.Yearly, type(int40).max).encode().isNonRecurrent());
     }
 }

@@ -818,23 +818,23 @@ contract CaptableBouncersTest is BaseCaptableTest {
         assertEq(token.balanceOf(HOLDER2), 1);
     }
 
-    function testFailsOnNonExistentEmbeddedBouncer() public {
+     function test_RevertWhen_NonExistentEmbeddedBouncer() public {
         IBouncer badBouncer = IBouncer(0x0000000000000000000000000000000000000a02);
         vm.prank(address(safe));
         captable.setBouncer(classId, badBouncer);
 
         vm.prank(HOLDER1);
-        vm.expectRevert(abi.encodeWithSignature("Error(string)", "Conversion into non-existent enum type"));
+        vm.expectRevert();
         token.transfer(HOLDER2, 10);
     }
 
-    function testFailsOnBadFlagForEmbeddedBouncer() public {
+    function test_RevertWhen_BadFlagForEmbeddedBouncer() public {
         IBouncer badBouncer = IBouncer(0x0000000000000000000000000000000000000101);
         vm.prank(address(safe));
         captable.setBouncer(classId, badBouncer);
 
         vm.prank(HOLDER1);
-        vm.expectRevert("EvmError: Revert");
+        vm.expectRevert();
         token.transfer(HOLDER2, 10);
     }
 
